@@ -23,7 +23,7 @@ const cp = require("child_process");
 const program = require("commander");
 const npm_prefix = require("npm-prefix")();
 const ProgressBar = require("progress");
-const extractZip = require("extract-zip");
+const extract_zip = require("extract-zip");
 const request = require("request");
 
 const pkg = require("../package.json");
@@ -344,9 +344,11 @@ function extractDownload(filePath, extractedPath) {
   fs.chmodSync(extractedPath, "0777");
 
   return new Promise((resolve, reject) => {
-    if (filePath.substr(-4) === ".zip") {
+    if (filePath.substr(-4) === ".zip" || filePath.substr(-3) === ".gz") {
       console.log("Extracting zip contents");
-      extractZip(path.resolve(filePath), { dir: extractedPath }, function(err) {
+      extract_zip(path.resolve(filePath), { dir: extractedPath }, function(
+        err
+      ) {
         if (err) {
           console.error("Error extracting zip");
           reject(err);
