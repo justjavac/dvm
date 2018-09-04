@@ -1,0 +1,48 @@
+{
+  "name": "dvm",
+  "version": "0.1.2",
+  "keywords": [
+    "deno",
+    "versions",
+    "v8"
+  ],
+  "description": "Deno Version Manager - Easy way to manage multiple active deno versions",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/justjavac/dvm.git"
+  },
+  "license": "GPL",
+  "bin": {
+    "dvm": "./bin/dvm.js"
+  },
+  "engines": {
+    "node": ">=8"
+  },
+  "homepage": "https://github.com/justjavac/dvm#readme",
+  "bugs": {
+    "url": "https://github.com/justjavac/dvm/issues",
+    "email": "justjavac@gmail.com"
+  },
+  "author": "justjavac <justjavac@gmail.com> (https://github.com/justjavac)",
+  "contributors":[
+    "justjavac <justjavac@gmail.com> (https://github.com/justjavac)",
+    "jysperm (https://github.com/jysperm)"
+  ],
+  "dependencies": {
+    "commander": "^2.17.1",
+    "extract-zip": "^1.6.7",
+    "ini": "^1.3.5",
+    "is-admin": "^2.1.1",
+    "npm-prefix": "^1.2.0",
+    "progress": "^2.0.0",
+    "request": "^2.88.0",
+    "request-progress": "^3.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.5.0",
+    "eslint-config-prettier": "^3.0.1",
+    "eslint-plugin-prettier": "^2.6.2",
+    "prettier": "^1.14.2",
+    "rimraf": "^2.6.2"
+  }
+}
