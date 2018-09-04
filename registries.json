@@ -1,0 +1,10 @@
+{
+    "deno": {
+        "home": "https://github.com/denoland/deno",
+        "registry": "https://github.com/denoland/deno/releases/download/"
+    },
+    "denocn": {
+        "home": "https://deno.js.cn",
+        "registry": "http://cdn.devtips.cn/deno/releases/download/"
+    }
+}
