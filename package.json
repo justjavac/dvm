@@ -1,6 +1,6 @@
 {
   "name": "dvm",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "keywords": [
     "deno",
     "versions",
@@ -8,12 +8,15 @@
   ],
   "description": "Deno Version Manager - Easy way to manage multiple active deno versions",
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/justjavac/dvm.git"
+    "type": "git",
+    "url": "https://github.com/justjavac/dvm.git"
   },
-  "license": "GPL",
+  "license": "LGPL-3.0-only",
   "bin": {
     "dvm": "./bin/dvm.js"
+  },
+  "scripts": {
+    "lint": "eslint ."
   },
   "engines": {
     "node": ">=8"
@@ -24,7 +27,7 @@
     "email": "justjavac@gmail.com"
   },
   "author": "justjavac <justjavac@gmail.com> (https://github.com/justjavac)",
-  "contributors":[
+  "contributors": [
     "justjavac <justjavac@gmail.com> (https://github.com/justjavac)",
     "jysperm (https://github.com/jysperm)"
   ],
