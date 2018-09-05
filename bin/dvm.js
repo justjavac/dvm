@@ -369,7 +369,7 @@ function extractDownload(filePath, extractedPath) {
   return uncompresser
     .uncompress(source, dest)
     .then(() => {
-      fs.chmodSync(DENO_PATH, "0777");
+      fs.chmodSync(dest, "0777");
       return extractedPath;
     })
     .catch(err => {
