@@ -252,8 +252,6 @@ function download(version, registry = "denocn") {
         return downloaded_file;
       }
 
-      // Start the install.
-      console.log("Downloading from", url);
       return request_binary(url, downloaded_file);
     });
 }
@@ -272,8 +270,6 @@ function verify_checksum(file, checksum) {
 function request_binary(url, filePath) {
   const writePath = filePath + "-download-" + Date.now();
 
-  console.log("Receiving...");
-
   return new Promise((resolve, reject) => {
     request(url)
       .on("response", function(response) {
@@ -287,7 +283,9 @@ function request_binary(url, filePath) {
 
         const writeStream = fs.createWriteStream(writePath);
 
-        console.log();
+        // Start the install.
+        console.log("Downloading from ", url);
+
         const bar = new ProgressBar("  downloading [:bar] :percent :etas", {
           complete: "=",
           incomplete: " ",
