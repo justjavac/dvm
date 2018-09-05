@@ -18,7 +18,6 @@ const is_admin = require("is-admin");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
-const cp = require("child_process");
 
 const program = require("commander");
 const npm_prefix = require("npm-prefix")();
