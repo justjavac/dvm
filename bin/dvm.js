@@ -32,7 +32,12 @@ const registries = require("../registries.json");
 
 const DVM_PATH = process.env.DVM_PATH || path.join(os.homedir(), ".dvm");
 const DENO_EXECUTOR = "deno" + (process.platform === "win32" ? ".exe" : "");
-const DENO_PATH = path.join(npm_prefix, DENO_EXECUTOR);
+
+const DENO_PATH = path.join(
+  npm_prefix,
+  process.platform === "win32" ? "" : "bin",
+  DENO_EXECUTOR
+);
 
 if (!fs.existsSync(DVM_PATH)) {
   console.log("Creating %s", DVM_PATH);
