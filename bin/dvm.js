@@ -13,12 +13,11 @@ if (majorVer < 8) {
   process.exit(1);
 }
 
-const is_admin = require("is-admin");
-
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
+const is_admin = require("is-admin");
 const program = require("commander");
 const npm_prefix = require("npm-prefix")();
 const ProgressBar = require("progress");
