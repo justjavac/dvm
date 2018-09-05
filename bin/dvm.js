@@ -23,10 +23,15 @@ const npm_prefix = require("npm-prefix")();
 const ProgressBar = require("progress");
 const compressing = require("compressing");
 const request = require("request");
+const debug = require("debug");
 
 const pkg = require("../package.json");
 const registries = require("../registries.json");
 // let dvmrc = path.join(os.homedir(), ".dvmrc");
+
+const E = debug("dvm:error");
+const W = debug("dvm:warn");
+const I = debug("dvm:info");
 
 const DVM_PATH = process.env.DVM_PATH || path.join(os.homedir(), ".dvm");
 const DENO_EXECUTOR = "deno" + (process.platform === "win32" ? ".exe" : "");
@@ -42,12 +47,14 @@ if (!fs.existsSync(DVM_PATH)) {
   fs.mkdirSync(DVM_PATH, "0777");
 }
 
-program.version(pkg.version, "-v, --version");
+program
+  .version(pkg.version, "-v, --version")
+  .description("Easy way to manage multiple active deno versions")
+  .option("-d, --debug", "Print verbose infos for debug");
 
 program
   .command("arch")
-  //   .option("-s, --setup_mode [mode]", "Which setup mode to use")
-  .description("Show if deno is running in 32 or 64 bit mode.")
+  .description("Show if deno is running in 32 or 64 bit mode")
   .action(() => {
     console.log("System Arch: %s_%s.", process.platform, process.arch);
   });
@@ -63,6 +70,7 @@ program
   .command("install <version>")
   .description("Install deno <version>")
   .action(function(version) {
+    I("check whether the current version is installed");
     if (fs.existsSync(path.join(DVM_PATH, version))) {
       console.log(
         "Deno v%s is already installed, run `dvm use %s` to use this version.",
@@ -71,6 +79,9 @@ program
       );
       process.exit(1);
     }
+
+    I("deno v%s is not installed", version);
+    I("try to download...", version);
 
     download(version)
       .then(filePath => extractDownload(filePath, path.join(DVM_PATH, version)))
@@ -91,7 +102,7 @@ program
 
 program
   .command("use [version]")
-  .description("Switch to use the specified version.")
+  .description("Switch to use the specified version")
   .action(version => {
     if (version !== undefined) {
       link(version);
@@ -119,13 +130,13 @@ program
     console.log();
   });
 
-program.on("option:verbose", function() {
-  process.env.VERBOSE = this.verbose;
+program.on("option:debug", () => {
+  debug.enable("*");
 });
 
-program.on("command:*", function() {
-  console.error(
-    "Invalid command: %s\nSee --help or -h for a list of available commands.",
+program.on("command:*", () => {
+  console.log(
+    "Invalid command: '%s'. See 'dvm --help' for a list of available commands.",
     program.args.join(" ")
   );
   process.exit(1);
@@ -133,7 +144,7 @@ program.on("command:*", function() {
 
 program.parse(process.argv);
 
-if (process.argv.length === 2) {
+if (program.args.length === 0) {
   program.help();
 }
 
@@ -150,7 +161,10 @@ function current_verion() {
   let version = "";
 
   try {
+    I("deno symbolic link: %s", DENO_PATH);
     const link = fs.readlinkSync(DENO_PATH);
+    I("deno installed path: %s", link);
+
     version = link && path.basename(path.resolve(link, ".."));
   } catch (e) {} /* eslint-disable-line no-empty */
 
@@ -172,6 +186,8 @@ function checkSymlink(stat) {
 // make the symlink
 async function link(version = "") {
   let ln = path.join(DVM_PATH, version, DENO_EXECUTOR);
+  I("deno location: %s", ln);
+
   let stat;
 
   if (!fs.existsSync(ln)) {
@@ -186,7 +202,14 @@ async function link(version = "") {
   if (process.platform === "win32") {
     const admin = await is_admin();
 
+    I("check elevated");
+
     if (!admin) {
+      W("permissions check failed");
+      E(
+        "deno v%s has been installed on you computer successfully, but we con't use it",
+        version
+      );
       console.error(
         "You may have to run dvm in a shell (cmd, PowerShell, Git Bash, etc) with elevated (Administrative) privileges to get it to run."
       );
@@ -215,7 +238,10 @@ async function link(version = "") {
  * @returns {string} url
  */
 function get_download_url(version, registry = "denocn") {
+  I("using mirror %s", registry);
   const url_prefix = registries[registry].registry;
+  I("using registry %s", url_prefix);
+
   let name;
 
   if (process.platform === "win32") {
@@ -236,6 +262,8 @@ function get_download_url(version, registry = "denocn") {
  */
 function download(version, registry = "denocn") {
   let url = get_download_url(version, registry);
+  I("remote package url: %s", url);
+
   let downloaded_file;
 
   return Promise.resolve()
@@ -243,9 +271,12 @@ function download(version, registry = "denocn") {
       let tmpdir = os.tmpdir();
       let fileName = url.split("/").pop();
       downloaded_file = path.join(tmpdir, fileName);
+      I("file will save at %s", downloaded_file);
 
       if (fs.existsSync(downloaded_file)) {
+        I("file already exists, try to delete it...");
         fs.unlinkSync(downloaded_file);
+        I("delete successfully");
         return verify_checksum();
       }
       return false;
@@ -274,6 +305,7 @@ function request_binary(url, filePath) {
   const writePath = filePath + "-download-" + Date.now();
 
   return new Promise((resolve, reject) => {
+    I("start downloading");
     request(url)
       .on("response", function(response) {
         if (response.statusCode === 404) {
@@ -299,11 +331,14 @@ function request_binary(url, filePath) {
         });
 
         response.on("end", function() {
+          I("download finish");
           writeStream.end();
         });
 
         writeStream.on("finish", function() {
+          I("successfully downloaded files to local files");
           fs.renameSync(writePath, filePath);
+          I("rename %s to %s", writePath, filePath);
           resolve(filePath);
         });
       })
@@ -333,7 +368,9 @@ function handleRequestError(error) {
 
 function extractDownload(filePath, extractedPath) {
   if (fs.existsSync(extractedPath)) {
+    I("file <%s> already exists, try to delete it...", extractedPath);
     fs.rmdirSync(extractedPath);
+    I("delete successfully");
   }
 
   fs.mkdirSync(extractedPath, "0777");

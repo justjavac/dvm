@@ -35,14 +35,15 @@ Usage: dvm [options] [command]
 Options:
 
   -v, --version      output the version number
+  -d, --debug        Print verbose infos for debug
   -h, --help         output usage information
 
 Commands:
 
-  arch               Show if deno is running in 32 or 64 bit mode.
+  arch               Show if deno is running in 32 or 64 bit mode
   list               List all installed versions
   install <version>  Install deno <version>
-  use [version]      Switch to use the specified version.
+  use [version]      Switch to use the specified version
 ```
 
 ### Verify installation
