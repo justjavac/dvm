@@ -23,7 +23,7 @@ const cp = require("child_process");
 const program = require("commander");
 const npm_prefix = require("npm-prefix")();
 const ProgressBar = require("progress");
-const extract_zip = require("extract-zip");
+const compressing = require("compressing");
 const request = require("request");
 
 const pkg = require("../package.json");
@@ -332,8 +332,6 @@ function handleRequestError(error) {
 }
 
 function extractDownload(filePath, extractedPath) {
-  const options = { cwd: extractedPath };
-
   if (fs.existsSync(extractedPath)) {
     fs.rmdirSync(extractedPath);
   }
@@ -341,31 +339,36 @@ function extractDownload(filePath, extractedPath) {
   fs.mkdirSync(extractedPath, "0777");
   fs.chmodSync(extractedPath, "0777");
 
-  return new Promise((resolve, reject) => {
-    if (filePath.substr(-4) === ".zip" || filePath.substr(-3) === ".gz") {
-      console.log("Extracting zip contents");
-      extract_zip(path.resolve(filePath), { dir: extractedPath }, function(
-        err
-      ) {
-        if (err) {
-          console.error("Error extracting zip");
-          reject(err);
-        } else {
-          resolve(extractedPath);
-        }
-      });
-    } else {
-      console.log("Extracting tar contents (via spawned process)");
-      cp.execFile("tar", ["jxf", path.resolve(filePath)], options, function(
-        err
-      ) {
-        if (err) {
-          console.error("Error extracting archive");
-          reject(err);
-        } else {
-          resolve(extractedPath);
-        }
-      });
-    }
-  });
+  let uncompresser;
+  let dest;
+  let source = path.resolve(filePath);
+
+  // Note:
+  //
+  // tar, tgz and zip have the same uncompressing API as above:
+  // destination should be a path of a directory,
+  // while that of gzip is slightly different:
+  // destination must be a file or filestream.
+  //
+  // https://github.com/node-modules/compressing#uncompress-a-file
+  if (filePath.substr(-4) === ".zip") {
+    console.log("Extracting zip contents");
+    uncompresser = compressing.zip;
+    dest = extractedPath;
+  } else if (filePath.substr(-3) === ".gz") {
+    console.log("Extracting gz contents");
+    uncompresser = compressing.gzip;
+    dest = path.join(extractedPath, DENO_EXECUTOR);
+  }
+
+  return uncompresser
+    .uncompress(source, dest)
+    .then(() => {
+      return extractedPath;
+    })
+    .catch(err => {
+      console.error("Error extracting archive");
+      fs.rmdirSync(extractedPath);
+      console.error(err);
+    });
 }
