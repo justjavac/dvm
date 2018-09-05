@@ -110,11 +110,14 @@ now use 0.1.2
 deno v0.0.2 is not installed. Use `dvm install 0.0.2` to install it first.
 ```
 
-## Credits
+## Authors
 
-* GitHub ([justjavac](http://github.com/justjavac))
-* Twitter ([@justjavac](http://twitter.com/justjavac))
-* Weibo ([@justjavac](http://weibo.com/justjavac))
+- [justjavac](http://github.com/justjavac)
+
+## Contributors
+
+- [justjavac](http://github.com/justjavac)
+- [jysperm](http://github.com/jysperm)
 
 ## License
 
