@@ -63,7 +63,7 @@ program
   .command("list")
   .description("List all installed versions")
   .action(function() {
-    list_verions();
+    list_versions();
   });
 
 program
@@ -109,7 +109,7 @@ program
       return;
     }
 
-    const current = current_verion();
+    const current = current_version();
 
     if (current === "") {
       console.log(
@@ -148,8 +148,8 @@ if (program.args.length === 0) {
   program.help();
 }
 
-function list_verions() {
-  const current = current_verion();
+function list_versions() {
+  const current = current_version();
   fs.readdirSync(DVM_PATH).forEach(function(denos) {
     if (denos[0] !== ".") {
       console.log(" %s %s", current == denos ? "*" : " ", denos);
@@ -157,7 +157,7 @@ function list_verions() {
   });
 }
 
-function current_verion() {
+function current_version() {
   let version = "";
 
   try {
