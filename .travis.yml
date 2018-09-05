@@ -8,6 +8,6 @@ cache:
     - "node_modules"
 
 script:
-  - npm run lint
+  - yarn lint
 
 sudo: false
