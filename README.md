@@ -1,6 +1,13 @@
 Deno Version Manager
 =====
 
+[![npm package](https://nodei.co/npm/dvm.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/dvm/)
+
+[![Build Status](https://travis-ci.com/justjavac/dvm.svg?branch=master)](https://travis-ci.com/justjavac/dvm)
+[![NPM version](https://img.shields.io/npm/v/dvm.svg)](https://www.npmjs.com/package/dvm)
+[![NPM Downloads](https://img.shields.io/npm/dm/dvm.svg?style=flat)](https://npmcharts.com/compare/dvm?minimal=true)
+[![Install Size](https://packagephobia.now.sh/badge?p=dvm)](https://packagephobia.now.sh/result?p=dvm)
+
 Switch between different versions of [Deno](https://github.com/denoland/deno).
 
 ### TODO
