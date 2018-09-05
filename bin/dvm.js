@@ -286,9 +286,6 @@ function request_binary(url, filePath) {
 
         const writeStream = fs.createWriteStream(writePath);
 
-        // Start the install.
-        console.log("Downloading from ", url);
-
         const bar = new ProgressBar("  downloading [:bar] :percent :etas", {
           complete: "=",
           incomplete: " ",
