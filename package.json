@@ -16,7 +16,12 @@
     "dvm": "./bin/dvm.js"
   },
   "scripts": {
-    "lint": "eslint ."
+    "clean": "rimraf -rf dist/*",
+    "lint": "eslint .",
+    "fix": "eslint --fix .",
+    "test": "jest",
+    "coverage": "jest --coverage",
+    "codecov": "jest  --coverage && codecov"
   },
   "engines": {
     "node": ">=8"
@@ -44,9 +49,12 @@
     "string-similarity": "^1.2.1"
   },
   "devDependencies": {
+    "babel-jest": "^23.4.2",
+    "codecov": "^3.1.0",
     "eslint": "^5.5.0",
     "eslint-config-prettier": "^3.0.1",
     "eslint-plugin-prettier": "^2.6.2",
+    "jest": "^23.5.0",
     "prettier": "^1.14.2",
     "rimraf": "^2.6.2"
   }
