@@ -69,7 +69,8 @@ program
 program
   .command("install <version>")
   .description("Install deno <version>")
-  .action(function(version) {
+  .option("-r, --registry <source>", "source registry")
+  .action(function(version, cmd) {
     I("check whether the current version is installed");
     if (fs.existsSync(path.join(DVM_PATH, version))) {
       console.log(
@@ -81,9 +82,9 @@ program
     }
 
     I("deno v%s is not installed", version);
-    I("try to download...", version);
+    I("try to download version:%s, registry:%s", version, cmd.registry);
 
-    download(version)
+    download(version, cmd.registry)
       .then(filePath => extractDownload(filePath, path.join(DVM_PATH, version)))
       .then(() => {
         link(version);

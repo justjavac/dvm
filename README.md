@@ -13,7 +13,7 @@ Switch between different versions of [Deno](https://github.com/denoland/deno).
 ### TODO
 
 - [ ] `dvm ls-remote`
-- [ ] `dvm install x.x.x -r denocn`
+- [x] `dvm install x.x.x -r denocn`
 
 Installation
 ------------
