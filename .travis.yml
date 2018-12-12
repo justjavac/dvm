@@ -1,6 +1,7 @@
 language: node_js
 
 node_js:
+  - "8"
   - "10"
 
 cache:
@@ -9,5 +10,6 @@ cache:
 
 script:
   - yarn lint
+  - node ./bin/dvm.js -v
 
 sudo: false
