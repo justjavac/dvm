@@ -21,7 +21,8 @@
     "fix": "eslint --fix .",
     "test": "jest",
     "coverage": "jest --coverage",
-    "codecov": "jest  --coverage && codecov"
+    "codecov": "jest  --coverage && codecov",
+    "preinstall": "node scripts/preinstall.js"
   },
   "engines": {
     "node": ">=8"
