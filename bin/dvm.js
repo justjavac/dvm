@@ -238,7 +238,7 @@ async function link(version = "") {
  *
  * @returns {string} url
  */
-function get_download_url(version, registry = "denocn") {
+function get_download_url(version, registry = "deno") {
   I("using mirror %s", registry);
   const url_prefix = registries[registry].registry;
   I("using registry %s", url_prefix);
