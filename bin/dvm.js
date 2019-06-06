@@ -253,7 +253,7 @@ function get_download_url(version, registry = "deno") {
     name = "deno_linux_x64.gz";
   }
 
-  return `${url_prefix}/v${version}/${name}`;
+  return `${url_prefix}v${version}/${name}`;
 }
 
 /**
