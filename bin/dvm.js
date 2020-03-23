@@ -62,7 +62,7 @@ program
 program
   .command("list")
   .description("List all installed versions")
-  .action(function() {
+  .action(function () {
     list_versions();
   });
 
@@ -70,7 +70,7 @@ program
   .command("install <version>")
   .description("Install deno <version>")
   .option("-r, --registry <source>", "source registry")
-  .action(function(version, cmd) {
+  .action(function (version, cmd) {
     I("check whether the current version is installed");
     if (fs.existsSync(path.join(DVM_PATH, version))) {
       console.log(
@@ -85,15 +85,17 @@ program
     I("try to download version:%s, registry:%s", version, cmd.registry);
 
     download(version, cmd.registry)
-      .then(filePath => extractDownload(filePath, path.join(DVM_PATH, version)))
+      .then((filePath) =>
+        extractDownload(filePath, path.join(DVM_PATH, version))
+      )
       .then(() => {
         link(version);
       })
-      .catch(msg => {
+      .catch((msg) => {
         console.error(msg, version);
       });
   })
-  .on("--help", function() {
+  .on("--help", function () {
     console.log("  Examples:");
     console.log();
     console.log("    $ dvm install 0.1.0");
@@ -104,7 +106,7 @@ program
 program
   .command("use [version]")
   .description("Switch to use the specified version")
-  .action(version => {
+  .action((version) => {
     if (version !== undefined) {
       link(version);
       return;
@@ -123,7 +125,7 @@ program
     console.log("Switch to another version using `dvm use [version]`");
     console.log("List all installed versions using `dvm list`");
   })
-  .on("--help, -h", function() {
+  .on("--help, -h", function () {
     console.log("  Examples:");
     console.log();
     console.log("    $ dvm use 0.1.0");
@@ -151,7 +153,7 @@ if (program.args.length === 0) {
 
 function list_versions() {
   const current = current_version();
-  fs.readdirSync(DVM_PATH).forEach(function(denos) {
+  fs.readdirSync(DVM_PATH).forEach(function (denos) {
     if (denos[0] !== ".") {
       console.log(" %s %s", current == denos ? "*" : " ", denos);
     }
@@ -268,7 +270,7 @@ function download(version, registry = "denocn") {
   let downloaded_file;
 
   return Promise.resolve()
-    .then(function() {
+    .then(function () {
       let tmpdir = os.tmpdir();
       let fileName = url.split("/").pop();
       downloaded_file = path.join(tmpdir, fileName);
@@ -282,7 +284,7 @@ function download(version, registry = "denocn") {
       }
       return false;
     })
-    .then(function(verified) {
+    .then(function (verified) {
       if (verified) {
         return downloaded_file;
       }
@@ -308,7 +310,7 @@ function request_binary(url, filePath) {
   return new Promise((resolve, reject) => {
     I("start downloading");
     request(url)
-      .on("response", function(response) {
+      .on("response", function (response) {
         if (response.statusCode === 404) {
           reject("Deno v%s is not yet released or available.");
           // console.error("Deno v%s is not yet released or available.");
@@ -323,27 +325,27 @@ function request_binary(url, filePath) {
           complete: "=",
           incomplete: " ",
           width: 20,
-          total: len
+          total: len,
         });
 
-        response.on("data", function(chunk) {
+        response.on("data", function (chunk) {
           writeStream.write(chunk);
           bar.tick(chunk.length);
         });
 
-        response.on("end", function() {
+        response.on("end", function () {
           I("download finish");
           writeStream.end();
         });
 
-        writeStream.on("finish", function() {
+        writeStream.on("finish", function () {
           I("successfully downloaded files to local files");
           fs.renameSync(writePath, filePath);
           I("rename %s to %s", writePath, filePath);
           resolve(filePath);
         });
       })
-      .on("error", function(error) {
+      .on("error", function (error) {
         handleRequestError(error);
       });
   });
@@ -405,7 +407,7 @@ function extractDownload(filePath, extractedPath) {
       fs.chmodSync(dest, "0777");
       return extractedPath;
     })
-    .catch(err => {
+    .catch((err) => {
       console.error("Error extracting archive");
       fs.rmdirSync(extractedPath);
       console.error(err);

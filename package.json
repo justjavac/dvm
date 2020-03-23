@@ -37,25 +37,25 @@
     "jysperm (https://github.com/jysperm)"
   ],
   "dependencies": {
-    "commander": "^2.17.1",
-    "compressing": "^1.3.1",
+    "commander": "^5.0.0",
+    "compressing": "^1.5.0",
     "debug": "^4.1.0",
     "ini": "^1.3.5",
     "is-admin": "^3.0.0",
     "npm-prefix": "^1.2.0",
     "progress": "^2.0.0",
-    "request": "^2.88.0",
+    "request": "^2.88.2",
     "request-progress": "^3.0.0",
-    "string-similarity": "^3.0.0"
+    "string-similarity": "^4.0.1"
   },
   "devDependencies": {
-    "babel-jest": "^24.8.0",
+    "babel-jest": "^25.1.0",
     "codecov": "^3.1.0",
-    "eslint": "^6.0.1",
-    "eslint-config-prettier": "^6.0.0",
-    "eslint-plugin-prettier": "^3.0.0",
-    "jest": "^24.8.0",
-    "prettier": "^1.14.2",
-    "rimraf": "^2.6.2"
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.1",
+    "eslint-plugin-prettier": "^3.1.2",
+    "jest": "^25.1.0",
+    "prettier": "^2.0.1",
+    "rimraf": "^3.0.2"
   }
 }
