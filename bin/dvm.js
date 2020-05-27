@@ -248,11 +248,11 @@ function get_download_url(version, registry = "deno") {
   let name;
 
   if (process.platform === "win32") {
-    name = "deno_win_x64.zip";
+    name = "deno-x86_64-pc-windows-msvc.zip";
   } else if (process.platform === "darwin") {
-    name = "deno_osx_x64.gz";
+    name = "deno-x86_64-apple-darwin.zip";
   } else {
-    name = "deno_linux_x64.gz";
+    name = "deno-x86_64-unknown-linux-gnu.zip";
   }
 
   return `${url_prefix}v${version}/${name}`;
@@ -263,7 +263,7 @@ function get_download_url(version, registry = "deno") {
  *
  * @returns {Promise}
  */
-function download(version, registry = "denocn") {
+function download(version, registry = "deno") {
   let url = get_download_url(version, registry);
   I("remote package url: %s", url);
 
