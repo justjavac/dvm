@@ -409,7 +409,7 @@ function extractDownload(filePath, extractedPath) {
     })
     .catch((err) => {
       console.error("Error extracting archive");
-      fs.rmdirSync(extractedPath);
+      fs.rmdirSync(extractedPath, { recursive: true });
       console.error(err);
     });
 }
