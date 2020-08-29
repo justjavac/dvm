@@ -13,9 +13,6 @@ use flags::DvmSubcommand;
 use std::env;
 
 pub fn main() {
-  #[cfg(windows)]
-  colors::enable_ansi(); // For Windows 10
-
   let args: Vec<String> = env::args().collect();
   let flags = flags::flags_from_vec(args);
 
