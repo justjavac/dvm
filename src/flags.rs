@@ -1,6 +1,5 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020 the Dvm authors. All rights reserved. MIT license.
-
 use clap::{App, AppSettings, Arg, SubCommand};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -9,9 +8,8 @@ pub enum DvmSubcommand {
     buf: Box<[u8]>,
   },
   Help,
-  Upgrade {
-    dry_run: bool,
-    force: bool,
+  Install {
+    no_use: bool,
     version: Option<String>,
   },
 }
@@ -51,8 +49,10 @@ pub fn flags_from_vec_safe(args: Vec<String>) -> clap::Result<Flags> {
 
   if let Some(m) = matches.subcommand_matches("completions") {
     completions_parse(&mut flags, m);
-  } else if let Some(m) = matches.subcommand_matches("upgrade") {
-    upgrade_parse(&mut flags, m);
+  } else if let Some(m) = matches.subcommand_matches("install") {
+    install_parse(&mut flags, m);
+  } else {
+    help_parse(&mut flags, &matches);
   }
 
   Ok(flags)
@@ -69,8 +69,12 @@ fn clap_root<'a, 'b>() -> App<'a, 'b> {
     .set_term_width(0)
     .version(crate::version::DENO)
     .subcommand(completions_subcommand())
-    .subcommand(upgrade_subcommand())
+    .subcommand(install_subcommand())
     .long_about(DENO_HELP)
+}
+
+fn help_parse(flags: &mut Flags, _matches: &clap::ArgMatches) {
+  flags.subcommand = DvmSubcommand::Help;
 }
 
 fn completions_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
@@ -88,13 +92,11 @@ fn completions_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
   };
 }
 
-fn upgrade_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
-  let dry_run = matches.is_present("dry-run");
-  let force = matches.is_present("force");
+fn install_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
+  let no_use = matches.is_present("no-use");
   let version = matches.value_of("version").map(|s| s.to_string());
-  flags.subcommand = DvmSubcommand::Upgrade {
-    dry_run,
-    force,
+  flags.subcommand = DvmSubcommand::Install {
+    no_use,
     version,
   };
 }
@@ -115,20 +117,13 @@ fn completions_subcommand<'a, 'b>() -> App<'a, 'b> {
     )
 }
 
-fn upgrade_subcommand<'a, 'b>() -> App<'a, 'b> {
-  SubCommand::with_name("upgrade")
-    .about("Upgrade deno executable to given version")
+fn install_subcommand<'a, 'b>() -> App<'a, 'b> {
+  SubCommand::with_name("install")
+    .visible_alias("i")
+    .about("Install deno executable to given version")
     .long_about(
-      "Upgrade deno executable to the given version.
-Defaults to latest.
-
-The version is downloaded from
-https://github.com/denoland/deno/releases
-and is used to replace the current executable.
-
-If you want to not replace the current Deno executable but instead download an
-update to a different location, use the --output flag
-  deno upgrade --output $HOME/my_deno",
+      "Install deno executable to the given version.
+Defaults to latest.",
     )
     .arg(
       Arg::with_name("version")
@@ -136,15 +131,9 @@ update to a different location, use the --output flag
         .takes_value(true),
     )
     .arg(
-      Arg::with_name("dry-run")
-        .long("dry-run")
-        .help("Perform all checks without replacing old exe"),
-    )
-    .arg(
-      Arg::with_name("force")
-        .long("force")
-        .short("f")
-        .help("Replace current exe even if not out-of-date"),
+      Arg::with_name("no-use")
+        .long("no-use")
+        .help("Only install to local, but not use"),
     )
 }
 
@@ -161,14 +150,13 @@ mod tests {
   #[test]
   fn upgrade() {
     let r =
-      flags_from_vec_safe(svec!["deno", "upgrade", "--dry-run", "--force"]);
+      flags_from_vec_safe(svec!["deno", "install", "--no-use"]);
     let flags = r.unwrap();
     assert_eq!(
       flags,
       Flags {
-        subcommand: DvmSubcommand::Upgrade {
-          force: true,
-          dry_run: true,
+        subcommand: DvmSubcommand::Install {
+          no_use: true,
           version: None,
         },
         ..Flags::default()
