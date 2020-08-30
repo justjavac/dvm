@@ -25,10 +25,7 @@ const ARCHIVE_NAME: &str = "deno-x86_64-apple-darwin.zip";
 #[cfg(target_os = "linux")]
 const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
-pub fn exec(
-  no_use: bool,
-  version: Option<String>,
-) -> Result<()> {
+pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   let client_builder = Client::builder();
   let client = client_builder.build()?;
 
@@ -36,17 +33,13 @@ pub fn exec(
 
   let install_version = match version {
     Some(passed_version) => match semver_parse(&passed_version) {
-      Ok(ver) => {
-        ver
-      }
+      Ok(ver) => ver,
       Err(_) => {
         eprintln!("Invalid semver passed");
         std::process::exit(1)
       }
     },
-    None => {
-      get_latest_version(&client)?
-    }
+    None => get_latest_version(&client)?,
   };
 
   let archive_data = download_package(
