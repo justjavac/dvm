@@ -3,11 +3,11 @@ extern crate regex;
 extern crate reqwest;
 extern crate url;
 
-pub mod commands;
+mod commands;
 mod flags;
+mod utils;
 pub mod version;
 
-use commands::upgrade::upgrade_command;
 use flags::DvmSubcommand;
 
 use std::env;
@@ -17,11 +17,10 @@ pub fn main() {
   let flags = flags::flags_from_vec(args);
 
   let result = match flags.subcommand {
-    DvmSubcommand::Upgrade {
-      force,
-      dry_run,
+    DvmSubcommand::Install {
+      no_use,
       version,
-    } => upgrade_command(dry_run, force, version),
+    } => commands::install::exec(no_use, version),
     _ => unreachable!(),
   };
 
