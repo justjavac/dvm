@@ -95,10 +95,7 @@ fn completions_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
 fn install_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
   let no_use = matches.is_present("no-use");
   let version = matches.value_of("version").map(|s| s.to_string());
-  flags.subcommand = DvmSubcommand::Install {
-    no_use,
-    version,
-  };
+  flags.subcommand = DvmSubcommand::Install { no_use, version };
 }
 
 fn completions_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -149,8 +146,7 @@ mod tests {
 
   #[test]
   fn upgrade() {
-    let r =
-      flags_from_vec_safe(svec!["deno", "install", "--no-use"]);
+    let r = flags_from_vec_safe(svec!["deno", "install", "--no-use"]);
     let flags = r.unwrap();
     assert_eq!(
       flags,
