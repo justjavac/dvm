@@ -17,10 +17,9 @@ pub fn main() {
   let flags = flags::flags_from_vec(args);
 
   let result = match flags.subcommand {
-    DvmSubcommand::Install {
-      no_use,
-      version,
-    } => commands::install::exec(no_use, version),
+    DvmSubcommand::Install { no_use, version } => {
+      commands::install::exec(no_use, version)
+    }
     _ => unreachable!(),
   };
 
