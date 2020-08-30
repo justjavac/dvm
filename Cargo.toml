@@ -1,6 +1,6 @@
 [package]
 name = "dvm"
-version = "0.0.3"
+version = "0.0.4"
 license = "MIT"
 authors = ["迷渡 <justjavac@gmail.com>"]
 edition = "2018"
