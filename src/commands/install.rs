@@ -15,7 +15,7 @@ use std::process::{Command, Stdio};
 use std::string::String;
 
 use crate::utils::get_dvm_root;
-use crate::version::get_local_versions;
+// use crate::version::get_local_versions;
 
 // TODO(ry) Auto detect target triples for the uploaded files.
 #[cfg(windows)]
