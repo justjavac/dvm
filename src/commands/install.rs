@@ -1,21 +1,21 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020 the Dvm authors. All rights reserved. MIT license.
-
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 use semver_parser::version::{parse as semver_parse, Version};
-use tempfile::TempDir;
 use url::Url;
 use which::which;
 
-use std::env;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::string::String;
+
+use crate::utils::get_dvm_root;
+use crate::version::get_local_versions;
 
 // TODO(ry) Auto detect target triples for the uploaded files.
 #[cfg(windows)]
@@ -25,25 +25,19 @@ const ARCHIVE_NAME: &str = "deno-x86_64-apple-darwin.zip";
 #[cfg(target_os = "linux")]
 const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
-pub fn upgrade_command(
-  dry_run: bool,
-  force: bool,
+pub fn exec(
+  no_use: bool,
   version: Option<String>,
 ) -> Result<()> {
   let client_builder = Client::builder();
   let client = client_builder.build()?;
 
-  let current_version = semver_parse(crate::version::DENO).unwrap();
+  println!("{:?}", get_local_versions());
 
   let install_version = match version {
     Some(passed_version) => match semver_parse(&passed_version) {
       Ok(ver) => {
-        if !force && current_version == ver {
-          println!("Version {} is already installed", &ver);
-          return Ok(());
-        } else {
-          ver
-        }
+        ver
       }
       Err(_) => {
         eprintln!("Invalid semver passed");
@@ -51,17 +45,7 @@ pub fn upgrade_command(
       }
     },
     None => {
-      let latest_version = get_latest_version(&client)?;
-
-      if !force && current_version >= latest_version {
-        println!(
-          "Local deno version {} is the most recent release",
-          &crate::version::DENO
-        );
-        return Ok(());
-      } else {
-        latest_version
-      }
+      get_latest_version(&client)?
     }
   };
 
@@ -76,7 +60,7 @@ pub fn upgrade_command(
   fs::set_permissions(&new_exe_path, permissions)?;
   check_exe(&new_exe_path, &install_version)?;
 
-  if !dry_run {
+  if !no_use {
     replace_exe(&new_exe_path, &old_exe_path)?;
   }
 
@@ -237,22 +221,6 @@ fn check_exe(exe_path: &Path, expected_version: &Version) -> Result<()> {
   assert!(output.status.success());
   assert_eq!(stdout.trim(), format!("deno {}", expected_version));
   Ok(())
-}
-
-fn get_dvm_root() -> Result<PathBuf> {
-  // Note: on Windows, the $HOME environment variable may be set by users or by
-  // third party software, but it is non-standard and should not be relied upon.
-  let home_env_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-  let mut home_path = match env::var_os(home_env_var).map(PathBuf::from) {
-    Some(home_path) => home_path,
-    None => {
-      // Use temp dir
-      TempDir::new()?.into_path()
-    }
-  };
-
-  home_path.push(".dvm");
-  Ok(home_path)
 }
 
 #[test]
