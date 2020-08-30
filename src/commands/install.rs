@@ -29,7 +29,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   let client_builder = Client::builder();
   let client = client_builder.build()?;
 
-  println!("{:?}", get_local_versions());
+  // println!("{:?}", get_local_versions());
 
   let install_version = match version {
     Some(passed_version) => match semver_parse(&passed_version) {
