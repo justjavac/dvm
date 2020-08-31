@@ -129,7 +129,7 @@ jobs:
           git remote set-url origin https://justjavac:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git fetch
           git checkout -- .
-          git checkout latest
+          git checkout release
           cp target/release/dvm-* .
           git commit -am "auto release ${{ github.head_ref }}"
           git push
