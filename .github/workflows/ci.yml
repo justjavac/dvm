@@ -128,11 +128,11 @@ jobs:
           git config --local user.name "迷渡"
           git remote set-url origin https://justjavac:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git fetch
+          git checkout -- .
           git checkout latest
           cp -rf target/release/dvm-* .
           git commit -am "auto release"
           git push
-          git checkout -- .
           git checkout ${{ github.ref }}
 
       - name: Publish
