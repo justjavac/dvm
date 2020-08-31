@@ -130,7 +130,7 @@ jobs:
           git fetch
           git checkout -- .
           git checkout latest
-          cp -rf target/release/dvm-* .
+          cp target/release/dvm-* .
           git commit -am "auto release"
           git push
           git checkout ${{ github.ref }}
