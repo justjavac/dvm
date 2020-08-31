@@ -144,7 +144,7 @@ checksum = "134951f4028bdadb9b84baf4232681efbf277da25144b9b0ad65df75946c422b"
 
 [[package]]
 name = "dvm"
-version = "1.0.0"
+version = "1.1.2"
 dependencies = [
  "anyhow",
  "clap",
