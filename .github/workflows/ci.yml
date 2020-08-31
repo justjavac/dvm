@@ -119,6 +119,19 @@ jobs:
             target/release/dvm-x86_64-apple-darwin.zip
           draft: true
 
+      - name: Push release branch
+        if: |
+          startsWith(github.repository, 'justjavac') &&
+          startsWith(github.ref, 'refs/tags/')
+        run: |
+          git config --local user.email "justjavac@gmail.com"
+          git config --local user.name "迷渡"
+          git remote set-url origin https://justjavac:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git checkout release
+          cp -rf target/release/dvm-x86_64-* .
+          git commit -am "auto release"
+          git push
+
       - name: Publish
         if: |
           startsWith(matrix.os, 'ubuntu') &&
