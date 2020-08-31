@@ -24,20 +24,7 @@ else
 	esac
 fi
 
-if [ $# -eq 0 ]; then
-	dvm_asset_path=$(
-		curl -sSf https://github.com/justjavac/dvm/releases |
-			grep -o "/justjavac/dvm/releases/download/.*/dvm-${target}\\.zip" |
-			head -n 1
-	)
-	if [ ! "$dvm_asset_path" ]; then
-		echo "Error: Unable to find latest dvm release on GitHub." 1>&2
-		exit 1
-	fi
-	dvm_uri="https://github.com${dvm_asset_path}"
-else
-	dvm_uri="https://github.com/justjavac/dvm/releases/download/${1}/dvm-${target}.zip"
-fi
+dvm_uri="https://cdn.jsdelivr.net/gh/justjavac/dvm@latest/dvm-${target}.zip"
 
 deno_install="${DENO_INSTALL:-$HOME/.deno}"
 dvm_dir="${DVM_DIR:-$HOME/.dvm}"
@@ -48,11 +35,11 @@ if [ ! -d "$dvm_bin_dir" ]; then
 	mkdir -p "$dvm_bin_dir"
 fi
 
-# curl --fail --location --progress-bar --output "$exe.zip" "$dvm_uri"
-# cd "$dvm_bin_dir"
-# unzip -o "$exe.zip"
-# chmod +x "$exe"
-# rm "$exe.zip"
+curl --fail --location --progress-bar --output "$exe.zip" "$dvm_uri"
+cd "$dvm_bin_dir"
+unzip -o "$exe.zip"
+chmod +x "$exe"
+rm "$exe.zip"
 
 case $SHELL in
 /bin/zsh) shell_profile=".zshrc" ;;

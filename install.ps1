@@ -4,13 +4,6 @@
 
 $ErrorActionPreference = 'Stop'
 
-if ($v) {
-  $Version = "v${v}"
-}
-if ($args.Length -eq 1) {
-  $Version = $args.Get(0)
-}
-
 $DenoInstall = $env:DENO_INSTALL
 $DenoBinDir = if ($DenoInstall) {
   "$DvmDir\bin"
@@ -32,29 +25,7 @@ $Target = 'x86_64-pc-windows-msvc'
 # GitHub requires TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$DvmUri = if (!$Version) {
-  $Response = Invoke-WebRequest 'https://github.com/justjavac/dvm/releases' -UseBasicParsing
-  if ($PSVersionTable.PSEdition -eq 'Core') {
-    $Response.Links |
-      Where-Object { $_.href -like "/justjavac/dvm/releases/download/*/dvm-${Target}.zip" } |
-      ForEach-Object { 'https://github.com' + $_.href } |
-      Select-Object -First 1
-  } else {
-    $HTMLFile = New-Object -Com HTMLFile
-    if ($HTMLFile.IHTMLDocument2_write) {
-      $HTMLFile.IHTMLDocument2_write($Response.Content)
-    } else {
-      $ResponseBytes = [Text.Encoding]::Unicode.GetBytes($Response.Content)
-      $HTMLFile.write($ResponseBytes)
-    }
-    $HTMLFile.getElementsByTagName('a') |
-      Where-Object { $_.href -like "about:/justjavac/dvm/releases/download/*/dvm-${Target}.zip" } |
-      ForEach-Object { $_.href -replace 'about:', 'https://github.com' } |
-      Select-Object -First 1
-  }
-} else {
-  "https://github.com/justjavac/dvm/releases/download/${Version}/dvm-${Target}.zip"
-}
+$DvmUri = "https://cdn.jsdelivr.net/gh/justjavac/dvm@latest/dvm-${Target}.zip"
 
 if (!(Test-Path $BinDir)) {
   New-Item $BinDir -ItemType Directory | Out-Null
