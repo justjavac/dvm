@@ -132,6 +132,7 @@ jobs:
           cp -rf target/release/dvm-* .
           git commit -am "auto release"
           git push
+          git checkout -- .
           git checkout ${{ github.ref }}
 
       - name: Publish
