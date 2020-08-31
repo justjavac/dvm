@@ -131,9 +131,9 @@ jobs:
           git checkout -- .
           git checkout latest
           cp target/release/dvm-* .
-          git commit -am "auto release"
+          git commit -am "auto release ${{ github.head_ref }}"
           git push
-          git checkout ${{ github.ref }}
+          git checkout ${{ github.head_ref }}
 
       - name: Publish
         if: |
