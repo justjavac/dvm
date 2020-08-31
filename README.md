@@ -40,9 +40,9 @@ SUBCOMMANDS:
     use            Use a given version
 
 Example:
-  dmv install 1.3.2     Install v1.3.2 release
-  dmv install           Install the latest available version
-  dmv use 1.0.0         Use v1.0.0 release
+  dvm install 1.3.2     Install v1.3.2 release
+  dvm install           Install the latest available version
+  dvm use 1.0.0         Use v1.0.0 release
 ```
 
 ### Verify installation

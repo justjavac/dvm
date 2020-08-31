@@ -37,9 +37,9 @@ static DVM_HELP: &str =
   "Deno Version Manager - Easy way to manage multiple active deno versions.";
 
 static DVM_EXAMPLE: &str = "Example:
-  dmv install 1.3.2     Install v1.3.2 release
-  dmv install           Install the latest available version
-  dmv use 1.0.0         Use v1.0.0 release";
+  dvm install 1.3.2     Install v1.3.2 release
+  dvm install           Install the latest available version
+  dvm use 1.0.0         Use v1.0.0 release";
 
 /// Main entry point for parsing deno's command line flags.
 /// Exits the process on error.
