@@ -1,7 +1,2 @@
-*.log
-npm-debug.log*
-node_modules
-.idea
-.cache
-.vscode
-coverage
+/target
+/.cargo_home

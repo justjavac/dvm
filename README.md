@@ -1,49 +1,48 @@
-Deno Version Manager
-=====
+# Deno Version Manager
 
-[![npm package](https://nodei.co/npm/dvm.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/dvm/)
+Easy way to manage multiple active deno versions.
 
-[![Build Status](https://travis-ci.com/justjavac/dvm.svg?branch=master)](https://travis-ci.com/justjavac/dvm)
-[![NPM version](https://img.shields.io/npm/v/dvm.svg)](https://www.npmjs.com/package/dvm)
-[![NPM Downloads](https://img.shields.io/npm/dm/dvm.svg?style=flat)](https://npmcharts.com/compare/dvm?minimal=true)
-[![Install Size](https://packagephobia.now.sh/badge?p=dvm)](https://packagephobia.now.sh/result?p=dvm)
+## Installation
 
-Switch between different versions of [Deno](https://github.com/denoland/deno).
+You can install it using the installers below, or download a release binary from the [releases page](https://github.com/justjavac/dvm/releases).
 
-### TODO
-
-- [ ] `dvm ls-remote`
-- [x] `dvm install x.x.x -r denocn`
-
-Installation
-------------
-
-Currently you can use npm to install dvm:
+**With Shell:**
 
 ```sh
-npm install -g dvm
+curl -fsSL https://deno.land/x/dvm/install.sh | sh
 ```
 
-Usage
------
+**With PowerShell:**
+
+```powershell
+iwr https://deno.land/x/dvm/install.ps1 -useb | iex
+```
+
+## Usage
 
 ```
 ➜  ~  dvm --help
+Deno Version Manager - Easy way to manage multiple active deno versions.
 
-Usage: dvm [options] [command]
+USAGE:
+    dvm [SUBCOMMAND]
 
-Options:
+OPTIONS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
 
-  -v, --version      output the version number
-  -d, --debug        Print verbose infos for debug
-  -h, --help         output usage information
+SUBCOMMANDS:
+    completions    Generate shell completions
+    help           Prints this message or the help of the given subcommand(s)
+    info           Show dvm info
+    install        Install deno executable to given version [aliases: i]
+    list           List installed versions, matching a given <version> if provided [aliases: ls]
+    use            Use a given version
 
-Commands:
-
-  arch               Show if deno is running in 32 or 64 bit mode
-  list               List all installed versions
-  install <version>  Install deno <version>
-  use [version]      Switch to use the specified version
+Example:
+  dmv install 1.3.2     Install v1.3.2 release
+  dmv install           Install the latest available version
+  dmv use 1.0.0         Use v1.0.0 release
 ```
 
 ### Verify installation
@@ -66,27 +65,6 @@ and all installed versions of deno will put into `~/.dvm`.
 Creating /Users/justjavac/.dvm
 ```
 
-Note For Windows Users
-----------------------
-
-You may have to run `dvm` in a shell (cmd, PowerShell, Git Bash, etc) with
-elevated (Administrative) privileges to get it to run.
-
-```
-➜  ~  dvm use 0.1.2
-You may have to run dvm in a shell (cmd, PowerShell, Git Bash, etc) with elevated (Administrative) privileges to get it to run.
-```
-
-Known deno download registry Mirrors
----------------------
-
-*TODO*
-
-For your convenience, when you use `dvm install` to install a specific version of deno, you can pick a registry. Currently we provide these registries built in:
-
-* [deno](https://github.com/denoland/deno): `dvm install 0.1.2 -r deno`
-* [denocn](https://deno.js.cn): `dvm install 0.1.2 -r denocn`
-
 ## Example
 
 ### Listing versions
@@ -105,20 +83,33 @@ The version with a asterisk(`*`) means that this version is the version currentl
 ### Switching version
 
 ```
-➜  ~  dvm use 0.1.2
-now use 0.1.2
-➜  ~  dvm use 0.0.2
-deno v0.0.2 is not installed. Use `dvm install 0.0.2` to install it first.
+➜  ~  dvm use 1.1.0
+now use deno 1.1.0
+➜  ~  dvm use 1.2.0
+deno v1.2.0 is not installed. Use `dvm install 1.2.0` to install it first.
+```
+## Compatibility
+
+- The Shell installer can be used on Windows with [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about), [MSYS](https://www.msys2.org) or equivalent set of tools.
+
+## Known Issues
+
+### unzip is required
+
+The program [`unzip`](https://linux.die.net/man/1/unzip) is a requirement for the Shell installer.
+
+```sh
+$ curl -fsSL https://deno.land/x/dvm/install.sh | sh
+Error: unzip is required to install dvm (see: https://github.com/justjavac/dvm#unzip-is-required).
 ```
 
-## Authors
+**When does this issue occur?**
 
-- [justjavac](http://github.com/justjavac)
+During the `install.sh` process, `unzip` is used to extract the zip archive.
 
-## Contributors
+**How can this issue be fixed?**
 
-- [justjavac](http://github.com/justjavac)
-- [jysperm](http://github.com/jysperm)
+You can install unzip via `brew install unzip` on MacOS or `apt-get install unzip -y` on Linux.
 
 ## License
 
