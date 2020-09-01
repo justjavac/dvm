@@ -60,14 +60,17 @@ pub fn use_this_bin_path(exe_path: &PathBuf, version: &Version) -> Result<()> {
         None => {
           println!("DENO_INSTALL is not defined, use $HOME/.deno/bin");
           let home_env_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-          let home_path = env::var_os(home_env_var).map(PathBuf::from).unwrap();
-          let deno_bin_path = home_path.join("bin");
-          fs::create_dir_all(&deno_bin_path).unwrap();
-          deno_bin_path
+          env::var_os(home_env_var).map(PathBuf::from).unwrap()
         }
       };
+
+      let deno_bin_path = deno_install.join("bin");
+      if !deno_bin_path.exists() {
+        fs::create_dir_all(&deno_bin_path).unwrap();
+      }
+      
       let exe_ext = if cfg!(windows) { "exe" } else { "" };
-      deno_install.join("deno").with_extension(exe_ext)
+      deno_bin_path.join("deno").with_extension(exe_ext)
     }
   };
 
