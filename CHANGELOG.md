@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.9 - [2020-00-01]
+
+- Fix dir not exists #25
+
 ## 1.0.0 - [2020-08-31]
 
 - rewrite use rust
