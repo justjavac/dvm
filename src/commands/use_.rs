@@ -68,7 +68,7 @@ pub fn use_this_bin_path(exe_path: &PathBuf, version: &Version) -> Result<()> {
       if !deno_bin_path.exists() {
         fs::create_dir_all(&deno_bin_path).unwrap();
       }
-      
+
       let exe_ext = if cfg!(windows) { "exe" } else { "" };
       deno_bin_path.join("deno").with_extension(exe_ext)
     }
