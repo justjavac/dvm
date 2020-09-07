@@ -112,7 +112,7 @@ fn download_package(
 
 fn compose_url_to_exec(version: &Version) -> Result<Url> {
   let s = format!(
-    "https://github.com/denoland/deno/releases/download/v{}/{}",
+    "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/{}/{}",
     version, ARCHIVE_NAME
   );
   Ok(Url::parse(&s)?)
