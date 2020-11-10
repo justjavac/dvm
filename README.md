@@ -50,7 +50,7 @@ Example:
 To verify that dvm has been installed, do:
 
 ```bash
-dvm -v
+dvm -V
 ```
 
 which should output dvm's version if the installation was successful.
