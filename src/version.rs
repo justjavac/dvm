@@ -2,6 +2,7 @@
 use std::fs;
 use std::process::{Command, Stdio};
 use std::string::String;
+use semver_parser::version::{parse as semver_parse};
 
 use crate::utils::get_dvm_root;
 
@@ -32,7 +33,10 @@ pub fn get_local_versions() -> Vec<String> {
       if let Ok(entry) = entry {
         if let Ok(file_type) = entry.file_type() {
           if file_type.is_dir() {
-            v.push(entry.file_name().into_string().unwrap());
+            let file_name = entry.file_name().into_string().unwrap();
+            if let Ok(_) = semver_parse(&file_name) {
+              v.push(file_name);
+            }
           }
         }
       }
