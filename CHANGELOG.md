@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - [2021-01-03]
+
+- feat: Support changing dvm root by DVM_DIR env #35
+- fix: Filter non-SemVer versions in the list showed by `dvm ls` #36
+- fix actions environment variable #37
+
 ## 1.1.10 - [2020-09-07]
 
 - use jsdelivr (#28)
