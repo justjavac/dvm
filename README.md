@@ -113,4 +113,4 @@ You can install unzip via `brew install unzip` on MacOS or `apt-get install unzi
 
 ## License
 
-Deno Version Manager(dvm) is released under the GPL License. See the bundled [LICENSE](./LICENSE) file for details.
+Deno Version Manager(dvm) is released under the MIT License. See the bundled [LICENSE](./LICENSE) file for details.
