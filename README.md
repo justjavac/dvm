@@ -1,4 +1,5 @@
 # Deno Version Manager
+English|[简体中文](./README_zh-cn)
 
 Easy way to manage multiple active deno versions.
 
@@ -109,7 +110,7 @@ During the `install.sh` process, `unzip` is used to extract the zip archive.
 
 **How can this issue be fixed?**
 
-You can install unzip via `brew install unzip` on MacOS or `apt-get install unzip -y` on Linux.
+You can install unzip via `brew install unzip` on MacOS or `apt-get install unzip -y` on Linux(Ubuntu,Debian,Deepin).
 
 ## License
 
