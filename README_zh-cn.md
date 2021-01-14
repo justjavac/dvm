@@ -1,5 +1,5 @@
 # Deno版本管理工具
-[English](./README.md)|简体中文
+[English](https://github.com/qiuquanwu/dvm/)|简体中文
 
 简单管理多个活动deno版本的方式。
 

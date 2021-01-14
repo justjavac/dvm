@@ -1,5 +1,5 @@
 # Deno Version Manager
-English|[简体中文](./README_zh-cn)
+English|[简体中文](./README_zh-cn.md)
 
 Easy way to manage multiple active deno versions.
 
