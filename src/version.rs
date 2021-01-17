@@ -1,11 +1,10 @@
 // Copyright 2020 justjavac. All rights reserved. MIT license.
-use semver_parser::version::parse as semver_parse;
+// use semver_parser::version::parse as semver_parse;
 use std::fs;
 use std::process::{Command, Stdio};
 use std::string::String;
-use semver_parser::version::{parse as semver_parse};
 
-use crate::utils::get_dvm_root;
+use crate::utils::{get_dvm_root, is_semver};
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
 
@@ -35,7 +34,7 @@ pub fn get_local_versions() -> Vec<String> {
         if let Ok(file_type) = entry.file_type() {
           if file_type.is_dir() {
             let file_name = entry.file_name().into_string().unwrap();
-            if let Ok(_) = semver_parse(&file_name) {
+            if is_semver(&file_name) {
               v.push(file_name);
             }
           }

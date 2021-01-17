@@ -1,5 +1,5 @@
 // Copyright 2020 justjavac. All rights reserved. MIT license.
-use semver_parser::version::Version;
+use semver_parser::version::{parse as semver_parse, Version};
 use tempfile::TempDir;
 
 use std::env;
@@ -31,4 +31,8 @@ pub fn get_exe_path(version: &Version) -> PathBuf {
   fs::create_dir_all(&dvm_dir).unwrap();
   let exe_ext = if cfg!(windows) { "exe" } else { "" };
   dvm_dir.join("deno").with_extension(exe_ext)
+}
+
+pub fn is_semver(file_name: &str) -> bool {
+  semver_parse(file_name).is_ok()
 }
