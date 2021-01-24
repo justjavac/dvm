@@ -1,5 +1,4 @@
 // Copyright 2020 justjavac. All rights reserved. MIT license.
-// use semver_parser::version::parse as semver_parse;
 use std::fs;
 use std::process::{Command, Stdio};
 use std::string::String;
