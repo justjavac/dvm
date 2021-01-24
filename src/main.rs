@@ -25,6 +25,7 @@ pub fn main() {
     }
     DvmSubcommand::List {} => commands::list::exec(),
     DvmSubcommand::Use { version } => commands::use_::exec(version),
+    DvmSubcommand::Uninstall { version } => commands::uninstall::exec(version),
     _ => unreachable!(),
   };
 

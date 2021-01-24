@@ -3,7 +3,6 @@ use semver_parser::version::{parse as semver_parse, Version};
 use tempfile::TempDir;
 
 use std::env;
-use std::fs;
 use std::path::PathBuf;
 
 pub fn get_dvm_root() -> PathBuf {
