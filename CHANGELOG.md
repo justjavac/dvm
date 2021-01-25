@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0 - [20201-01-25]
+
+- Feature: Add `dvm uninstall x.x.x`, alias `dvm rm x.x.x` #40
+
 ## 1.2.0 - [2021-01-03]
 
 - feat: Support changing dvm root by DVM_DIR env #35
