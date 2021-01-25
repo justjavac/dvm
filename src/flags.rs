@@ -17,6 +17,9 @@ pub enum DvmSubcommand {
   Use {
     version: Option<String>,
   },
+  Uninstall {
+    version: Option<String>,
+  },
 }
 
 impl Default for DvmSubcommand {
@@ -67,6 +70,8 @@ pub fn flags_from_vec_safe(args: Vec<String>) -> clap::Result<Flags> {
     list_parse(&mut flags, m);
   } else if let Some(m) = matches.subcommand_matches("use") {
     use_parse(&mut flags, m);
+  } else if let Some(m) = matches.subcommand_matches("uninstall") {
+    uninstall_parse(&mut flags, m);
   } else {
     info_parse(&mut flags, &matches);
   }
@@ -89,6 +94,7 @@ fn clap_root<'a, 'b>() -> App<'a, 'b> {
     .subcommand(install_subcommand())
     .subcommand(list_subcommand())
     .subcommand(use_subcommand())
+    .subcommand(uninstall_subcommand())
     .long_about(DVM_HELP)
     .after_help(DVM_EXAMPLE)
 }
@@ -125,6 +131,11 @@ fn install_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
 fn use_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
   let version = matches.value_of("version").map(|s| s.to_string());
   flags.subcommand = DvmSubcommand::Use { version };
+}
+
+fn uninstall_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
+  let version = matches.value_of("version").map(|s| s.to_string());
+  flags.subcommand = DvmSubcommand::Uninstall { version };
 }
 
 fn completions_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -189,6 +200,18 @@ fn use_subcommand<'a, 'b>() -> App<'a, 'b> {
     )
 }
 
+fn uninstall_subcommand<'a, 'b>() -> App<'a, 'b> {
+  SubCommand::with_name("uninstall")
+    .visible_alias("rm")
+    .about("Uninstall a given version")
+    .long_about("Uninstall a given version.")
+    .arg(
+      Arg::with_name("version")
+        .help("The version to uninstall")
+        .takes_value(true),
+    )
+}
+
 #[cfg(test)]
 /// Creates vector of strings, Vec<String>
 macro_rules! svec {
@@ -200,7 +223,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn instrall() {
+  fn install() {
     let r = flags_from_vec_safe(svec!["deno", "install", "--no-use"]);
     let flags = r.unwrap();
     assert_eq!(
