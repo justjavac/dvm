@@ -1,5 +1,5 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
-// Copyright 2020 justjavac. All rights reserved. MIT license.
+// Copyright 2020-2021 justjavac. All rights reserved. MIT license.
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::blocking::Client;

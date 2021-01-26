@@ -1,4 +1,3 @@
-// Copyright 2020 justjavac. All rights reserved. MIT license.
 use std::fs;
 use std::process::{Command, Stdio};
 use std::string::String;

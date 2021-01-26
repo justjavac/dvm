@@ -1,4 +1,3 @@
-// Copyright 2020 justjavac. All rights reserved. MIT license.
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
 use which::which;

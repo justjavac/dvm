@@ -1,4 +1,3 @@
-// Copyright 2020 justjavac. All rights reserved. MIT license.
 extern crate clap;
 extern crate regex;
 extern crate reqwest;

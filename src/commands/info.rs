@@ -1,4 +1,3 @@
-// Copyright 2020 justjavac. All rights reserved. MIT license.
 use anyhow::Result;
 use std::string::String;
 
