@@ -111,10 +111,15 @@ fn download_package(
 }
 
 fn compose_url_to_exec(version: &Version) -> Result<Url> {
-  let s = format!(
-    "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/{}/{}",
-    version, ARCHIVE_NAME
-  );
+  let s = if version.major >= 1 && version.minor >= 7 {
+    format!("https://dl.deno.land/release/v{}/{}", version, ARCHIVE_NAME)
+  } else {
+    format!(
+      "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/{}/{}",
+      version, ARCHIVE_NAME
+    )
+  };
+
   Ok(Url::parse(&s)?)
 }
 
@@ -190,7 +195,7 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
 }
 
 #[test]
-fn test_compose_url_to_exec() {
+fn test_compose_url_to_exec_lte_1_7() {
   let v = semver_parse("0.0.1").unwrap();
   let url = compose_url_to_exec(&v).unwrap();
   #[cfg(windows)]
@@ -202,4 +207,25 @@ fn test_compose_url_to_exec() {
   );
   #[cfg(target_os = "linux")]
   assert_eq!(url.as_str(), "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/0.0.1/deno-x86_64-unknown-linux-gnu.zip");
+}
+
+#[test]
+fn test_compose_url_to_exec() {
+  let v = semver_parse("1.7.0").unwrap();
+  let url = compose_url_to_exec(&v).unwrap();
+  #[cfg(windows)]
+  assert_eq!(
+    url.as_str(),
+    "https://dl.deno.land/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip"
+  );
+  #[cfg(target_os = "macos")]
+  assert_eq!(
+    url.as_str(),
+    "https://dl.deno.land/release/v1.7.0/deno-x86_64-apple-darwin.zip"
+  );
+  #[cfg(target_os = "linux")]
+  assert_eq!(
+    url.as_str(),
+    "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
+  );
 }
