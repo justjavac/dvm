@@ -1,19 +1,20 @@
-# Deno版本管理工具
-[English](https://github.com/qiuquanwu/dvm/)|简体中文
+# Deno 版本管理工具
 
-简单管理多个活动deno版本的方式。
+[English](https://github.com/qiuquanwu/dvm/) | 简体中文
+
+简单管理多个活动 deno 版本的方式。
 
 ## 安装
 
 您可以使用下面的安装程序安装它，或者从[发布页](https://github.com/justjavac/dvm/releases)面下载源文件.
 
-**Shell安装:**
+**Shell 安装:**
 
 ```sh
 curl -fsSL https://deno.land/x/dvm/install.sh | sh
 ```
 
-**PowerShell安装:**
+**PowerShell 安装:**
 
 ```powershell
 iwr https://deno.land/x/dvm/install.ps1 -useb | iex
@@ -38,6 +39,7 @@ SUBCOMMANDS:
     info           Show dvm info
     install        Install deno executable to given version [aliases: i]
     list           List installed versions, matching a given <version> if provided [aliases: ls]
+    uninstall      Uninstall a given version [aliases: rm]
     use            Use a given version
 
 Example:
@@ -90,12 +92,13 @@ deno v1.2.0 is not installed. Use `dvm install 1.2.0` to install it first.
 ```
 ## 兼容性
 
-- Shell安装程序可以在带有[Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about), [MSYS](https://www.msys2.org)或等效工具集的Windows上使用。
+- Shell 安装程序可以在带有 [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about), [MSYS](https://www.msys2.org) 或等效工具集的 Windows 上使用。
+
 ## 常见问题
 
 ### unzip is required
 
-此项目需要依赖 [`unzip`](https://linux.die.net/man/1/unzip) 进行Shell 安装.
+此项目需要依赖 [`unzip`](https://linux.die.net/man/1/unzip) 进行 Shell 安装.
 
 ```sh
 $ curl -fsSL https://deno.land/x/dvm/install.sh | sh
@@ -104,14 +107,13 @@ Error: unzip is required to install dvm (see: https://github.com/justjavac/dvm#u
 
 **此问题何时出现？**
 
-在运行 `install.sh` 过程中, 会使用`unzip`提取zip文件。
+在运行 `install.sh` 过程中, 会使用 `unzip` 提取 zip 文件。
 
 **如何解决？**
 
-- MacOs使用 `brew install unzip`安装unzip。
-- Ubuntu，Debian使用`apt-get install unzip -y`安装unzip。
-- CentOS 使用`yum install -y unzip zip`安装unzip。
-
+- MacOs 使用 `brew install unzip` 安装 unzip。
+- Ubuntu，Debian 使用`apt-get install unzip -y` 安装 unzip。
+- CentOS 使用 `yum install -y unzip zip` 安装 unzip。
 
 ## 开源协议
 
