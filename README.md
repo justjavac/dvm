@@ -1,5 +1,6 @@
 # Deno Version Manager
-English|[简体中文](./README_zh-cn.md)
+
+English | [简体中文](./README_zh-cn.md)
 
 Easy way to manage multiple active deno versions.
 
@@ -38,6 +39,7 @@ SUBCOMMANDS:
     info           Show dvm info
     install        Install deno executable to given version [aliases: i]
     list           List installed versions, matching a given <version> if provided [aliases: ls]
+    uninstall      Uninstall a given version [aliases: rm]
     use            Use a given version
 
 Example:
