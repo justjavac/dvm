@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0 - [20201-01-26]
+
+- feat: use `dl.deno.land` #43
+
 ## 1.3.0 - [20201-01-25]
 
 - Feature: Add `dvm uninstall x.x.x`, alias `dvm rm x.x.x` #40
