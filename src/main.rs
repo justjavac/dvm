@@ -1,5 +1,4 @@
 extern crate clap;
-extern crate regex;
 extern crate reqwest;
 extern crate url;
 

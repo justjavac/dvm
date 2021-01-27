@@ -1,7 +1,6 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
-use anyhow::{anyhow, Result};
-use regex::Regex;
+use anyhow::Result;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 use semver_parser::version::{parse as semver_parse, Version};
@@ -62,13 +61,11 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
 fn get_latest_version(client: &Client) -> Result<Version> {
   println!("Checking for latest version");
   let body = client
-    .get(Url::parse(
-      "https://github.com/denoland/deno/releases/latest",
-    )?)
+    .get(Url::parse("https://dl.deno.land/release-latest.txt")?)
     .send()?
     .text()?;
-  let v = find_version(&body)?;
-  println!("The latest version is {}", &v);
+  let v = body.trim().replace("v", "");
+  println!("The latest version is v{}", &v);
   Ok(semver_parse(&v).unwrap())
 }
 
@@ -121,15 +118,6 @@ fn compose_url_to_exec(version: &Version) -> Result<Url> {
   };
 
   Ok(Url::parse(&s)?)
-}
-
-fn find_version(text: &str) -> Result<String> {
-  let re = Regex::new(r#"v(\d+\.\d+\.\d+) "#)?;
-  if let Some(_mat) = re.find(text) {
-    let mat = _mat.as_str();
-    return Ok(mat[1..mat.len() - 1].to_string());
-  }
-  Err(anyhow!("Cannot read latest tag version"))
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
