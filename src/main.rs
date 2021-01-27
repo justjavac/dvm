@@ -1,7 +1,3 @@
-extern crate clap;
-extern crate reqwest;
-extern crate url;
-
 mod commands;
 mod flags;
 mod utils;
