@@ -93,12 +93,14 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           cd target/release
+          strip dvm
           zip -r dvm-x86_64-unknown-linux-gnu.zip dvm
 
       - name: Pre-release (mac)
         if: startsWith(matrix.os, 'macOS')
         run: |
           cd target/release
+          strip dvm
           zip -r dvm-x86_64-apple-darwin.zip dvm
 
       - name: Pre-release (windows)
