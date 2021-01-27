@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "dvm"
-version = "1.4.0"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "clap",
