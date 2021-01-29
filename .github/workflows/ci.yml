@@ -122,6 +122,15 @@ jobs:
             target/release/dvm-x86_64-apple-darwin.zip
           draft: true
 
+      - name: Release DVM
+        uses: justjavac/action-dvm-release@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo '1.4.3' > latest.txt
+        with:
+          files: |
+            latest.txt
+
       - name: Publish
         if: |
           startsWith(matrix.os, 'ubuntu') &&
