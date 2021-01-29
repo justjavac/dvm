@@ -1,3 +1,11 @@
+extern crate anyhow;
+extern crate clap;
+// extern crate getopts;
+extern crate semver_parser;
+extern crate tempfile;
+extern crate tinyget;
+extern crate which;
+
 mod commands;
 mod flags;
 mod utils;
