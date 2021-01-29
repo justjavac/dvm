@@ -58,23 +58,14 @@ pub fn get_remote_versions() -> Result<Vec<String>> {
   let json = Json::parse(body.as_bytes()).unwrap();
   let mut result: Vec<String> = Vec::new();
 
-  match json {
-    Json::ARRAY(list) => {
-      for item in &list {
-        let obj = item.get("name").unwrap();
-
-        match obj {
-          Json::OBJECT { name: _, value } => match value.unbox() {
-            Json::STRING(val) => {
-              result.push(val.replace("v", "").to_string());
-            }
-            _ => (),
-          },
-          _ => (),
+  if let Json::ARRAY(list) = json {
+    for item in &list {
+      if let Json::OBJECT { name: _, value } = item.get("name").unwrap() {
+        if let Json::STRING(val) = value.unbox() {
+          result.push(val.replace("v", "").to_string());
         }
       }
     }
-    _ => (),
   }
 
   Ok(result)
