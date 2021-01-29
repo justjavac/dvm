@@ -18,6 +18,7 @@ pub fn main() {
       commands::install::exec(no_use, version)
     }
     DvmSubcommand::List {} => commands::list::exec(),
+    DvmSubcommand::ListRemote {} => commands::list::exec_remote(),
     DvmSubcommand::Use { version } => commands::use_::exec(version),
     DvmSubcommand::Uninstall { version } => commands::uninstall::exec(version),
     _ => unreachable!(),

@@ -1,4 +1,7 @@
 // Copyright 2020 justjavac. All rights reserved. MIT license.
+use json_minimal::Json;
+use ureq::{Agent, AgentBuilder, Error};
+
 use std::fs;
 use std::process::{Command, Stdio};
 use std::string::String;
@@ -43,4 +46,35 @@ pub fn get_local_versions() -> Vec<String> {
   }
 
   v
+}
+
+pub fn get_remote_versions() -> Result<Vec<String>, Error> {
+  let agent: Agent = AgentBuilder::new().build();
+  let body = agent
+    .get("https://api.github.com/repos/denoland/deno/tags")
+    .call()?
+    .into_string()?;
+  let json = Json::parse(body.as_bytes()).unwrap();
+  let mut result: Vec<String> = Vec::new();
+
+  match json {
+    Json::ARRAY(list) => {
+      for item in &list {
+        let obj = item.get("name").unwrap();
+
+        match obj {
+          Json::OBJECT { name: _, value } => match value.unbox() {
+            Json::STRING(val) => {
+              result.push(val.replace("v", "").to_string());
+            }
+            _ => (),
+          },
+          _ => (),
+        }
+      }
+    }
+    _ => (),
+  }
+
+  Ok(result)
 }

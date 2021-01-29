@@ -23,6 +23,7 @@ ureq = "2.0"
 semver-parser = "0.10.2"
 tempfile = "3"
 which = "4.0"
+json_minimal = "0.1"
 
 [package.metadata.winres]
 # This section defines the metadata that appears in the dvm.exe PE header.
