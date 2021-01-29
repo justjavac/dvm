@@ -1,9 +1,9 @@
 extern crate anyhow;
 extern crate clap;
 // extern crate getopts;
-extern crate tinyget;
 extern crate semver_parser;
 extern crate tempfile;
+extern crate tinyget;
 extern crate which;
 
 mod commands;

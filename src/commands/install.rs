@@ -53,7 +53,8 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
 
 fn get_latest_version() -> Result<Version> {
   println!("Checking for latest version");
-  let response = tinyget::get("https://dl.deno.land/release-latest.txt").send()?;
+  let response =
+    tinyget::get("https://dl.deno.land/release-latest.txt").send()?;
   let body = response.as_str()?;
   let v = body.trim().replace("v", "");
   println!("The latest version is v{}", &v);
