@@ -126,10 +126,9 @@ jobs:
         uses: justjavac/action-dvm-release@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo '1.4.3' > latest.txt
         with:
           files: |
-            latest.txt
+            LICENSE
 
       - name: Publish
         if: |
