@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.3 - [20201-01-27]
+
+- reduce size
+
 ## 1.4.0 - [20201-01-26]
 
 - feat: use `dl.deno.land` #43

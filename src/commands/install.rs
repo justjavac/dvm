@@ -1,11 +1,8 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
-use anyhow::{anyhow, Result};
-use regex::Regex;
-use reqwest::blocking::Client;
-use reqwest::StatusCode;
+use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
-use url::Url;
+use ureq::{Agent, AgentBuilder, Error};
 
 use std::fs;
 use std::io::prelude::*;
@@ -25,8 +22,7 @@ const ARCHIVE_NAME: &str = "deno-x86_64-apple-darwin.zip";
 const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
 pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
-  let client_builder = Client::builder();
-  let client = client_builder.build()?;
+  let agent: Agent = AgentBuilder::new().build();
 
   let install_version = match version {
     Some(passed_version) => match semver_parse(&passed_version) {
@@ -36,7 +32,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
         std::process::exit(1)
       }
     },
-    None => get_latest_version(&client)?,
+    None => get_latest_version(&agent)?,
   };
 
   let exe_path = get_exe_path(&install_version);
@@ -45,8 +41,8 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
     println!("version v{} is already installed", install_version);
   } else {
     let archive_data = download_package(
-      &compose_url_to_exec(&install_version)?,
-      client,
+      &compose_url_to_exec(&install_version),
+      agent,
       &install_version,
     )?;
     unpack(archive_data, &install_version)?;
@@ -59,77 +55,63 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   Ok(())
 }
 
-fn get_latest_version(client: &Client) -> Result<Version> {
+fn get_latest_version(agent: &Agent) -> Result<Version> {
   println!("Checking for latest version");
-  let body = client
-    .get(Url::parse(
-      "https://github.com/denoland/deno/releases/latest",
-    )?)
-    .send()?
-    .text()?;
-  let v = find_version(&body)?;
-  println!("The latest version is {}", &v);
+  let body = agent
+    .get("https://dl.deno.land/release-latest.txt")
+    .call()?
+    .into_string()?;
+  let v = body.trim().replace("v", "");
+  println!("The latest version is v{}", &v);
   Ok(semver_parse(&v).unwrap())
 }
 
 fn download_package(
-  url: &Url,
-  client: Client,
+  url: &str,
+  agent: Agent,
   version: &Version,
 ) -> Result<Vec<u8>> {
-  println!("downloading {}", url);
-  let url = url.clone();
-  let version = version.clone();
+  println!("downloading {}", &url);
 
-  let mut response = match client.get(url.clone()).send() {
+  let response = match agent.get(url).call() {
     Ok(response) => response,
+    Err(Error::Status(code, _response)) => {
+      println!("Request error with code: {}", code);
+      std::process::exit(1)
+    }
     Err(error) => {
       println!("Network error {}", &error);
       std::process::exit(1)
     }
   };
 
-  if response.status().is_success() {
-    println!("Version has been found");
-    println!("Deno v{} has been downloaded", &version);
-  }
-
-  if response.status() == StatusCode::NOT_FOUND {
+  if response.status() == 404 {
     println!("Version has not been found, aborting");
     std::process::exit(1)
   }
 
-  if response.status().is_client_error() || response.status().is_server_error()
-  {
+  if response.status() >= 400 && response.status() <= 599 {
     println!("Download '{}' failed: {}", &url, response.status());
     std::process::exit(1)
   }
 
+  println!("Version has been found");
+  println!("Deno v{} has been downloaded", &version);
+
   let mut buf: Vec<u8> = vec![];
-  response.copy_to(&mut buf)?;
+  response.into_reader().read_to_end(&mut buf)?;
   Ok(buf)
 }
 
-fn compose_url_to_exec(version: &Version) -> Result<Url> {
-  let s = if version.major >= 1 && version.minor >= 7 {
+fn compose_url_to_exec(version: &Version) -> String {
+  if version.major >= 1 && version.minor >= 7 {
     format!("https://dl.deno.land/release/v{}/{}", version, ARCHIVE_NAME)
   } else {
     format!(
       "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/{}/{}",
       version, ARCHIVE_NAME
     )
-  };
-
-  Ok(Url::parse(&s)?)
-}
-
-fn find_version(text: &str) -> Result<String> {
-  let re = Regex::new(r#"v(\d+\.\d+\.\d+) "#)?;
-  if let Some(_mat) = re.find(text) {
-    let mat = _mat.as_str();
-    return Ok(mat[1..mat.len() - 1].to_string());
   }
-  Err(anyhow!("Cannot read latest tag version"))
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
@@ -197,7 +179,7 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
 #[test]
 fn test_compose_url_to_exec_lte_1_7() {
   let v = semver_parse("0.0.1").unwrap();
-  let url = compose_url_to_exec(&v).unwrap();
+  let url = compose_url_to_exec(&v);
   #[cfg(windows)]
   assert_eq!(url.as_str(), "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/0.0.1/deno-x86_64-pc-windows-msvc.zip");
   #[cfg(target_os = "macos")]
@@ -212,7 +194,7 @@ fn test_compose_url_to_exec_lte_1_7() {
 #[test]
 fn test_compose_url_to_exec() {
   let v = semver_parse("1.7.0").unwrap();
-  let url = compose_url_to_exec(&v).unwrap();
+  let url = compose_url_to_exec(&v);
   #[cfg(windows)]
   assert_eq!(
     url.as_str(),
