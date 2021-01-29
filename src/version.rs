@@ -1,6 +1,6 @@
 // Copyright 2020 justjavac. All rights reserved. MIT license.
+use anyhow::Result;
 use json_minimal::Json;
-use ureq::{Agent, AgentBuilder, Error};
 
 use std::fs;
 use std::process::{Command, Stdio};
@@ -48,12 +48,13 @@ pub fn get_local_versions() -> Vec<String> {
   v
 }
 
-pub fn get_remote_versions() -> Result<Vec<String>, Error> {
-  let agent: Agent = AgentBuilder::new().build();
-  let body = agent
-    .get("https://api.github.com/repos/denoland/deno/tags")
-    .call()?
-    .into_string()?;
+pub fn get_remote_versions() -> Result<Vec<String>> {
+  let response =
+    tinyget::get("https://api.github.com/repos/denoland/deno/tags")
+      // http://developer.github.com/v3/#user-agent-required
+      .with_header("User-Agent", "tinyget")
+      .send()?;
+  let body = response.as_str()?;
   let json = Json::parse(body.as_bytes()).unwrap();
   let mut result: Vec<String> = Vec::new();
 
