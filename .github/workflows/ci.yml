@@ -123,6 +123,19 @@ jobs:
             target/release/dvm-x86_64-apple-darwin.zip
           draft: true
 
+      - name: Release DVM
+        uses: justjavac/action-dvm-release@v1
+        if: |
+          startsWith(github.repository, 'justjavac') &&
+          startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          files: |
+            target/release/dvm-x86_64-pc-windows-msvc.zip
+            target/release/dvm-x86_64-unknown-linux-gnu.zip
+            target/release/dvm-x86_64-apple-darwin.zip
+
       - name: Publish
         if: |
           startsWith(matrix.os, 'ubuntu') &&
