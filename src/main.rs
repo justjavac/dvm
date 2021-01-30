@@ -1,6 +1,10 @@
 extern crate anyhow;
 extern crate clap;
 // extern crate getopts;
+#[cfg(windows)]
+extern crate ctor;
+#[cfg(windows)]
+extern crate output_vt100;
 extern crate semver_parser;
 extern crate tempfile;
 extern crate tinyget;
@@ -10,10 +14,16 @@ mod commands;
 mod flags;
 mod utils;
 pub mod version;
-
+#[cfg(windows)]
+use ctor::*;
 use flags::DvmSubcommand;
-
 use std::env;
+
+#[cfg(windows)]
+#[ctor]
+fn init() {
+  output_vt100::init();
+}
 
 pub fn main() {
   let args: Vec<String> = env::args().collect();

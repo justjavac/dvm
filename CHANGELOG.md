@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.6 - [20201-01-31]
+
+- fix ANSI colors in Windows CMD and PowerShell
+
 ## 1.4.5 - [20201-01-29]
 
 - feat: Add `dvm list-remote` alias `dvm ls-remote` (#47)
