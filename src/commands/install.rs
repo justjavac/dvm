@@ -2,7 +2,6 @@
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
-use ureq::{Agent, AgentBuilder, Error};
 
 use std::fs;
 use std::io::prelude::*;
@@ -22,8 +21,6 @@ const ARCHIVE_NAME: &str = "deno-x86_64-apple-darwin.zip";
 const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
 pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
-  let agent: Agent = AgentBuilder::new().build();
-
   let install_version = match version {
     Some(passed_version) => match semver_parse(&passed_version) {
       Ok(ver) => ver,
@@ -32,7 +29,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
         std::process::exit(1)
       }
     },
-    None => get_latest_version(&agent)?,
+    None => get_latest_version()?,
   };
 
   let exe_path = get_exe_path(&install_version);
@@ -42,7 +39,6 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   } else {
     let archive_data = download_package(
       &compose_url_to_exec(&install_version),
-      agent,
       &install_version,
     )?;
     unpack(archive_data, &install_version)?;
@@ -55,52 +51,41 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   Ok(())
 }
 
-fn get_latest_version(agent: &Agent) -> Result<Version> {
+fn get_latest_version() -> Result<Version> {
   println!("Checking for latest version");
-  let body = agent
-    .get("https://dl.deno.land/release-latest.txt")
-    .call()?
-    .into_string()?;
+  let response =
+    tinyget::get("https://dl.deno.land/release-latest.txt").send()?;
+  let body = response.as_str()?;
   let v = body.trim().replace("v", "");
   println!("The latest version is v{}", &v);
   Ok(semver_parse(&v).unwrap())
 }
 
-fn download_package(
-  url: &str,
-  agent: Agent,
-  version: &Version,
-) -> Result<Vec<u8>> {
+fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
   println!("downloading {}", &url);
 
-  let response = match agent.get(url).call() {
+  let response = match tinyget::get(url).send() {
     Ok(response) => response,
-    Err(Error::Status(code, _response)) => {
-      println!("Request error with code: {}", code);
-      std::process::exit(1)
-    }
     Err(error) => {
       println!("Network error {}", &error);
       std::process::exit(1)
     }
   };
 
-  if response.status() == 404 {
+  if response.status_code == 404 {
     println!("Version has not been found, aborting");
     std::process::exit(1)
   }
 
-  if response.status() >= 400 && response.status() <= 599 {
-    println!("Download '{}' failed: {}", &url, response.status());
+  if response.status_code >= 400 && response.status_code <= 599 {
+    println!("Download '{}' failed: {}", &url, response.status_code);
     std::process::exit(1)
   }
 
   println!("Version has been found");
   println!("Deno v{} has been downloaded", &version);
 
-  let mut buf: Vec<u8> = vec![];
-  response.into_reader().read_to_end(&mut buf)?;
-  Ok(buf)
+  Ok(response.into_bytes())
 }
 
 fn compose_url_to_exec(version: &Version) -> String {

@@ -1,3 +1,11 @@
+extern crate anyhow;
+extern crate clap;
+// extern crate getopts;
+extern crate semver_parser;
+extern crate tempfile;
+extern crate tinyget;
+extern crate which;
+
 mod commands;
 mod flags;
 mod utils;
@@ -18,6 +26,7 @@ pub fn main() {
       commands::install::exec(no_use, version)
     }
     DvmSubcommand::List {} => commands::list::exec(),
+    DvmSubcommand::ListRemote {} => commands::list::exec_remote(),
     DvmSubcommand::Use { version } => commands::use_::exec(version),
     DvmSubcommand::Uninstall { version } => commands::uninstall::exec(version),
     _ => unreachable!(),
