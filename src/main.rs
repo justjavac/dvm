@@ -22,7 +22,7 @@ use std::env;
 #[cfg(windows)]
 #[ctor]
 fn init() {
-  output_vt100::init();
+  output_vt100::try_init().ok();
 }
 
 pub fn main() {
