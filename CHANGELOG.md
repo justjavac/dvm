@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.5 - [20201-01-29]
+
+- feat: Add `dvm list-remote` alias `dvm ls-remote` (#47)
+
 ## 1.4.3 - [20201-01-27]
 
 - reduce size
