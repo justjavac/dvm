@@ -24,6 +24,7 @@ semver-parser = "0.10.2"
 tempfile = "3"
 tinyget = { version = "1.0", features = ["https"] }
 which = "4.0"
+json_minimal = "0.1"
 
 [package.metadata.winres]
 # This section defines the metadata that appears in the dvm.exe PE header.

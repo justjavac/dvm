@@ -87,6 +87,7 @@ version = "1.4.4"
 dependencies = [
  "anyhow",
  "clap",
+ "json_minimal",
  "semver-parser",
  "tempfile",
  "tinyget",
@@ -127,6 +128,12 @@ checksum = "322f4de77956e22ed0e5032c359a0f1273f1f7f0d79bfa3b8ffbc730d7fbcc5c"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "json_minimal"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f23a154c7bbe06d65d084a909a7ba16981b514768c5b79ccf423dda1e4b4d8e"
 
 [[package]]
 name = "lazy_static"

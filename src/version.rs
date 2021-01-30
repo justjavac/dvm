@@ -1,3 +1,7 @@
+// Copyright 2020 justjavac. All rights reserved. MIT license.
+use anyhow::Result;
+use json_minimal::Json;
+
 use std::fs;
 use std::process::{Command, Stdio};
 use std::string::String;
@@ -42,4 +46,27 @@ pub fn get_local_versions() -> Vec<String> {
   }
 
   v
+}
+
+pub fn get_remote_versions() -> Result<Vec<String>> {
+  let response =
+    tinyget::get("https://api.github.com/repos/denoland/deno/tags")
+      // http://developer.github.com/v3/#user-agent-required
+      .with_header("User-Agent", "tinyget")
+      .send()?;
+  let body = response.as_str()?;
+  let json = Json::parse(body.as_bytes()).unwrap();
+  let mut result: Vec<String> = Vec::new();
+
+  if let Json::ARRAY(list) = json {
+    for item in &list {
+      if let Json::OBJECT { name: _, value } = item.get("name").unwrap() {
+        if let Json::STRING(val) = value.unbox() {
+          result.push(val.replace("v", "").to_string());
+        }
+      }
+    }
+  }
+
+  Ok(result)
 }

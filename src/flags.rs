@@ -14,6 +14,7 @@ pub enum DvmSubcommand {
     version: Option<String>,
   },
   List,
+  ListRemote,
   Use {
     version: Option<String>,
   },
@@ -68,6 +69,8 @@ pub fn flags_from_vec_safe(args: Vec<String>) -> clap::Result<Flags> {
     install_parse(&mut flags, m);
   } else if let Some(m) = matches.subcommand_matches("list") {
     list_parse(&mut flags, m);
+  } else if let Some(m) = matches.subcommand_matches("list-remote") {
+    list_remote_parse(&mut flags, m);
   } else if let Some(m) = matches.subcommand_matches("use") {
     use_parse(&mut flags, m);
   } else if let Some(m) = matches.subcommand_matches("uninstall") {
@@ -93,6 +96,7 @@ fn clap_root<'a, 'b>() -> App<'a, 'b> {
     .subcommand(info_subcommand())
     .subcommand(install_subcommand())
     .subcommand(list_subcommand())
+    .subcommand(list_remote_subcommand())
     .subcommand(use_subcommand())
     .subcommand(uninstall_subcommand())
     .long_about(DVM_HELP)
@@ -105,6 +109,10 @@ fn info_parse(flags: &mut Flags, _matches: &clap::ArgMatches) {
 
 fn list_parse(flags: &mut Flags, _matches: &clap::ArgMatches) {
   flags.subcommand = DvmSubcommand::List;
+}
+
+fn list_remote_parse(flags: &mut Flags, _matches: &clap::ArgMatches) {
+  flags.subcommand = DvmSubcommand::ListRemote;
 }
 
 fn completions_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
@@ -210,6 +218,13 @@ fn uninstall_subcommand<'a, 'b>() -> App<'a, 'b> {
         .help("The version to uninstall")
         .takes_value(true),
     )
+}
+
+fn list_remote_subcommand<'a, 'b>() -> App<'a, 'b> {
+  SubCommand::with_name("list-remote")
+    .visible_alias("ls-remote")
+    .about("List released versions")
+    .long_about("List released versions.")
 }
 
 #[cfg(test)]
