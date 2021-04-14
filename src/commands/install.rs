@@ -15,7 +15,9 @@ use crate::utils::get_exe_path;
 
 #[cfg(windows)]
 const ARCHIVE_NAME: &str = "deno-x86_64-pc-windows-msvc.zip";
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+const ARCHIVE_NAME: &str = "deno-aarch64-apple-darwin.zip";
+#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 const ARCHIVE_NAME: &str = "deno-x86_64-apple-darwin.zip";
 #[cfg(target_os = "linux")]
 const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
