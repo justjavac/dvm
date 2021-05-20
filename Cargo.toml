@@ -1,6 +1,6 @@
 [package]
 name = "dvm"
-version = "1.4.5"
+version = "1.4.6"
 license = "MIT"
 authors = ["迷渡 <justjavac@gmail.com>"]
 edition = "2018"
@@ -25,6 +25,10 @@ tempfile = "3"
 tinyget = { version = "1.0", features = ["https"] }
 which = "4.0"
 json_minimal = "0.1"
+
+[target.'cfg(windows)'.dependencies]
+output_vt100 = "0.1"
+ctor = "0.1"
 
 [package.metadata.winres]
 # This section defines the metadata that appears in the dvm.exe PE header.
