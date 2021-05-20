@@ -29,7 +29,7 @@ fn print_versions(mut versions: Vec<String>) {
   versions.sort_by(|a, b| sort_semver_version(b, a));
 
   for v in &versions {
-    if v.to_string() == current_version {
+    if *v == current_version {
       // display current used version with bright green
       println!("\x1b[0;92m*{}\x1b[0m", v);
     } else {
@@ -38,7 +38,7 @@ fn print_versions(mut versions: Vec<String>) {
   }
 }
 
-fn sort_semver_version(s1: &String, s2: &String) -> Ordering {
+fn sort_semver_version(s1: &str, s2: &str) -> Ordering {
   let v1 = parse(s1).unwrap();
   let v2 = parse(s2).unwrap();
 
