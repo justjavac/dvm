@@ -43,27 +43,27 @@ fn sort_semver_version(s1: &String, s2: &String) -> Ordering {
   let v2 = parse(s2).unwrap();
 
   if v1.major > v2.major {
-    return Ordering::Greater
+    return Ordering::Greater;
   }
 
   if v1.major < v2.major {
-    return Ordering::Less
+    return Ordering::Less;
   }
   
   if v1.minor > v2.minor {
-    return Ordering::Greater
+    return Ordering::Greater;
   }
 
   if v1.minor < v2.minor {
-    return Ordering::Less
+    return Ordering::Less;
   }
 
   if v1.patch > v2.patch {
-    return Ordering::Greater
+    return Ordering::Greater;
   }
 
   if v1.patch < v2.patch {
-    return Ordering::Less
+    return Ordering::Less;
   }
 
   Ordering::Equal
