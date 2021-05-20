@@ -49,7 +49,6 @@ fn sort_semver_version(s1: &String, s2: &String) -> Ordering {
   if v1.major < v2.major {
     return Ordering::Less;
   }
-  
   if v1.minor > v2.minor {
     return Ordering::Greater;
   }
@@ -68,7 +67,6 @@ fn sort_semver_version(s1: &String, s2: &String) -> Ordering {
 
   Ordering::Equal
 }
-
 
 #[cfg(test)]
 mod tests {
