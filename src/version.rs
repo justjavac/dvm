@@ -31,14 +31,12 @@ pub fn get_local_versions() -> Vec<String> {
   let mut v: Vec<String> = Vec::new();
 
   if let Ok(entries) = fs::read_dir(get_dvm_root()) {
-    for entry in entries {
-      if let Ok(entry) = entry {
-        if let Ok(file_type) = entry.file_type() {
-          if file_type.is_dir() {
-            let file_name = entry.file_name().into_string().unwrap();
-            if is_semver(&file_name) {
-              v.push(file_name);
-            }
+    for entry in entries.flatten() {
+      if let Ok(file_type) = entry.file_type() {
+        if file_type.is_dir() {
+          let file_name = entry.file_name().into_string().unwrap();
+          if is_semver(&file_name) {
+            v.push(file_name);
           }
         }
       }
