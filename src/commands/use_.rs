@@ -36,7 +36,7 @@ pub fn exec(version: Option<String>) -> Result<()> {
 }
 
 pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
-  check_exe(&exe_path, &version)?;
+  check_exe(exe_path, version)?;
 
   let old_exe_path = match which("deno") {
     Ok(old_exe_path) => {
