@@ -20,6 +20,8 @@ curl -fsSL https://deno.land/x/dvm/install.sh | sh
 iwr https://deno.land/x/dvm/install.ps1 -useb | iex
 ```
 
+**注意**: 如果你使用的是 Apple M1，请使用 `cargo install dvm` 手动编译，因为 Github Actions 目前还不支持 aarch64 架构。
+
 ## 使用
 
 ```
