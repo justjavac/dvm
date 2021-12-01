@@ -1,22 +1,27 @@
 # Changelog
 
-## 1.4.6 - [20201-01-31]
+### 1.4.7 - [2021-12-01]
+
+- Detect aarch64 to support Apple M1 (#52)
+- fix: version `1.10.0` should be greater than version `1.9.1` (#53)
+
+## 1.4.6 - [2021-01-31]
 
 - fix ANSI colors in Windows CMD and PowerShell
 
-## 1.4.5 - [20201-01-29]
+## 1.4.5 - [2021-01-29]
 
 - feat: Add `dvm list-remote` alias `dvm ls-remote` (#47)
 
-## 1.4.3 - [20201-01-27]
+## 1.4.3 - [2021-01-27]
 
 - reduce size
 
-## 1.4.0 - [20201-01-26]
+## 1.4.0 - [2021-01-26]
 
 - feat: use `dl.deno.land` #43
 
-## 1.3.0 - [20201-01-25]
+## 1.3.0 - [2021-01-25]
 
 - Feature: Add `dvm uninstall x.x.x`, alias `dvm rm x.x.x` #40
 

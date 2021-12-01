@@ -1,6 +1,6 @@
 [package]
 name = "dvm"
-version = "1.4.6"
+version = "1.4.7"
 license = "MIT"
 authors = ["迷渡 <justjavac@gmail.com>"]
 edition = "2018"
@@ -20,7 +20,7 @@ path = "src/main.rs"
 anyhow = "1.0"
 clap = "2.33"
 # getopts = "0.2"
-semver-parser = "0.10.2"
+semver-parser = "0.10"
 tempfile = "3"
 tinyget = { version = "1.0", features = ["https"] }
 which = "4.0"
