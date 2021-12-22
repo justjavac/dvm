@@ -19,7 +19,7 @@ else
 	esac
 fi
 
-dvm_uri="https://cdn.jsdelivr.net/gh/justjavac/dvm_releases/dvm-${target}.zip"
+dvm_uri="https://cdn.jsdelivr.net/gh/justjavac/dvm_releases@main/dvm-${target}.zip"
 
 deno_install="${DENO_INSTALL:-$HOME/.deno}"
 dvm_dir="${DVM_DIR:-$HOME/.dvm}"

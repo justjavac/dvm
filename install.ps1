@@ -25,7 +25,7 @@ $Target = 'x86_64-pc-windows-msvc'
 # GitHub requires TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$DvmUri = "https://cdn.jsdelivr.net/gh/justjavac/dvm_releases/dvm-${Target}.zip"
+$DvmUri = "https://cdn.jsdelivr.net/gh/justjavac/dvm_releases@main/dvm-${Target}.zip"
 
 if (!(Test-Path $BinDir)) {
   New-Item $BinDir -ItemType Directory | Out-Null
