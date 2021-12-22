@@ -1,5 +1,10 @@
 # Changelog
 
+### 1.5.0 - [2021-12-22]
+
+- add `list-remote`
+- auto detect China mainland
+
 ### 1.4.7 - [2021-12-01]
 
 - Detect aarch64 to support Apple M1 (#52)
