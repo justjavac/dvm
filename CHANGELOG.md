@@ -1,5 +1,9 @@
 # Changelog
 
+### 1.5.2 - [2021-12-22]
+
+- use specify branch for installer script
+
 ### 1.5.1 - [2021-12-22]
 
 - use .dvmrc (#60)
