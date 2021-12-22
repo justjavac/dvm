@@ -2,7 +2,7 @@
 use crate::utils::{dvm_root, is_china_mainland, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
-use std::fs;
+use std::fs::{read_dir, read_to_string};
 use std::process::{Command, Stdio};
 use std::string::String;
 
@@ -21,10 +21,20 @@ pub fn current_version() -> Option<String> {
   }
 }
 
+pub fn dvmrc_version() -> Option<String> {
+  match read_to_string(".dvmrc") {
+    Ok(v) => {
+      println!("Found '.dvmrc' with version <{}>", v.trim());
+      Some(v.trim().into())
+    }
+    Err(_) => None,
+  }
+}
+
 pub fn local_versions() -> Vec<String> {
   let mut v: Vec<String> = Vec::new();
 
-  if let Ok(entries) = fs::read_dir(dvm_root()) {
+  if let Ok(entries) = read_dir(dvm_root()) {
     for entry in entries.flatten() {
       if let Ok(file_type) = entry.file_type() {
         if file_type.is_dir() {
