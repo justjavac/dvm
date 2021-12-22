@@ -1,13 +1,11 @@
+use crate::utils::deno_bin_path;
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
-use which::which;
-
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
-use crate::utils::get_exe_path;
+use which::which;
 
 pub fn exec(version: Option<String>) -> Result<()> {
   let used_version = match version {
@@ -21,7 +19,7 @@ pub fn exec(version: Option<String>) -> Result<()> {
     None => unimplemented!(),
   };
 
-  let new_exe_path = get_exe_path(&used_version);
+  let new_exe_path = deno_bin_path(&used_version);
 
   if !new_exe_path.exists() {
     eprintln!(

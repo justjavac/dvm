@@ -1,17 +1,14 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
+use super::use_;
+use crate::utils::{deno_bin_path, dvm_root, is_china_mainland};
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
-
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::string::String;
-
-use super::use_;
-use crate::utils::get_dvm_root;
-use crate::utils::get_exe_path;
 
 #[cfg(windows)]
 const ARCHIVE_NAME: &str = "deno-x86_64-pc-windows-msvc.zip";
@@ -34,15 +31,12 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
     None => get_latest_version()?,
   };
 
-  let exe_path = get_exe_path(&install_version);
+  let exe_path = deno_bin_path(&install_version);
 
   if exe_path.exists() {
     println!("version v{} is already installed", install_version);
   } else {
-    let archive_data = download_package(
-      &compose_url_to_exec(&install_version),
-      &install_version,
-    )?;
+    let archive_data = download_package(&compose_url_to_exec(&install_version), &install_version)?;
     unpack(archive_data, &install_version)?;
   }
 
@@ -55,10 +49,14 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
 
 fn get_latest_version() -> Result<Version> {
   println!("Checking for latest version");
-  let response =
-    tinyget::get("https://dl.deno.land/release-latest.txt").send()?;
+  let response = if is_china_mainland() {
+    tinyget::get("https://dl.deno.js.cn/release-latest.txt").send()?
+  } else {
+    tinyget::get("https://dl.deno.land/release-latest.txt").send()?
+  };
+
   let body = response.as_str()?;
-  let v = body.trim().replace("v", "");
+  let v = body.trim().replace('v', "");
   println!("The latest version is v{}", &v);
   Ok(semver_parse(&v).unwrap())
 }
@@ -102,9 +100,9 @@ fn compose_url_to_exec(version: &Version) -> String {
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
-  let dvm_dir = get_dvm_root().join(format!("{}", version));
+  let dvm_dir = dvm_root().join(format!("{}", version));
   fs::create_dir_all(&dvm_dir)?;
-  let exe_path = get_exe_path(version);
+  let exe_path = deno_bin_path(version);
 
   let archive_ext = Path::new(ARCHIVE_NAME)
     .extension()
@@ -168,14 +166,20 @@ fn test_compose_url_to_exec_lte_1_7() {
   let v = semver_parse("0.0.1").unwrap();
   let url = compose_url_to_exec(&v);
   #[cfg(windows)]
-  assert_eq!(url.as_str(), "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/0.0.1/deno-x86_64-pc-windows-msvc.zip");
+  assert_eq!(
+    url.as_str(),
+    "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/0.0.1/deno-x86_64-pc-windows-msvc.zip"
+  );
   #[cfg(target_os = "macos")]
   assert_eq!(
     url.as_str(),
     "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/0.0.1/deno-x86_64-apple-darwin.zip"
   );
   #[cfg(target_os = "linux")]
-  assert_eq!(url.as_str(), "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/0.0.1/deno-x86_64-unknown-linux-gnu.zip");
+  assert_eq!(
+    url.as_str(),
+    "https://cdn.jsdelivr.net/gh/justjavac/deno_releases/0.0.1/deno-x86_64-unknown-linux-gnu.zip"
+  );
 }
 
 #[test]

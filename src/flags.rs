@@ -4,23 +4,14 @@ use clap::{App, AppSettings, Arg, SubCommand};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DvmSubcommand {
-  Completions {
-    buf: Box<[u8]>,
-  },
+  Completions { buf: Box<[u8]> },
   Help,
   Info,
-  Install {
-    no_use: bool,
-    version: Option<String>,
-  },
+  Install { no_use: bool, version: Option<String> },
   List,
   ListRemote,
-  Use {
-    version: Option<String>,
-  },
-  Uninstall {
-    version: Option<String>,
-  },
+  Use { version: Option<String> },
+  Uninstall { version: Option<String> },
 }
 
 impl Default for DvmSubcommand {
@@ -37,8 +28,7 @@ pub struct Flags {
   pub subcommand: DvmSubcommand,
 }
 
-static DVM_HELP: &str =
-  "Deno Version Manager - Easy way to manage multiple active deno versions.";
+static DVM_HELP: &str = "Deno Version Manager - Easy way to manage multiple active deno versions.";
 
 static DVM_EXAMPLE: &str = "Example:
   dvm install 1.3.2     Install v1.3.2 release
@@ -119,11 +109,7 @@ fn completions_parse(flags: &mut Flags, matches: &clap::ArgMatches) {
   let shell: &str = matches.value_of("shell").unwrap();
   let mut buf: Vec<u8> = vec![];
   use std::str::FromStr;
-  clap_root().gen_completions_to(
-    "dvm",
-    clap::Shell::from_str(shell).unwrap(),
-    &mut buf,
-  );
+  clap_root().gen_completions_to("dvm", clap::Shell::from_str(shell).unwrap(), &mut buf);
 
   flags.subcommand = DvmSubcommand::Completions {
     buf: buf.into_boxed_slice(),
@@ -166,9 +152,7 @@ fn list_subcommand<'a, 'b>() -> App<'a, 'b> {
   SubCommand::with_name("list")
     .visible_alias("ls")
     .about("List installed versions, matching a given <version> if provided")
-    .long_about(
-      "List installed versions, matching a given <version> if provided",
-    )
+    .long_about("List installed versions, matching a given <version> if provided")
 }
 
 fn info_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -181,10 +165,7 @@ fn install_subcommand<'a, 'b>() -> App<'a, 'b> {
   SubCommand::with_name("install")
     .visible_alias("i")
     .about("Install deno executable to given version")
-    .long_about(
-      "Install deno executable to the given version.
-Defaults to latest.",
-    )
+    .long_about("Install deno executable to the given version.\nDefaults to latest.")
     .arg(
       Arg::with_name("version")
         .help("The version to install")
@@ -201,11 +182,7 @@ fn use_subcommand<'a, 'b>() -> App<'a, 'b> {
   SubCommand::with_name("use")
     .about("Use a given version")
     .long_about("Use a given version.")
-    .arg(
-      Arg::with_name("version")
-        .help("The version to use")
-        .takes_value(true),
-    )
+    .arg(Arg::with_name("version").help("The version to use").takes_value(true))
 }
 
 fn uninstall_subcommand<'a, 'b>() -> App<'a, 'b> {

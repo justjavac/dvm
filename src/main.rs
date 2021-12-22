@@ -1,15 +1,3 @@
-extern crate anyhow;
-extern crate clap;
-// extern crate getopts;
-#[cfg(windows)]
-extern crate ctor;
-#[cfg(windows)]
-extern crate output_vt100;
-extern crate semver_parser;
-extern crate tempfile;
-extern crate tinyget;
-extern crate which;
-
 mod commands;
 mod flags;
 mod utils;
@@ -32,9 +20,7 @@ pub fn main() {
   let result = match flags.subcommand {
     DvmSubcommand::Completions { buf } => commands::completions::exec(&buf),
     DvmSubcommand::Info {} => commands::info::exec(),
-    DvmSubcommand::Install { no_use, version } => {
-      commands::install::exec(no_use, version)
-    }
+    DvmSubcommand::Install { no_use, version } => commands::install::exec(no_use, version),
     DvmSubcommand::List {} => commands::list::exec(),
     DvmSubcommand::ListRemote {} => commands::list::exec_remote(),
     DvmSubcommand::Use { version } => commands::use_::exec(version),

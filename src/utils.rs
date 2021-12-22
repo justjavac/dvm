@@ -1,10 +1,9 @@
 use semver_parser::version::{parse as semver_parse, Version};
-use tempfile::TempDir;
-
 use std::env;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
-pub fn get_dvm_root() -> PathBuf {
+pub fn dvm_root() -> PathBuf {
   match env::var_os("DVM_DIR").map(PathBuf::from) {
     Some(dvm_dir) => dvm_dir,
     None => {
@@ -24,12 +23,16 @@ pub fn get_dvm_root() -> PathBuf {
   }
 }
 
-pub fn get_exe_path(version: &Version) -> PathBuf {
-  let dvm_dir = get_dvm_root().join(format!("{}", version));
+pub fn deno_bin_path(version: &Version) -> PathBuf {
+  let dvm_dir = dvm_root().join(format!("{}", version));
   let exe_ext = if cfg!(windows) { "exe" } else { "" };
   dvm_dir.join("deno").with_extension(exe_ext)
 }
 
 pub fn is_semver(version: &str) -> bool {
   semver_parse(version).is_ok()
+}
+
+pub fn is_china_mainland() -> bool {
+  env::var("LANG").map(|lng| lng.starts_with("zh_CN.")).unwrap_or(false)
 }

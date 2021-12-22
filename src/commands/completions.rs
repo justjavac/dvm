@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-
 use std::io::Write;
 
 pub fn exec(buf: &[u8]) -> Result<()> {
