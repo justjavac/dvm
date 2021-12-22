@@ -1,4 +1,5 @@
 use crate::utils::deno_bin_path;
+use crate::version::dvmrc_version;
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
 use std::env;
@@ -8,15 +9,14 @@ use std::process::Command;
 use which::which;
 
 pub fn exec(version: Option<String>) -> Result<()> {
-  let used_version = match version {
-    Some(used_version) => match semver_parse(&used_version) {
-      Ok(ver) => ver,
-      Err(_) => {
-        eprintln!("Invalid semver");
-        std::process::exit(1)
-      }
-    },
-    None => unimplemented!(),
+  let version = version.unwrap_or_else(|| dvmrc_version().expect("Please input a version, or create a `.dvmrc` file."));
+
+  let used_version = match semver_parse(&version) {
+    Ok(ver) => ver,
+    Err(_) => {
+      eprintln!("Invalid semver");
+      std::process::exit(1)
+    }
   };
 
   let new_exe_path = deno_bin_path(&used_version);
@@ -72,7 +72,7 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
   };
 
   fs::copy(&exe_path, &old_exe_path)?;
-  println!("now use deno {}", version);
+  println!("Now using deno {}", version);
   Ok(())
 }
 
