@@ -41,6 +41,7 @@ SUBCOMMANDS:
     info           Show dvm info
     install        Install deno executable to given version [aliases: i]
     list           List installed versions, matching a given <version> if provided [aliases: ls]
+    list-remote    List released versions [aliases: ls-remote]
     uninstall      Uninstall a given version [aliases: rm]
     use            Use a given version
 
