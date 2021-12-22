@@ -20,7 +20,8 @@ curl -fsSL https://deno.land/x/dvm/install.sh | sh
 iwr https://deno.land/x/dvm/install.ps1 -useb | iex
 ```
 
-**注意**: 如果你使用的是 Apple M1，请使用 `cargo install dvm` 手动编译，因为 Github Actions 目前还不支持 aarch64 架构。
+**注意**: 如果你使用的是 Apple M1，请使用 `cargo install dvm` 手动编译，因为 Github Actions 目前还不支持
+aarch64 架构。
 
 ## 使用
 
@@ -70,6 +71,25 @@ dvm -V
 Creating /Users/justjavac/.dvm
 ```
 
+### .dvmrc
+
+你可以在项目根目录创建一个 `.dvmrc` 文件，然后把 Deno 的版本号写在里面。这样当你运行 `dvm use`、`dvm install`
+命令时，如果没有在命令行上提供版本参数，那么 dvm 会自动从 `.dvmrc` 文件读取 Deno 的版本号。
+
+举个例子，我们想把当前仓库的 Deno 版本号设置为 `1.17.0`，那么我们可以在根目录运行:
+
+```bash
+echo "1.17.0" > .dvmrc
+```
+
+然后运行 dvm:
+
+```plain
+$ dvm use
+Found '.dvmrc' with version <1.17.0>
+Now using deno 1.17.0
+```
+
 ## 举个例子
 
 ### 查看版本
@@ -93,9 +113,12 @@ now use deno 1.1.0
 ➜  ~  dvm use 1.2.0
 deno v1.2.0 is not installed. Use `dvm install 1.2.0` to install it first.
 ```
+
 ## 兼容性
 
-- Shell 安装程序可以在带有 [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about), [MSYS](https://www.msys2.org) 或等效工具集的 Windows 上使用。
+- Shell 安装程序可以在带有
+  [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about),
+  [MSYS](https://www.msys2.org) 或等效工具集的 Windows 上使用。
 
 ## 常见问题
 

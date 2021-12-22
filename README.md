@@ -6,7 +6,8 @@ Easy way to manage multiple active deno versions.
 
 ## Installation
 
-You can install it using the installers below, or download a release binary from the [releases page](https://github.com/justjavac/dvm/releases).
+You can install it using the installers below, or download a release binary from
+the [releases page](https://github.com/justjavac/dvm/releases).
 
 **With Shell:**
 
@@ -20,7 +21,8 @@ curl -fsSL https://deno.land/x/dvm/install.sh | sh
 iwr https://deno.land/x/dvm/install.ps1 -useb | iex
 ```
 
-**Note**: If you use Apple M1, please run `cargo install dvm` to support aarch64, becouse the Github Actions do not support aarch64.
+**Note**: If you use Apple M1, please run `cargo install dvm` to support
+aarch64, becouse the Github Actions do not support aarch64.
 
 ## Usage
 
@@ -63,12 +65,33 @@ which should output dvm's version if the installation was successful.
 
 ### Initialisation
 
-Calling `dvm` will creates an `~/.dvm/` directory if it doesn't exist,
-and all installed versions of deno will put into `~/.dvm`.
+Calling `dvm` will creates an `~/.dvm/` directory if it doesn't exist, and all
+installed versions of deno will put into `~/.dvm`.
 
 ```
 ➜  ~  dvm
 Creating /Users/justjavac/.dvm
+```
+
+### .dvmrc
+
+You can create a `.dvmrc` file containing a deno version number in the project
+root directory. Afterwards, `dvm use`, `dvm install` will use the version
+specified in the `.dvmrc` file if no version is supplied on the command line.
+
+For example, to make dvm default to the `1.17.0` release for the current
+directory:
+
+```bash
+echo "1.17.0" > .dvmrc
+```
+
+Then when you run dvm:
+
+```plain
+$ dvm use
+Found '.dvmrc' with version <1.17.0>
+Now using deno 1.17.0
 ```
 
 ## Example
@@ -84,7 +107,8 @@ List all installed versions:
    0.1.2
 ```
 
-The version with a asterisk(`*`) means that this version is the version currently in use.
+The version with a asterisk(`*`) means that this version is the version
+currently in use.
 
 ### Switching version
 
@@ -94,15 +118,19 @@ now use deno 1.1.0
 ➜  ~  dvm use 1.2.0
 deno v1.2.0 is not installed. Use `dvm install 1.2.0` to install it first.
 ```
+
 ## Compatibility
 
-- The Shell installer can be used on Windows with [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about), [MSYS](https://www.msys2.org) or equivalent set of tools.
+- The Shell installer can be used on Windows with
+  [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about),
+  [MSYS](https://www.msys2.org) or equivalent set of tools.
 
 ## Known Issues
 
 ### unzip is required
 
-The program [`unzip`](https://linux.die.net/man/1/unzip) is a requirement for the Shell installer.
+The program [`unzip`](https://linux.die.net/man/1/unzip) is a requirement for
+the Shell installer.
 
 ```sh
 $ curl -fsSL https://deno.land/x/dvm/install.sh | sh
@@ -115,8 +143,10 @@ During the `install.sh` process, `unzip` is used to extract the zip archive.
 
 **How can this issue be fixed?**
 
-You can install unzip via `brew install unzip` on MacOS or `apt-get install unzip -y` on Linux(Ubuntu,Debian,Deepin).
+You can install unzip via `brew install unzip` on MacOS or
+`apt-get install unzip -y` on Linux(Ubuntu,Debian,Deepin).
 
 ## License
 
-Deno Version Manager(dvm) is released under the MIT License. See the bundled [LICENSE](./LICENSE) file for details.
+Deno Version Manager(dvm) is released under the MIT License. See the bundled
+[LICENSE](./LICENSE) file for details.
