@@ -19,7 +19,7 @@ static AFTER_HELP: &str = "\x1b[33mEXAMPLE:\x1b[39m
   dvm use 1.0.0         Use v1.0.0 release
   
 \x1b[33mNOTE:\x1b[39m
-  To remove, delete, or uninstall dvm - just remove the \x1b[35m`$DVM_DIR`\x1b[39m folder (usually \x1b[35m`~/.dvm`\x1b[39m)";
+  To remove, delete, or uninstall dvm - just remove the \x1b[36m`$DVM_DIR`\x1b[39m folder (usually \x1b[36m`~/.dvm`\x1b[39m)";
 
 static COMPLETIONS_HELP: &str = "Output shell completion script to standard output.
   \x1b[35m
