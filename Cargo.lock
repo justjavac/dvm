@@ -121,6 +121,7 @@ dependencies = [
  "tempfile",
  "tinyget",
  "which",
+ "winapi",
 ]
 
 [[package]]

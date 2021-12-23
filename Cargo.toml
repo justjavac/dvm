@@ -30,6 +30,7 @@ json_minimal = "0.1"
 [target.'cfg(windows)'.dependencies]
 output_vt100 = "0.1"
 ctor = "0.1"
+winapi = { version = "0.3", features = ["winnls"] }
 
 [package.metadata.winres]
 # This section defines the metadata that appears in the dvm.exe PE header.
