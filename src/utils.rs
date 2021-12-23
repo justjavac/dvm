@@ -55,13 +55,3 @@ pub fn is_china_mainland() -> bool {
 
   String::from_utf16_lossy(&buf).starts_with("zh-CN")
 }
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn test_is_china_mainland() {
-    assert!(is_china_mainland());
-  }
-}
