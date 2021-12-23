@@ -25,31 +25,35 @@ aarch64 架构。
 
 ## 使用
 
-```
+```plain
 ➜  ~  dvm --help
 Deno Version Manager - Easy way to manage multiple active deno versions.
 
 USAGE:
-    dvm [SUBCOMMAND]
+    dvm <SUBCOMMAND>
 
 OPTIONS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+    -h, --help       Print help information
+    -V, --version    Print version information
 
 SUBCOMMANDS:
     completions    Generate shell completions
-    help           Prints this message or the help of the given subcommand(s)
-    info           Show dvm info
-    install        Install deno executable to given version [aliases: i]
-    list           List installed versions, matching a given <version> if provided [aliases: ls]
-    list-remote    List released versions [aliases: ls-remote]
-    uninstall      Uninstall a given version [aliases: rm]
+    help           Print this message or the help of the given subcommand(s)
+    info           Show dvm info.
+    install        Install deno executable to the given version. [aliases: i, add]
+    list           List installed versions, matching a given <version> if provided [aliases: ls,
+                   ll, la]
+    list-remote    List released versions [aliases: lr, ls-remote]
+    uninstall      Uninstall a given version [aliases: un, unlink, rm, remove]
     use            Use a given version
 
-Example:
+EXAMPLE:
   dvm install 1.3.2     Install v1.3.2 release
   dvm install           Install the latest available version
   dvm use 1.0.0         Use v1.0.0 release
+
+NOTE:
+  To remove, delete, or uninstall dvm - just remove the `$DVM_DIR` folder (usually `~/.dvm`)
 ```
 
 ### 验证
