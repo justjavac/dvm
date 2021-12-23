@@ -1,9 +1,8 @@
-use anyhow::{anyhow, Result};
-use std::io::Write;
+use anyhow::Result;
+use clap::App;
+use clap_generate::{generate, Shell};
 
-pub fn exec(buf: &[u8]) -> Result<()> {
-  match std::io::stdout().write_all(buf) {
-    Ok(()) => Ok(()),
-    Err(e) => Err(anyhow!("{}", e)),
-  }
+pub fn exec(app: &mut App, shell: Shell) -> Result<()> {
+  generate(shell, app, "dvm", &mut std::io::stdout());
+  Ok(())
 }
