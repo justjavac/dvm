@@ -22,8 +22,6 @@ impl Default for DvmSubcommand {
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Flags {
-  /// Vector of CLI arguments - these are user script arguments, all Deno
-  /// specific flags are removed.
   pub argv: Vec<String>,
   pub subcommand: DvmSubcommand,
 }
@@ -66,7 +64,7 @@ pub fn flags_from_vec_safe(args: Vec<String>) -> clap::Result<Flags> {
   } else if let Some(m) = matches.subcommand_matches("uninstall") {
     uninstall_parse(&mut flags, m);
   } else {
-    info_parse(&mut flags, &matches);
+    flags.subcommand = DvmSubcommand::Help;
   }
 
   Ok(flags)
@@ -216,7 +214,7 @@ mod tests {
 
   #[test]
   fn install() {
-    let r = flags_from_vec_safe(svec!["deno", "install", "--no-use"]);
+    let r = flags_from_vec_safe(svec!["dvm", "install", "--no-use"]);
     let flags = r.unwrap();
     assert_eq!(
       flags,
@@ -232,9 +230,9 @@ mod tests {
 
   #[test]
   fn version() {
-    let r = flags_from_vec_safe(svec!["deno", "--version"]);
+    let r = flags_from_vec_safe(svec!["dvm", "--version"]);
     assert_eq!(r.unwrap_err().kind, clap::ErrorKind::VersionDisplayed);
-    let r = flags_from_vec_safe(svec!["deno", "-V"]);
+    let r = flags_from_vec_safe(svec!["dvm", "-V"]);
     assert_eq!(r.unwrap_err().kind, clap::ErrorKind::VersionDisplayed);
   }
 }
