@@ -6,15 +6,15 @@
 
 ## 安装
 
-您可以使用下面的安装程序安装它，或者从[发布页](https://github.com/justjavac/dvm/releases)面下载源文件.
+您可以使用下面的安装程序安装它，或者从[发布页](https://github.com/justjavac/dvm/releases)面下载源文件。
 
-**Shell 安装:**
+**Shell 安装：**
 
 ```sh
 curl -fsSL https://deno.land/x/dvm/install.sh | sh
 ```
 
-**PowerShell 安装:**
+**PowerShell 安装：**
 
 ```powershell
 iwr https://deno.land/x/dvm/install.ps1 -useb | iex
@@ -58,17 +58,17 @@ NOTE:
 
 ### 验证
 
-要验证 dvm 是否已安装，输入:
+要验证 dvm 是否已安装，输入：
 
 ```bash
 dvm -V
 ```
 
-如果输出 dvm 的版本，则已经安装成功.
+如果输出 dvm 的版本，则已经安装成功。
 
 ### 初始化
 
-使用 `dvm` 将创建 `~/.dvm/` 文件夹 ,并且所有已安装的 deno 版本都将放入中 `~/.dvm`文件夹之中.
+使用 `dvm` 将创建 `~/.dvm/` 文件夹，并且所有已安装的 deno 版本都将放入中 `~/.dvm`文件夹之中。
 
 ```
 ➜  ~  dvm
@@ -80,13 +80,13 @@ Creating /Users/justjavac/.dvm
 你可以在项目根目录创建一个 `.dvmrc` 文件，然后把 Deno 的版本号写在里面。这样当你运行 `dvm use`、`dvm install`
 命令时，如果没有在命令行上提供版本参数，那么 dvm 会自动从 `.dvmrc` 文件读取 Deno 的版本号。
 
-举个例子，我们想把当前仓库的 Deno 版本号设置为 `1.17.0`，那么我们可以在根目录运行:
+举个例子，我们想把当前仓库的 Deno 版本号设置为 `1.17.0`，那么我们可以在根目录运行：
 
 ```bash
 echo "1.17.0" > .dvmrc
 ```
 
-然后运行 dvm:
+然后运行 dvm：
 
 ```plain
 $ dvm use
@@ -121,14 +121,14 @@ deno v1.2.0 is not installed. Use `dvm install 1.2.0` to install it first.
 ## 兼容性
 
 - Shell 安装程序可以在带有
-  [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about),
+  [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about)，
   [MSYS](https://www.msys2.org) 或等效工具集的 Windows 上使用。
 
 ## 常见问题
 
 ### unzip is required
 
-此项目需要依赖 [`unzip`](https://linux.die.net/man/1/unzip) 进行 Shell 安装.
+此项目需要依赖 [`unzip`](https://linux.die.net/man/1/unzip) 进行 Shell 安装。
 
 ```sh
 $ curl -fsSL https://deno.land/x/dvm/install.sh | sh
@@ -137,7 +137,7 @@ Error: unzip is required to install dvm (see: https://github.com/justjavac/dvm#u
 
 **此问题何时出现？**
 
-在运行 `install.sh` 过程中, 会使用 `unzip` 提取 zip 文件。
+在运行 `install.sh` 过程中，会使用 `unzip` 提取 zip 文件。
 
 **如何解决？**
 
