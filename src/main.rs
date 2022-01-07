@@ -2,8 +2,8 @@ mod commands;
 mod utils;
 pub mod version;
 use clap::{AppSettings, IntoApp, Parser};
-use clap_derive::{Parser, Subcommand};
 use clap_complete::Shell;
+use clap_derive::{Parser, Subcommand};
 #[cfg(windows)]
 use ctor::*;
 
