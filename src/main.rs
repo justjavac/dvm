@@ -3,7 +3,7 @@ mod utils;
 pub mod version;
 use clap::{AppSettings, IntoApp, Parser};
 use clap_derive::{Parser, Subcommand};
-use clap_generate::Shell;
+use clap_complete::Shell;
 #[cfg(windows)]
 use ctor::*;
 
