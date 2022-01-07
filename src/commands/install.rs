@@ -5,9 +5,8 @@ use crate::utils::{deno_bin_path, dvm_root, is_china_mainland};
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
 use std::fs;
-use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::string::String;
 
 #[cfg(windows)]
@@ -106,16 +105,6 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
     .and_then(|ext| ext.to_str())
     .unwrap();
   let unpack_status = match archive_ext {
-    "gz" => {
-      let exe_file = fs::File::create(&exe_path)?;
-      let mut cmd = Command::new("gunzip")
-        .arg("-c")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::from(exe_file))
-        .spawn()?;
-      cmd.stdin.as_mut().unwrap().write_all(&archive_data)?;
-      cmd.wait()?
-    }
     "zip" if cfg!(windows) => {
       let archive_path = dvm_dir.join("deno.zip");
       fs::write(&archive_path, &archive_data)?;
