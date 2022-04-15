@@ -1,4 +1,5 @@
 use crate::utils::deno_bin_path;
+use crate::utils::is_china_mainland;
 use crate::version::dvmrc_version;
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
@@ -9,7 +10,27 @@ use std::process::Command;
 use which::which;
 
 pub fn exec(version: Option<String>) -> Result<()> {
-  let version = version.unwrap_or_else(|| dvmrc_version().expect("Please input a version, or create a `.dvmrc` file."));
+  fn get_latest_version() -> Result<Version> {
+    println!("Checking for latest version");
+    let response = if is_china_mainland() {
+      tinyget::get("https://dl.deno.js.cn/release-latest.txt").send()?
+    } else {
+      tinyget::get("https://dl.deno.land/release-latest.txt").send()?
+    };
+
+    let body = response.as_str()?;
+    let v = body.trim().replace('v', "");
+    println!("The latest version is v{}", &v);
+    Ok(semver_parse(&v).unwrap())
+  }
+
+  let version = version.unwrap_or_else(|| {
+    println!("No version input detect, try to use version in .dvmrc file");
+    dvmrc_version().unwrap_or_else(|| {
+      println!("No version in .dvmrc file, try to use latest version");
+      get_latest_version().unwrap().to_string()
+    })
+  });
 
   let used_version = match semver_parse(&version) {
     Ok(ver) => ver,
