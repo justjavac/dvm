@@ -78,7 +78,7 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
         None => {
           println!("DENO_INSTALL is not defined, use $HOME/.deno/bin");
           let home_env_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-          env::var_os(home_env_var).map(PathBuf::from).unwrap()
+          env::var_os(home_env_var).map(PathBuf::from).unwrap().join(".deno")
         }
       };
 
