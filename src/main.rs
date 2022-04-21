@@ -89,7 +89,7 @@ pub fn main() {
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
-    Commands::Use { version } => commands::use_::exec(version),
+    Commands::Use { version } => commands::use_version::exec(version),
   };
 
   if let Err(err) = result {
