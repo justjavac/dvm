@@ -22,7 +22,7 @@ iwr https://deno.land/x/dvm/install.ps1 -useb | iex
 ```
 
 **Note**: If you use Apple M1, please run `cargo install dvm` to support
-aarch64, becouse the Github Actions do not support aarch64.
+aarch64, because the Github Actions do not support aarch64.
 
 ## Usage
 
