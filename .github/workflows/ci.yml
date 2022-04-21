@@ -23,7 +23,6 @@ jobs:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: full
       CARGO_TERM_COLOR: always
-      RUSTFLAGS: '-C link-arg=-s'
 
     steps:
       - name: Clone repository
