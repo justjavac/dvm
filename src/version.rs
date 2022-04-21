@@ -52,9 +52,7 @@ pub fn local_versions() -> Vec<String> {
 
 pub fn remote_versions() -> Result<Vec<String>> {
   if is_china_mainland() {
-    let response = tinyget::get("https://cdn.jsdelivr.net/gh/denoland/dotland@main/versions.json")
-      .with_header("User-Agent", "tinyget") // http://developer.github.com/v3/#user-agent-required
-      .send()?;
+    let response = tinyget::get("https://cdn.jsdelivr.net/gh/denoland/dotland@main/versions.json").send()?;
     let body = response.as_str()?;
     let json = Json::parse(body.as_bytes()).unwrap();
     let mut result: Vec<String> = Vec::new();
