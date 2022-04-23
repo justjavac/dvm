@@ -1,6 +1,6 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
-use super::use_version;
+use super::switch;
 use crate::utils::{deno_bin_path, dvm_root, is_china_mainland};
 use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
@@ -40,7 +40,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   }
 
   if !no_use {
-    use_version::use_this_bin_path(&exe_path, &install_version)?;
+    switch::use_this_bin_path(&exe_path, &install_version)?;
   }
 
   Ok(())

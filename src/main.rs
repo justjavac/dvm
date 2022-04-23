@@ -72,10 +72,18 @@ enum Commands {
     version: Option<String>,
   },
 
-  #[clap(about = "Use a given version")]
+  #[clap(about = "Switch to a given version which is locally installed, it's guaranteed to not access the internet")]
+  Switch {
+    #[clap(help = "The version to switch")]
+    version: String,
+  },
+
+  #[clap(
+    about = "Use a given version or a special tag, automatically install when the given version is not installed. If the version you gave is `latest`, dvm will always tracking the latest version and automatically upgrade deno to the latest version every time you run deno (not implemented yet)"
+  )]
   Use {
-    #[clap(help = "The version to install")]
-    version: Option<String>,
+    #[clap(help = "The version to use, or a special tag `latest`")]
+    version: String,
   },
 }
 
@@ -89,7 +97,8 @@ pub fn main() {
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
-    Commands::Use { version } => commands::use_version::exec(version),
+    Commands::Switch { version } => commands::switch::exec(version),
+    Commands::Use { version } => commands::r#use::exec(version),
   };
 
   if let Err(err) = result {

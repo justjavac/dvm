@@ -2,5 +2,6 @@ pub mod completions;
 pub mod info;
 pub mod install;
 pub mod list;
+pub mod switch;
 pub mod uninstall;
-pub mod use_version;
+pub mod r#use;

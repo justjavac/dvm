@@ -1,3 +1,4 @@
+use anyhow::Result;
 use semver_parser::version::{parse as semver_parse, Version};
 use std::env;
 use std::path::PathBuf;
@@ -54,4 +55,19 @@ pub fn is_china_mainland() -> bool {
   }
 
   String::from_utf16_lossy(&buf).starts_with("zh-CN")
+}
+
+#[allow(dead_code)]
+pub fn get_latest_version() -> Result<Version> {
+  println!("Checking for latest version");
+  let response = if is_china_mainland() {
+    tinyget::get("https://dl.deno.js.cn/release-latest.txt").send()?
+  } else {
+    tinyget::get("https://dl.deno.land/release-latest.txt").send()?
+  };
+
+  let body = response.as_str()?;
+  let v = body.trim().replace('v', "");
+  println!("The latest version is v{}", &v);
+  Ok(semver_parse(&v).unwrap())
 }
