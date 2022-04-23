@@ -17,10 +17,10 @@ name = "dvm"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.52"
-clap = "3.0.5"
-clap_derive = "3.0.5"
-clap_complete = "3.0.2"
+anyhow = "1.0.57"
+clap = "3.1.12"
+clap_derive = "3.1.7"
+clap_complete = "3.1.2"
 semver-parser = "0.10.2"
 tempfile = "3.2.0"
 tinyget = { version = "1.0.1", features = ["https"] }
