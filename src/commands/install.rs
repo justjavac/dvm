@@ -166,10 +166,8 @@ fn test_compose_url_to_exec() {
   );
 
   #[cfg(target_os = "linux")]
-  {
-    assert!(
-      url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
-        || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
-    );
-  }
+  assert!(
+    url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
+      || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
+  );
 }
