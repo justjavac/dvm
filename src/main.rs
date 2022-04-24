@@ -1,7 +1,7 @@
 mod commands;
 mod utils;
 pub mod version;
-use clap::{AppSettings, IntoApp, Parser};
+use clap::{CommandFactory, Parser};
 use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
 #[cfg(windows)]
@@ -29,8 +29,7 @@ static COMPLETIONS_HELP: &str = "Output shell completion script to standard outp
 #[derive(Parser)]
 #[clap(version, about)]
 #[clap(after_help = AFTER_HELP)]
-#[clap(global_setting(AppSettings::PropagateVersion))]
-#[clap(global_setting(AppSettings::UseLongFormatForHelpSubcommand))]
+#[clap(propagate_version = true)]
 struct Cli {
   #[clap(subcommand)]
   command: Commands,
@@ -83,7 +82,7 @@ pub fn main() {
   let cli = Cli::parse();
 
   let result = match cli.command {
-    Commands::Completions { shell } => commands::completions::exec(&mut Cli::into_app(), shell),
+    Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
     Commands::Info => commands::info::exec(),
     Commands::Install { no_use, version } => commands::install::exec(no_use, version),
     Commands::List => commands::list::exec(),
