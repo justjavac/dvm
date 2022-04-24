@@ -149,25 +149,29 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
 
 #[test]
 fn test_compose_url_to_exec() {
+  use asserts_rs::asserts_eq_one_of;
   let v = Version::parse("1.7.0").unwrap();
   let url = compose_url_to_exec(&v);
   #[cfg(windows)]
-  assert!(
-    url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip"
-      || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip"
+  asserts_eq_one_of!(
+    url.as_str(),
+    "https://dl.deno.land/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip",
+    "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip"
   );
 
   #[cfg(target_os = "macos")]
-  assert!(
-    url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-apple-darwin.zip"
-      || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-apple-darwin.zip"
-      || url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-aarch64-apple-darwin.zip"
-      || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-aarch64-apple-darwin.zip"
+  asserts_eq_one_of!(
+    url.as_str(),
+    "https://dl.deno.land/release/v1.7.0/deno-x86_64-apple-darwin.zip",
+    "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-apple-darwin.zip",
+    "https://dl.deno.land/release/v1.7.0/deno-aarch64-apple-darwin.zip",
+    "https://dl.deno.js.cn/release/v1.7.0/deno-aarch64-apple-darwin.zip"
   );
 
   #[cfg(target_os = "linux")]
-  assert!(
-    url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
-      || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
+  asserts_eq_one_of!(
+    url.as_str(),
+    "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip",
+    "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
   );
 }

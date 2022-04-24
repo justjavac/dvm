@@ -9,6 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
 
 [[package]]
+name = "asserts-rs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39886383117b7705830b4033f08b06d0d7f47ee62814252b56d00a6ae62428b7"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -120,6 +126,7 @@ name = "dvm"
 version = "1.5.5"
 dependencies = [
  "anyhow",
+ "asserts-rs",
  "clap",
  "clap_complete",
  "clap_derive",
