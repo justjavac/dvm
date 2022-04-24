@@ -1,4 +1,4 @@
-use semver_parser::version::{parse as semver_parse, Version};
+use semver::Version;
 use std::env;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -30,7 +30,7 @@ pub fn deno_bin_path(version: &Version) -> PathBuf {
 }
 
 pub fn is_semver(version: &str) -> bool {
-  semver_parse(version).is_ok()
+  Version::parse(version).is_ok()
 }
 
 #[cfg(not(windows))]

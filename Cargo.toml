@@ -21,7 +21,7 @@ anyhow = "1.0.57"
 clap = "3.1.12"
 clap_derive = "3.1.7"
 clap_complete = "3.1.2"
-semver-parser = "0.10.2"
+semver = "1.0.7"
 tempfile = "3.2.0"
 tinyget = { version = "1.0.1", features = ["https"] }
 which = "4.2.2"

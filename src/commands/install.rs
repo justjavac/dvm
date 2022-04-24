@@ -3,7 +3,7 @@
 use super::use_version;
 use crate::utils::{deno_bin_path, dvm_root, is_china_mainland};
 use anyhow::Result;
-use semver_parser::version::{parse as semver_parse, Version};
+use semver::Version;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -20,7 +20,7 @@ const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
 pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   let install_version = match version {
-    Some(passed_version) => match semver_parse(&passed_version) {
+    Some(passed_version) => match Version::parse(&passed_version) {
       Ok(ver) => ver,
       Err(_) => {
         eprintln!("Invalid semver");
@@ -57,7 +57,7 @@ fn get_latest_version() -> Result<Version> {
   let body = response.as_str()?;
   let v = body.trim().replace('v', "");
   println!("The latest version is v{}", &v);
-  Ok(semver_parse(&v).unwrap())
+  Ok(Version::parse(&v).unwrap())
 }
 
 fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
@@ -149,21 +149,27 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
 
 #[test]
 fn test_compose_url_to_exec() {
-  let v = semver_parse("1.7.0").unwrap();
+  let v = Version::parse("1.7.0").unwrap();
   let url = compose_url_to_exec(&v);
   #[cfg(windows)]
   assert!(
     url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip"
       || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip"
   );
+
   #[cfg(target_os = "macos")]
   assert!(
     url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-apple-darwin.zip"
       || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-apple-darwin.zip"
+      || url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-aarch64-apple-darwin.zip"
+      || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-aarch64-apple-darwin.zip"
   );
+
   #[cfg(target_os = "linux")]
-  assert!(
-    url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
-      || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
-  );
+  {
+    assert!(
+      url.as_str() == "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
+        || url.as_str() == "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
+    );
+  }
 }

@@ -1,13 +1,13 @@
 use crate::utils::{deno_bin_path, dvm_root};
 use crate::version::current_version;
 use anyhow::Result;
-use semver_parser::version::parse as semver_parse;
+use semver::Version;
 use std::fs;
 use std::process::exit;
 
 pub fn exec(version: Option<String>) -> Result<()> {
   let target_version = match version {
-    Some(target_version) => match semver_parse(&target_version) {
+    Some(target_version) => match Version::parse(&target_version) {
       Ok(ver) => ver,
       Err(_) => {
         eprintln!("Invalid semver");

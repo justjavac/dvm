@@ -2,7 +2,7 @@ use crate::utils::deno_bin_path;
 use crate::utils::is_china_mainland;
 use crate::version::dvmrc_version;
 use anyhow::Result;
-use semver_parser::version::{parse as semver_parse, Version};
+use semver::Version;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ pub fn exec(version: Option<String>) -> Result<()> {
     let body = response.as_str()?;
     let v = body.trim().replace('v', "");
     println!("The latest version is v{}", &v);
-    Ok(semver_parse(&v).unwrap())
+    Ok(Version::parse(&v).unwrap())
   }
 
   let version = version.unwrap_or_else(|| {
@@ -32,7 +32,7 @@ pub fn exec(version: Option<String>) -> Result<()> {
     })
   });
 
-  let used_version = match semver_parse(&version) {
+  let used_version = match Version::parse(&version) {
     Ok(ver) => ver,
     Err(_) => {
       eprintln!("Invalid semver");
