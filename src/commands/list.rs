@@ -1,6 +1,6 @@
 use crate::version::{current_version, local_versions, remote_versions};
 use anyhow::Result;
-use semver_parser::version::parse;
+use semver::Version;
 use std::cmp::Ordering;
 
 pub fn exec() -> Result<()> {
@@ -36,33 +36,10 @@ fn print_versions(mut versions: Vec<String>) {
 }
 
 fn sort_semver_version(s1: &str, s2: &str) -> Ordering {
-  let v1 = parse(s1).unwrap();
-  let v2 = parse(s2).unwrap();
+  let v1 = Version::parse(s1).unwrap();
+  let v2 = Version::parse(s2).unwrap();
 
-  if v1.major > v2.major {
-    return Ordering::Greater;
-  }
-
-  if v1.major < v2.major {
-    return Ordering::Less;
-  }
-  if v1.minor > v2.minor {
-    return Ordering::Greater;
-  }
-
-  if v1.minor < v2.minor {
-    return Ordering::Less;
-  }
-
-  if v1.patch > v2.patch {
-    return Ordering::Greater;
-  }
-
-  if v1.patch < v2.patch {
-    return Ordering::Less;
-  }
-
-  Ordering::Equal
+  v1.cmp(&v2)
 }
 
 #[cfg(test)]
@@ -80,7 +57,7 @@ mod tests {
     let v7 = String::from("10.9.0");
 
     assert_eq!(sort_semver_version(&v1, &v2), Ordering::Greater);
-    assert_eq!(sort_semver_version(&v1, &v3), Ordering::Equal);
+    assert_eq!(sort_semver_version(&v1, &v3), Ordering::Greater);
     assert_eq!(sort_semver_version(&v4, &v3), Ordering::Greater);
     assert_eq!(sort_semver_version(&v5, &v4), Ordering::Less);
     assert_eq!(sort_semver_version(&v7, &v6), Ordering::Greater);
