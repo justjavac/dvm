@@ -23,7 +23,7 @@ fn print_versions(mut versions: Vec<String>) {
     _ => String::from(""),
   };
 
-  versions.sort_by(|a, b| sort_semver_version(b, a));
+  versions.sort_by(|a, b| sort_semver_version(b, a).reverse());
 
   for v in &versions {
     if *v == current_version {
