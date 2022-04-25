@@ -39,7 +39,7 @@ fn sort_semver_version(s1: &str, s2: &str) -> Ordering {
   let v1 = Version::parse(s1).unwrap();
   let v2 = Version::parse(s2).unwrap();
 
-  v1.cmp(&v2)
+  v2.cmp(&v1)
 }
 
 #[cfg(test)]
