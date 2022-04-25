@@ -1,3 +1,6 @@
+extern crate core;
+
+mod config;
 mod commands;
 mod utils;
 pub mod version;
