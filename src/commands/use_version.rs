@@ -4,10 +4,10 @@ use std::io::{stdin, Read, Write};
 use crate::commands::install;
 use crate::utils::load_dvmrc;
 use crate::utils::{best_version, deno_bin_path};
-use crate::version::get_latest_version;
 use crate::version::remote_versions;
+use crate::version::{get_latest_version, VersionArg};
 use anyhow::Result;
-use semver::{Version, VersionReq};
+use semver::Version;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,7 +15,7 @@ use std::process::Command;
 use which::which;
 
 pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
-  let version_req: VersionReq;
+  let version_req: VersionArg;
   if let Some(ref version) = version {
     version_req = meta.resolve_version_req(version)
   } else {
@@ -30,13 +30,18 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
     println!("The latest version is v{}", version);
     version
   } else {
-    println!("Fetching version list");
-    let versions = remote_versions().expect("Fetching version list failed.");
-    best_version(
-      versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(),
-      version_req.clone(),
-    )
-    .unwrap()
+    match version_req {
+      VersionArg::Exact(ref v) => v.clone(),
+      VersionArg::Range(ref r) => {
+        println!("Fetching version list");
+        let versions = remote_versions().expect("Fetching version list failed.");
+        best_version(
+          versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(),
+          r.clone(),
+        )
+        .unwrap()
+      }
+    }
   };
 
   let new_exe_path = deno_bin_path(&used_version);

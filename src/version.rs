@@ -1,15 +1,46 @@
+use std::fmt::Formatter;
 // Copyright 2020 justjavac. All rights reserved. MIT license.
 use crate::consts::REGISTRY_LATEST_RELEASE_PATH;
-use crate::utils::{dvm_root, is_china_mainland, is_semver};
+use crate::utils::{dvm_root, is_china_mainland, is_exact_version, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
-use semver::Version;
+use semver::{Version, VersionReq};
 use std::fs::read_dir;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 use std::string::String;
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum VersionArg {
+  Exact(Version),
+  Range(VersionReq),
+}
+
+impl std::fmt::Display for VersionArg {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      VersionArg::Exact(version) => f.write_str(version.to_string().as_str()),
+      VersionArg::Range(version) => f.write_str(version.to_string().as_str()),
+    }
+  }
+}
+
+impl FromStr for VersionArg {
+  type Err = ();
+
+  fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    if is_exact_version(s) {
+      Version::parse(s).map(VersionArg::Exact).map_err(|_| ())
+    } else {
+      VersionReq::parse(s)
+        .map(VersionArg::Range)
+        .or_else(|_| VersionReq::parse("*").map(|it| VersionArg::Range(it)).map_err(|_| ()))
+    }
+  }
+}
 
 pub fn current_version() -> Option<String> {
   match Command::new("deno").arg("-V").stderr(Stdio::inherit()).output() {

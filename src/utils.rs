@@ -1,4 +1,5 @@
 use crate::consts::DVM_BIN_PATH_PREFIX;
+use crate::version::VersionArg;
 use anyhow::anyhow;
 use dirs::home_dir;
 use semver::{Version, VersionReq};
@@ -6,7 +7,12 @@ use std::env;
 use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use tempfile::TempDir;
+
+pub fn is_exact_version(input: &str) -> bool {
+  Version::parse(input).is_ok()
+}
 
 #[allow(dead_code)]
 pub fn is_valid_semver_range(input: &str) -> bool {
@@ -40,7 +46,7 @@ pub fn best_version(choices: &[&str], required: VersionReq) -> Option<Version> {
 ///
 /// Find and load the dvmrc
 /// local -> user -> default
-pub fn load_dvmrc() -> VersionReq {
+pub fn load_dvmrc() -> VersionArg {
   let project_config = Path::new(".dvmrc");
   let user_config = home_dir().unwrap().join(".dvmrc");
 
@@ -54,13 +60,13 @@ pub fn load_dvmrc() -> VersionReq {
   if let Some(found) = found_config {
     let result = read_to_string(found)
       .map_err(|e| anyhow!(e))
-      .and_then(|content| VersionReq::parse(&content).map_err(|e| anyhow!(e)));
+      .and_then(|content| VersionArg::from_str(&content).map_err(|_| anyhow!("")));
     if let Ok(req) = result {
       return req;
     }
   }
 
-  VersionReq::parse("*").unwrap()
+  VersionArg::from_str("*").unwrap()
 }
 
 pub fn dvm_root() -> PathBuf {

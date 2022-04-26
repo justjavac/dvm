@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use crate::consts::{DVM_BIN_PATH_PREFIX, REGISTRY_OFFICIAL};
 use crate::utils::{deno_bin_path, dvm_root};
+use crate::version::VersionArg;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fs::{read_to_string, write};
@@ -180,15 +181,15 @@ impl DvmMeta {
   }
 
   /// get the semver range of alias
-  pub fn get_alias(&self, name: &str) -> Option<VersionReq> {
+  pub fn get_alias(&self, name: &str) -> Option<VersionArg> {
     if DEFAULT_ALIAS.contains_key(name) {
-      VersionReq::parse(DEFAULT_ALIAS[name]).ok()
+      VersionArg::from_str(DEFAULT_ALIAS[name]).ok()
     } else {
       self
         .alias
         .iter()
         .position(|it| it.name == name)
-        .map(|index| VersionReq::parse(&self.alias[index].required).unwrap())
+        .map(|index| VersionArg::from_str(&self.alias[index].required).unwrap())
     }
   }
 
@@ -200,11 +201,11 @@ impl DvmMeta {
     }
   }
 
-  pub fn resolve_version_req(&self, required: &str) -> VersionReq {
+  pub fn resolve_version_req(&self, required: &str) -> VersionArg {
     if self.has_alias(required) {
       self.get_alias(required).unwrap()
     } else {
-      VersionReq::parse(required).unwrap_or_else(|_| VersionReq::parse("*").unwrap())
+      VersionArg::from_str(required).unwrap()
     }
   }
 
