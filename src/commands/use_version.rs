@@ -2,8 +2,8 @@ use crate::meta::DvmMeta;
 use std::io::{stdin, Read, Write};
 
 use crate::commands::install;
-use crate::utils::{is_exact_version, load_dvmrc};
 use crate::utils::{best_version, deno_bin_path};
+use crate::utils::{is_exact_version, load_dvmrc};
 use crate::version::remote_versions;
 use crate::version::{get_latest_version, VersionArg};
 use anyhow::Result;
@@ -57,10 +57,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
       install::exec(true, Some(used_version.to_string())).unwrap();
       let version = version.unwrap_or_else(|| version_req.to_string());
       if !is_exact_version(&version) {
-        meta.set_version_mapping(
-          version,
-          used_version.to_string(),
-        );
+        meta.set_version_mapping(version, used_version.to_string());
         meta.save();
       }
     } else {
