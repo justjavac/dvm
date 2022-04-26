@@ -1,12 +1,16 @@
 extern crate core;
 
-mod config;
 mod commands;
+mod consts;
+mod meta;
 mod utils;
 pub mod version;
+
 use clap::{CommandFactory, Parser};
 use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
+use meta::DvmMeta;
+
 #[cfg(windows)]
 use ctor::*;
 
@@ -83,6 +87,7 @@ enum Commands {
 
 pub fn main() {
   let cli = Cli::parse();
+  let mut meta = DvmMeta::new();
 
   let result = match cli.command {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
@@ -91,7 +96,7 @@ pub fn main() {
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
-    Commands::Use { version } => commands::use_version::exec(version),
+    Commands::Use { version } => commands::use_version::exec(&mut meta, version),
   };
 
   if let Err(err) = result {

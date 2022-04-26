@@ -1,7 +1,9 @@
 // Copyright 2020 justjavac. All rights reserved. MIT license.
+use crate::consts::REGISTRY_LATEST_RELEASE_PATH;
 use crate::utils::{dvm_root, is_china_mainland, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
+use semver::Version;
 use std::fs::{read_dir, read_to_string};
 use std::process::{Command, Stdio};
 use std::string::String;
@@ -16,16 +18,6 @@ pub fn current_version() -> Option<String> {
         Ok(stdout) => Some(stdout.trim()[5..].to_string()),
         Err(_) => None,
       }
-    }
-    Err(_) => None,
-  }
-}
-
-pub fn dvmrc_version() -> Option<String> {
-  match read_to_string(".dvmrc") {
-    Ok(v) => {
-      println!("Found '.dvmrc' with version <{}>", v.trim());
-      Some(v.trim().into())
     }
     Err(_) => None,
   }
@@ -88,4 +80,12 @@ pub fn remote_versions() -> Result<Vec<String>> {
   }
 
   Ok(result)
+}
+
+pub fn get_latest_version(registry: &str) -> Result<Version> {
+  tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_RELEASE_PATH)).send()?;
+
+  let body = response.as_str()?;
+  let v = body.trim().replace('v', "");
+  Ok(Version::parse(&v).unwrap())
 }

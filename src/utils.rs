@@ -1,13 +1,14 @@
+use crate::consts::DVM_BIN_PATH_PREFIX;
+use anyhow::anyhow;
+use dirs::home_dir;
 use semver::{Op, Version, VersionReq};
 use std::env;
 use std::fs::read_to_string;
+use std::path::Path;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use std::path::Path;
-use anyhow::anyhow;
-use dirs::home_dir;
 
-pub fn best_version(choices: &Vec<& str>, required: VersionReq) -> Option<Version> {
+pub fn best_version(choices: &Vec<&str>, required: VersionReq) -> Option<Version> {
   let mut best: Option<Version> = None;
 
   for &candidate in choices {
@@ -47,8 +48,8 @@ pub fn load_dvmrc() -> VersionReq {
 
   if let Some(found) = found_config {
     let result = read_to_string(found)
-        .map_err(|e|anyhow!(e))
-        .and_then(|content| VersionReq::parse(&content).map_err(|e| anyhow!(e)));
+      .map_err(|e| anyhow!(e))
+      .and_then(|content| VersionReq::parse(&content).map_err(|e| anyhow!(e)));
     if let Ok(req) = result {
       return req;
     }
@@ -78,7 +79,7 @@ pub fn dvm_root() -> PathBuf {
 }
 
 pub fn deno_bin_path(version: &Version) -> PathBuf {
-  let dvm_dir = dvm_root().join(format!("{}", version));
+  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_BIN_PATH_PREFIX, version));
   let exe_ext = if cfg!(windows) { "exe" } else { "" };
   dvm_dir.join("deno").with_extension(exe_ext)
 }
@@ -110,7 +111,6 @@ pub fn is_china_mainland() -> bool {
   String::from_utf16_lossy(&buf).starts_with("zh-CN")
 }
 
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -118,9 +118,27 @@ mod tests {
 
   #[test]
   fn test_best_version() {
-    let versions = vec!["0.8.5", "0.8.0", "0.9.0", "1.0.0", "1.0.0-alpha", "1.0.0-beta", "0.5.0", "2.0.0"];
-    assert_eq!(best_version(&versions, VersionReq::parse("*").unwrap()), Some(Version::parse("2.0.0").unwrap()));
-    assert_eq!(best_version(&versions, VersionReq::parse("^1").unwrap()), Some(Version::parse("1.0.0").unwrap()));
-    assert_eq!(best_version(&versions, VersionReq::parse("~0.8").unwrap()), Some(Version::parse("0.8.5").unwrap()));
+    let versions = vec![
+      "0.8.5",
+      "0.8.0",
+      "0.9.0",
+      "1.0.0",
+      "1.0.0-alpha",
+      "1.0.0-beta",
+      "0.5.0",
+      "2.0.0",
+    ];
+    assert_eq!(
+      best_version(&versions, VersionReq::parse("*").unwrap()),
+      Some(Version::parse("2.0.0").unwrap())
+    );
+    assert_eq!(
+      best_version(&versions, VersionReq::parse("^1").unwrap()),
+      Some(Version::parse("1.0.0").unwrap())
+    );
+    assert_eq!(
+      best_version(&versions, VersionReq::parse("~0.8").unwrap()),
+      Some(Version::parse("0.8.5").unwrap())
+    );
   }
 }

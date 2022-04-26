@@ -1,6 +1,8 @@
+use crate::meta::DvmMeta;
 use crate::utils::deno_bin_path;
 use crate::utils::is_china_mainland;
-use crate::version::dvmrc_version;
+use crate::utils::load_dvmrc;
+use crate::version::get_latest_version;
 use anyhow::Result;
 use semver::Version;
 use std::env;
@@ -9,26 +11,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use which::which;
 
-pub fn exec(version: Option<String>) -> Result<()> {
-  fn get_latest_version() -> Result<Version> {
-    println!("Checking for latest version");
-    let response = if is_china_mainland() {
-      tinyget::get("https://dl.deno.js.cn/release-latest.txt").send()?
-    } else {
-      tinyget::get("https://dl.deno.land/release-latest.txt").send()?
-    };
-
-    let body = response.as_str()?;
-    let v = body.trim().replace('v', "");
-    println!("The latest version is v{}", &v);
-    Ok(Version::parse(&v).unwrap())
-  }
-
+pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
   let version = version.unwrap_or_else(|| {
     println!("No version input detect, try to use version in .dvmrc file");
     dvmrc_version().unwrap_or_else(|| {
       println!("No version in .dvmrc file, try to use latest version");
-      get_latest_version().unwrap().to_string()
+      println!("Checking for latest version");
+      let version = get_latest_version(&meta.registry).unwrap().to_string();
+      println!("The latest version is v{}", &v);
+      version
     })
   });
 
