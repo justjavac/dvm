@@ -83,7 +83,7 @@ pub fn remote_versions() -> Result<Vec<String>> {
 }
 
 pub fn get_latest_version(registry: &str) -> Result<Version> {
-  tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_RELEASE_PATH)).send()?;
+  let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_RELEASE_PATH)).send()?;
 
   let body = response.as_str()?;
   let v = body.trim().replace('v', "");

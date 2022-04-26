@@ -8,6 +8,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
+pub fn is_valid_semver_range(input: &str) -> bool {
+  VersionReq::parse(input).is_ok()
+}
+
 pub fn best_version(choices: &Vec<&str>, required: VersionReq) -> Option<Version> {
   let mut best: Option<Version> = None;
 

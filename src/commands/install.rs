@@ -8,6 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::string::String;
+use crate::consts::DVM_BIN_PATH_PREFIX;
 
 #[cfg(windows)]
 const ARCHIVE_NAME: &str = "deno-x86_64-pc-windows-msvc.zip";
@@ -96,7 +97,7 @@ fn compose_url_to_exec(version: &Version) -> String {
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
-  let dvm_dir = dvm_root().join(format!("{}", version));
+  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_BIN_PATH_PREFIX, version));
   fs::create_dir_all(&dvm_dir)?;
   let exe_path = deno_bin_path(version);
 

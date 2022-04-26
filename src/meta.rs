@@ -4,9 +4,12 @@ use crate::utils::dvm_root;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fs::{read_to_string, write};
-use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+
+const DEFAULT_ALIAS: phf::Map<&'static str, &'static str> = phf::phf_map!{
+  "latest" => "*"
+};
 
 pub trait ToVersionReq {
   fn to_version_req(&self) -> VersionReq;
@@ -47,7 +50,7 @@ impl ToVersionReq for VersionMapping {
 }
 
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
-pub(crate) struct Alias {
+pub struct Alias {
   name: String,
   required: String,
 }
@@ -110,19 +113,19 @@ impl DvmMeta {
   /// get fold name of a given mapping,
   /// None if there haven't a deno version met the required semver range or alias that
   /// are installed already
-  pub fn get_version_mapping(&self, required: String) -> Option<String> {
+  pub fn get_version_mapping(&self, required: &str) -> Option<String> {
     self
       .versions
       .iter()
       .position(|it| it.required == required)
-      .map(|index| self.versions[index].current)
+      .map(|index| self.versions[index].current.clone())
   }
 
   ///
   /// delete a version mapping
   /// this will also delete actual files.
   pub fn delete_version_mapping(&mut self, required: String) {
-    let result = self.versions.iter().position(|it| it.name == name);
+    let result = self.versions.iter().position(|it| it.required == required);
     if let Some(index) = result {
       self.versions.remove(index);
     }
@@ -132,6 +135,9 @@ impl DvmMeta {
   ///   name is alias name
   ///   required is a semver range
   pub fn set_alias(&mut self, name: String, required: String) {
+    if DEFAULT_ALIAS.contains_key(name.as_str()) {
+      return;
+    }
     let result = self.alias.iter().position(|it| it.name == name);
     if let Some(index) = result {
       self.alias[index] = Alias { name, required };
@@ -140,13 +146,21 @@ impl DvmMeta {
     }
   }
 
+  pub fn has_alias(&self, name: &str) -> bool {
+    self.get_alias(name).is_some()
+  }
+
   /// get the semver range of alias
-  pub fn get_alias(&self, name: String) -> Option<VersionReq> {
-    self
-      .alias
-      .iter()
-      .position(|it| it.name == name)
-      .map(|index| VersionReq::parse(&self.alias[index].required).unwrap())
+  pub fn get_alias(&self, name: &str) -> Option<VersionReq> {
+    if DEFAULT_ALIAS.contains_key(name) {
+      VersionReq::parse(DEFAULT_ALIAS[name]).ok()
+    } else {
+      self
+        .alias
+        .iter()
+        .position(|it| it.name == name)
+        .map(|index| VersionReq::parse(&self.alias[index].required).unwrap())
+    }
   }
 
   /// delete a alias
@@ -154,6 +168,14 @@ impl DvmMeta {
     let result = self.alias.iter().position(|it| it.name == name);
     if let Some(index) = result {
       self.alias.remove(index);
+    }
+  }
+
+  pub fn resolve_version_req(&self, required: &str) -> VersionReq {
+    if self.has_alias(required) {
+      self.get_alias(required).unwrap()
+    } else {
+      VersionReq::parse(required).unwrap_or_else(|_| VersionReq::parse("*").unwrap())
     }
   }
 
@@ -166,7 +188,7 @@ impl DvmMeta {
 
   /// write to disk
   pub fn save(&self) {
-    write(DvmMeta::path(), serde_json::to_string_pretty(self).unwrap());
+    write(DvmMeta::path(), serde_json::to_string_pretty(self).unwrap()).unwrap();
   }
 }
 
