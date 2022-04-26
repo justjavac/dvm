@@ -93,6 +93,70 @@ impl DvmMeta {
     config
   }
 
+  ///
+  /// set a version mapping
+  ///   `required` is either a semver range or a alias to a semver rage
+  ///   `current` is the current directory that the deno located in
+  pub fn set_version_mapping(&mut self, required: String, current: String) {
+    let result = self.versions.iter().position(|it| it.required == current);
+    if let Some(index) = result {
+      self.versions[index] = VersionMapping { required, current };
+    } else {
+      self.versions.push(VersionMapping { required, current });
+    }
+  }
+
+  ///
+  /// get fold name of a given mapping,
+  /// None if there haven't a deno version met the required semver range or alias that
+  /// are installed already
+  pub fn get_version_mapping(&self, required: String) -> Option<String> {
+    self
+      .versions
+      .iter()
+      .position(|it| it.required == required)
+      .map(|index| self.versions[index].current)
+  }
+
+  ///
+  /// delete a version mapping
+  /// this will also delete actual files.
+  pub fn delete_version_mapping(&mut self, required: String) {
+    let result = self.versions.iter().position(|it| it.name == name);
+    if let Some(index) = result {
+      self.versions.remove(index);
+    }
+  }
+
+  /// set a alias
+  ///   name is alias name
+  ///   required is a semver range
+  pub fn set_alias(&mut self, name: String, required: String) {
+    let result = self.alias.iter().position(|it| it.name == name);
+    if let Some(index) = result {
+      self.alias[index] = Alias { name, required };
+    } else {
+      self.alias.push(Alias { name, required });
+    }
+  }
+
+  /// get the semver range of alias
+  pub fn get_alias(&self, name: String) -> Option<VersionReq> {
+    self
+      .alias
+      .iter()
+      .position(|it| it.name == name)
+      .map(|index| VersionReq::parse(&self.alias[index].required).unwrap())
+  }
+
+  /// delete a alias
+  pub fn delete_alias(&mut self, name: String) {
+    let result = self.alias.iter().position(|it| it.name == name);
+    if let Some(index) = result {
+      self.alias.remove(index);
+    }
+  }
+
   /// reload from disk
   pub fn reload(&mut self) {
     let new = DvmMeta::new();

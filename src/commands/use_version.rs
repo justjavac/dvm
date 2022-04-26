@@ -4,7 +4,7 @@ use crate::utils::is_china_mainland;
 use crate::utils::load_dvmrc;
 use crate::version::get_latest_version;
 use anyhow::Result;
-use semver::Version;
+use semver::{Version, VersionReq};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -12,9 +12,17 @@ use std::process::Command;
 use which::which;
 
 pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
-  let version = version.unwrap_or_else(|| {
+  let version_req: VersionReq;
+  if let Some(version) = version {
+    version_req = VersionReq::parse(&version).unwrap_or_else(|| VersionReq::parse("*").unwrap())
+  } else {
     println!("No version input detect, try to use version in .dvmrc file");
-    dvmrc_version().unwrap_or_else(|| {
+    version_req = load_dvmrc();
+    println!("Using {}", version_req.to_string());
+  }
+
+  let version = version.unwrap_or_else(|| {
+    load_dvmrc().unwrap_or_else(|| {
       println!("No version in .dvmrc file, try to use latest version");
       println!("Checking for latest version");
       let version = get_latest_version(&meta.registry).unwrap().to_string();
