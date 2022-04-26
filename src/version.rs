@@ -37,7 +37,7 @@ impl FromStr for VersionArg {
     } else {
       VersionReq::parse(s)
         .map(VersionArg::Range)
-        .or_else(|_| VersionReq::parse("*").map(|it| VersionArg::Range(it)).map_err(|_| ()))
+        .or_else(|_| VersionReq::parse("*").map(VersionArg::Range).map_err(|_| ()))
     }
   }
 }
