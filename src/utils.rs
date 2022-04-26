@@ -1,18 +1,19 @@
 use crate::consts::DVM_BIN_PATH_PREFIX;
 use anyhow::anyhow;
 use dirs::home_dir;
-use semver::{Op, Version, VersionReq};
+use semver::{Version, VersionReq};
 use std::env;
 use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
+#[allow(dead_code)]
 pub fn is_valid_semver_range(input: &str) -> bool {
   VersionReq::parse(input).is_ok()
 }
 
-pub fn best_version(choices: &Vec<&str>, required: VersionReq) -> Option<Version> {
+pub fn best_version(choices: &[&str], required: VersionReq) -> Option<Version> {
   let mut best: Option<Version> = None;
 
   for &candidate in choices {

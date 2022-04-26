@@ -4,7 +4,7 @@ use crate::utils::{dvm_root, is_china_mainland, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
 use semver::Version;
-use std::fs::{read_dir, read_to_string};
+use std::fs::read_dir;
 use std::process::{Command, Stdio};
 use std::string::String;
 

@@ -1,6 +1,7 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
 use super::use_version;
+use crate::consts::DVM_BIN_PATH_PREFIX;
 use crate::utils::{deno_bin_path, dvm_root, is_china_mainland};
 use anyhow::Result;
 use semver::Version;
@@ -8,7 +9,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::string::String;
-use crate::consts::DVM_BIN_PATH_PREFIX;
 
 #[cfg(windows)]
 const ARCHIVE_NAME: &str = "deno-x86_64-pc-windows-msvc.zip";

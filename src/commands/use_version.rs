@@ -1,11 +1,11 @@
 use crate::meta::DvmMeta;
-use std::io::{Read, stdin, Write};
+use std::io::{stdin, Read, Write};
 
+use crate::commands::install;
 use crate::utils::load_dvmrc;
 use crate::utils::{best_version, deno_bin_path};
 use crate::version::get_latest_version;
 use crate::version::remote_versions;
-use crate::commands::install;
 use anyhow::Result;
 use semver::{Version, VersionReq};
 use std::env;
@@ -21,24 +21,31 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
   } else {
     println!("No version input detect, try to use version in .dvmrc file");
     version_req = load_dvmrc();
-    println!("Using {}", version_req.to_string());
+    println!("Using {}", version_req);
   }
 
   let used_version = if version_req.to_string() == "*" {
     println!("Checking for latest version");
     let version = get_latest_version(&meta.registry).expect("Get latest version failed");
-    println!("The latest version is v{}", version.to_string());
+    println!("The latest version is v{}", version);
     version
   } else {
     println!("Fetching version list");
     let versions = remote_versions().expect("Fetching version list failed.");
-    best_version(&versions.iter().map(AsRef::as_ref).collect(), version_req.clone()).unwrap()
+    best_version(
+      versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(),
+      version_req.clone(),
+    )
+    .unwrap()
   };
 
   let new_exe_path = deno_bin_path(&used_version);
 
   if !new_exe_path.exists() {
-    print!("deno v{} is not installed. do you want to install it? (Y/n)", used_version);
+    print!(
+      "deno v{} is not installed. do you want to install it? (Y/n)",
+      used_version
+    );
     std::io::stdout().flush().unwrap();
     let confirm = stdin().bytes().next().and_then(|it| it.ok()).map(char::from).unwrap();
     if confirm == '\n' || confirm.to_ascii_lowercase() == 'y' {

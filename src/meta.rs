@@ -7,7 +7,7 @@ use std::fs::{read_to_string, write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-const DEFAULT_ALIAS: phf::Map<&'static str, &'static str> = phf::phf_map!{
+const DEFAULT_ALIAS: phf::Map<&'static str, &'static str> = phf::phf_map! {
   "latest" => "*"
 };
 
@@ -67,9 +67,14 @@ impl ToVersionReq for Alias {
 
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct DvmMeta {
+  #[serde(default = "default_registry")]
   pub registry: String,
   pub versions: Vec<VersionMapping>,
   pub alias: Vec<Alias>,
+}
+
+pub fn default_registry() -> String {
+  REGISTRY_OFFICIAL.to_string()
 }
 
 impl DvmMeta {
@@ -211,7 +216,10 @@ mod tests {
   fn test_default_config() {
     let result = serde_json::to_string(&DvmMeta::default());
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "{\"versions\":[],\"alias\":[]}");
+    assert_eq!(
+      result.unwrap(),
+      "{\"registry\":\"https://dl.deno.land/\",\"versions\":[],\"alias\":[]}"
+    );
   }
 
   #[test]
@@ -225,7 +233,7 @@ mod tests {
     assert!(result.is_ok());
     assert_eq!(
       result.unwrap(),
-      "{\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
+      "{\"registry\":\"https://dl.deno.land/\",\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
     )
   }
 
@@ -244,7 +252,7 @@ mod tests {
     assert!(result.is_ok());
     assert_eq!(
             result.unwrap(),
-            "{\"versions\":[],\"alias\":[{\"name\":\"stable\",\"required\":\"1.0.0\"},{\"name\":\"two-point-o\",\"required\":\"2.0.0\"}]}"
+            "{\"registry\":\"https://dl.deno.land/\",\"versions\":[],\"alias\":[{\"name\":\"stable\",\"required\":\"1.0.0\"},{\"name\":\"two-point-o\",\"required\":\"2.0.0\"}]}"
         )
   }
 
