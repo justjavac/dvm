@@ -5,6 +5,7 @@ use anyhow::Result;
 use json_minimal::Json;
 use semver::Version;
 use std::fs::read_dir;
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::string::String;
 
@@ -26,7 +27,7 @@ pub fn current_version() -> Option<String> {
 pub fn local_versions() -> Vec<String> {
   let mut v: Vec<String> = Vec::new();
 
-  if let Ok(entries) = read_dir(dvm_root()) {
+  if let Ok(entries) = read_dir(dvm_root().join(Path::new("versions"))) {
     for entry in entries.flatten() {
       if let Ok(file_type) = entry.file_type() {
         if file_type.is_dir() {

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-use crate::consts::REGISTRY_OFFICIAL;
-use crate::utils::dvm_root;
+use crate::consts::{DVM_BIN_PATH_PREFIX, REGISTRY_OFFICIAL};
+use crate::utils::{deno_bin_path, dvm_root};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fs::{read_to_string, write};
@@ -89,8 +89,16 @@ impl DvmMeta {
     if path.exists() {
       let content = read_to_string(path);
       if let Ok(content) = content {
-        let config = serde_json::from_str(content.as_str());
-        if let Ok(config) = config {
+        let config = serde_json::from_str::<DvmMeta>(content.as_str());
+        if let Ok(mut config) = config {
+          let mut i = 0;
+          while i < config.versions.len() {
+            if !deno_bin_path(&Version::parse(&config.versions[i].current).unwrap()).exists() {
+              config.versions.remove(i);
+            } else {
+              i += 1;
+            }
+          }
           return config;
         }
       }
@@ -101,11 +109,27 @@ impl DvmMeta {
     config
   }
 
+  pub fn clean_files(&self) {
+    let bin_path = dvm_root().join(Path::new(DVM_BIN_PATH_PREFIX));
+    for entry in bin_path.read_dir().expect("read_dir call failed").flatten() {
+      if entry.metadata().unwrap().is_dir()
+        && !self
+          .versions
+          .iter()
+          .map(|it| it.current.clone())
+          .any(|x| x == *entry.file_name().to_str().unwrap())
+      {
+        std::fs::remove_dir_all(entry.path()).unwrap();
+      }
+    }
+  }
+
   ///
   /// set a version mapping
   ///   `required` is either a semver range or a alias to a semver rage
   ///   `current` is the current directory that the deno located in
   pub fn set_version_mapping(&mut self, required: String, current: String) {
+    println!("{}, {}", &required, current);
     let result = self.versions.iter().position(|it| it.required == current);
     if let Some(index) = result {
       self.versions[index] = VersionMapping { required, current };

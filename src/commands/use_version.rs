@@ -16,8 +16,8 @@ use which::which;
 
 pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
   let version_req: VersionReq;
-  if let Some(version) = version {
-    version_req = meta.resolve_version_req(&version)
+  if let Some(ref version) = version {
+    version_req = meta.resolve_version_req(version)
   } else {
     println!("No version input detect, try to use version in .dvmrc file");
     version_req = load_dvmrc();
@@ -50,7 +50,10 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
     let confirm = stdin().bytes().next().and_then(|it| it.ok()).map(char::from).unwrap();
     if confirm == '\n' || confirm.to_ascii_lowercase() == 'y' {
       install::exec(true, Some(used_version.to_string())).unwrap();
-      meta.set_version_mapping(version_req.to_string(), used_version.to_string());
+      meta.set_version_mapping(
+        version.unwrap_or_else(|| version_req.to_string()),
+        used_version.to_string(),
+      );
       meta.save();
     } else {
       std::process::exit(1);
