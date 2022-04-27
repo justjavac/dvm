@@ -1,6 +1,11 @@
-use crate::utils::deno_bin_path;
-use crate::utils::is_china_mainland;
-use crate::version::dvmrc_version;
+use crate::meta::DvmMeta;
+use std::io::{stdin, Read, Write};
+
+use crate::commands::install;
+use crate::utils::{best_version, deno_bin_path};
+use crate::utils::{is_exact_version, load_dvmrc};
+use crate::version::remote_versions;
+use crate::version::{get_latest_version, VersionArg};
 use anyhow::Result;
 use semver::Version;
 use std::env;
@@ -9,45 +14,55 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use which::which;
 
-pub fn exec(version: Option<String>) -> Result<()> {
-  fn get_latest_version() -> Result<Version> {
-    println!("Checking for latest version");
-    let response = if is_china_mainland() {
-      tinyget::get("https://dl.deno.js.cn/release-latest.txt").send()?
-    } else {
-      tinyget::get("https://dl.deno.land/release-latest.txt").send()?
-    };
-
-    let body = response.as_str()?;
-    let v = body.trim().replace('v', "");
-    println!("The latest version is v{}", &v);
-    Ok(Version::parse(&v).unwrap())
+pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
+  let version_req: VersionArg;
+  if let Some(ref version) = version {
+    version_req = meta.resolve_version_req(version)
+  } else {
+    println!("No version input detect, try to use version in .dvmrc file");
+    version_req = load_dvmrc();
+    println!("Using semver range: {}", version_req);
   }
 
-  let version = version.unwrap_or_else(|| {
-    println!("No version input detect, try to use version in .dvmrc file");
-    dvmrc_version().unwrap_or_else(|| {
-      println!("No version in .dvmrc file, try to use latest version");
-      get_latest_version().unwrap().to_string()
-    })
-  });
-
-  let used_version = match Version::parse(&version) {
-    Ok(ver) => ver,
-    Err(_) => {
-      eprintln!("Invalid semver");
-      std::process::exit(1)
+  let used_version = if version_req.to_string() == "*" {
+    println!("Checking for latest version");
+    let version = get_latest_version(&meta.registry).expect("Get latest version failed");
+    println!("The latest version is v{}", version);
+    version
+  } else {
+    match version_req {
+      VersionArg::Exact(ref v) => v.clone(),
+      VersionArg::Range(ref r) => {
+        println!("Fetching version list");
+        let versions = remote_versions().expect("Fetching version list failed.");
+        best_version(
+          versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(),
+          r.clone(),
+        )
+        .unwrap()
+      }
     }
   };
 
   let new_exe_path = deno_bin_path(&used_version);
 
   if !new_exe_path.exists() {
-    eprintln!(
-      "deno v{} is not installed. Use `dvm install {}` to install it first.",
-      used_version, used_version
+    print!(
+      "deno v{} is not installed. do you want to install it? (Y/n)",
+      used_version
     );
-    std::process::exit(1)
+    std::io::stdout().flush().unwrap();
+    let confirm = stdin().bytes().next().and_then(|it| it.ok()).map(char::from).unwrap();
+    if confirm == '\n' || confirm.to_ascii_lowercase() == 'y' {
+      install::exec(true, Some(used_version.to_string())).unwrap();
+      let version = version.unwrap_or_else(|| version_req.to_string());
+      if !is_exact_version(&version) {
+        meta.set_version_mapping(version, used_version.to_string());
+        meta.save();
+      }
+    } else {
+      std::process::exit(1);
+    }
   }
 
   use_this_bin_path(&new_exe_path, &used_version)?;

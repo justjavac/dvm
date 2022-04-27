@@ -1,12 +1,46 @@
+use std::fmt::Formatter;
 // Copyright 2020 justjavac. All rights reserved. MIT license.
-use crate::utils::{dvm_root, is_china_mainland, is_semver};
+use crate::consts::REGISTRY_LATEST_RELEASE_PATH;
+use crate::utils::{dvm_root, is_china_mainland, is_exact_version, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
-use std::fs::{read_dir, read_to_string};
+use semver::{Version, VersionReq};
+use std::fs::read_dir;
+use std::path::Path;
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 use std::string::String;
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum VersionArg {
+  Exact(Version),
+  Range(VersionReq),
+}
+
+impl std::fmt::Display for VersionArg {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      VersionArg::Exact(version) => f.write_str(version.to_string().as_str()),
+      VersionArg::Range(version) => f.write_str(version.to_string().as_str()),
+    }
+  }
+}
+
+impl FromStr for VersionArg {
+  type Err = ();
+
+  fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    if is_exact_version(s) {
+      Version::parse(s).map(VersionArg::Exact).map_err(|_| ())
+    } else {
+      VersionReq::parse(s)
+        .map(VersionArg::Range)
+        .or_else(|_| VersionReq::parse("*").map(VersionArg::Range).map_err(|_| ()))
+    }
+  }
+}
 
 pub fn current_version() -> Option<String> {
   match Command::new("deno").arg("-V").stderr(Stdio::inherit()).output() {
@@ -21,20 +55,10 @@ pub fn current_version() -> Option<String> {
   }
 }
 
-pub fn dvmrc_version() -> Option<String> {
-  match read_to_string(".dvmrc") {
-    Ok(v) => {
-      println!("Found '.dvmrc' with version <{}>", v.trim());
-      Some(v.trim().into())
-    }
-    Err(_) => None,
-  }
-}
-
 pub fn local_versions() -> Vec<String> {
   let mut v: Vec<String> = Vec::new();
 
-  if let Ok(entries) = read_dir(dvm_root()) {
+  if let Ok(entries) = read_dir(dvm_root().join(Path::new("versions"))) {
     for entry in entries.flatten() {
       if let Ok(file_type) = entry.file_type() {
         if file_type.is_dir() {
@@ -88,4 +112,12 @@ pub fn remote_versions() -> Result<Vec<String>> {
   }
 
   Ok(result)
+}
+
+pub fn get_latest_version(registry: &str) -> Result<Version> {
+  let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_RELEASE_PATH)).send()?;
+
+  let body = response.as_str()?;
+  let v = body.trim().replace('v', "");
+  Ok(Version::parse(&v).unwrap())
 }

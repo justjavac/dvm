@@ -1,7 +1,73 @@
-use semver::Version;
+use crate::consts::DVM_BIN_PATH_PREFIX;
+use crate::version::VersionArg;
+use anyhow::anyhow;
+use dirs::home_dir;
+use semver::{Version, VersionReq};
 use std::env;
+use std::fs::read_to_string;
+use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use tempfile::TempDir;
+
+pub fn is_exact_version(input: &str) -> bool {
+  Version::parse(input).is_ok()
+}
+
+#[allow(dead_code)]
+pub fn is_valid_semver_range(input: &str) -> bool {
+  VersionReq::parse(input).is_ok()
+}
+
+pub fn best_version(choices: &[&str], required: VersionReq) -> Option<Version> {
+  let mut best: Option<Version> = None;
+
+  for &candidate in choices {
+    let version = Version::parse(candidate);
+    if version.is_err() {
+      continue;
+    }
+    let version = version.unwrap();
+    if required.matches(&version) {
+      if best.is_none() {
+        best.replace(version);
+      } else {
+        let old = best.as_ref().unwrap();
+        if old.lt(&version) {
+          best.replace(version);
+        }
+      }
+    }
+  }
+
+  best
+}
+
+///
+/// Find and load the dvmrc
+/// local -> user -> default
+pub fn load_dvmrc() -> VersionArg {
+  let project_config = Path::new(".dvmrc");
+  let user_config = home_dir().unwrap().join(".dvmrc");
+
+  let mut found_config: Option<&Path> = None;
+  if Path::exists(project_config) {
+    found_config = Some(project_config)
+  } else if Path::exists(user_config.as_path()) {
+    found_config = Some(user_config.as_path())
+  }
+
+  if let Some(found) = found_config {
+    let result = read_to_string(found)
+      .map_err(|e| anyhow!(e))
+      .and_then(|content| VersionArg::from_str(&content).map_err(|_| anyhow!("")));
+    if let Ok(req) = result {
+      return req;
+    }
+  }
+
+  VersionArg::from_str("*").unwrap()
+}
 
 pub fn dvm_root() -> PathBuf {
   match env::var_os("DVM_DIR").map(PathBuf::from) {
@@ -24,7 +90,7 @@ pub fn dvm_root() -> PathBuf {
 }
 
 pub fn deno_bin_path(version: &Version) -> PathBuf {
-  let dvm_dir = dvm_root().join(format!("{}", version));
+  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_BIN_PATH_PREFIX, version));
   let exe_ext = if cfg!(windows) { "exe" } else { "" };
   dvm_dir.join("deno").with_extension(exe_ext)
 }
@@ -54,4 +120,36 @@ pub fn is_china_mainland() -> bool {
   }
 
   String::from_utf16_lossy(&buf).starts_with("zh-CN")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use semver::VersionReq;
+
+  #[test]
+  fn test_best_version() {
+    let versions = vec![
+      "0.8.5",
+      "0.8.0",
+      "0.9.0",
+      "1.0.0",
+      "1.0.0-alpha",
+      "1.0.0-beta",
+      "0.5.0",
+      "2.0.0",
+    ];
+    assert_eq!(
+      best_version(&versions, VersionReq::parse("*").unwrap()),
+      Some(Version::parse("2.0.0").unwrap())
+    );
+    assert_eq!(
+      best_version(&versions, VersionReq::parse("^1").unwrap()),
+      Some(Version::parse("1.0.0").unwrap())
+    );
+    assert_eq!(
+      best_version(&versions, VersionReq::parse("~0.8").unwrap()),
+      Some(Version::parse("0.8.5").unwrap())
+    );
+  }
 }
