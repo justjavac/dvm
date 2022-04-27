@@ -24,6 +24,8 @@ static AFTER_HELP: &str = "\x1b[33mEXAMPLE:\x1b[39m
   dvm install 1.3.2     Install v1.3.2 release
   dvm install           Install the latest available version
   dvm use 1.0.0         Use v1.0.0 release
+  dvm use latest        Use the latest alias that comes with dvm, equivalent to *
+  dvm use ^1.0.0        Use 1.x version (~1.0.0, >=1.0.0 are supported as well)
   
 \x1b[33mNOTE:\x1b[39m
   To remove, delete, or uninstall dvm - just remove the \x1b[36m`$DVM_DIR`\x1b[39m folder (usually \x1b[36m`~/.dvm`\x1b[39m)";
@@ -78,9 +80,9 @@ enum Commands {
     version: Option<String>,
   },
 
-  #[clap(about = "Use a given version")]
+  #[clap(about = "Use a given version or a semver range or a alias to the range.")]
   Use {
-    #[clap(help = "The version to install")]
+    #[clap(help = "The version, semver range or alias to use")]
     version: Option<String>,
   },
 }
