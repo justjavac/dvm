@@ -2,7 +2,7 @@ use crate::meta::DvmMeta;
 use std::io::{stdin, Read, Write};
 
 use crate::commands::install;
-use crate::utils::{best_version, deno_bin_path};
+use crate::utils::{best_version, deno_bin_path, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc};
 use crate::version::remote_versions;
 use crate::version::{get_latest_version, VersionArg};
@@ -66,6 +66,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
   }
 
   use_this_bin_path(&new_exe_path, &used_version)?;
+  update_stub(used_version.to_string().as_str());
   Ok(())
 }
 

@@ -4,11 +4,27 @@ use anyhow::anyhow;
 use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
-use std::fs::read_to_string;
+use std::fs::{read_to_string, write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::TempDir;
+
+pub fn now() -> u128 {
+  SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
+}
+
+pub fn update_stub(verison: &str) {
+  let mut home = dvm_root();
+  home.push("versions");
+  home.push(verison);
+  println!("update_stub {}", home.to_str().unwrap());
+  if home.is_dir() {
+    home.push(".dvmstub");
+    write(home, now().to_string()).unwrap();
+  }
+}
 
 pub fn is_exact_version(input: &str) -> bool {
   Version::parse(input).is_ok()

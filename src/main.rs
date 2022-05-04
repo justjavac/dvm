@@ -11,6 +11,7 @@ use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
 use meta::DvmMeta;
 
+use crate::meta::DEFAULT_ALIAS;
 #[cfg(windows)]
 use ctor::*;
 
@@ -85,6 +86,32 @@ enum Commands {
     #[clap(help = "The version, semver range or alias to use")]
     version: Option<String>,
   },
+
+  #[clap(about = "Set or unset an alias")]
+  Alias {
+    #[clap(subcommand)]
+    command: AliasCommands,
+  },
+}
+
+#[derive(Subcommand)]
+pub enum AliasCommands {
+  #[clap(about = "Set an alias")]
+  Set {
+    #[clap(help = "Alias name to set")]
+    name: String,
+    #[clap(help = "Alias content")]
+    content: String,
+  },
+
+  #[clap(about = "Unset an alias")]
+  Unset {
+    #[clap(help = "Alias name to unset")]
+    name: String,
+  },
+
+  #[clap(about = "List all alias")]
+  List,
 }
 
 pub fn main() {
@@ -99,6 +126,7 @@ pub fn main() {
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
     Commands::Use { version } => commands::use_version::exec(&mut meta, version),
+    Commands::Alias { command } => commands::alias::exec(&mut meta, command),
   };
 
   if let Err(err) = result {

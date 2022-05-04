@@ -1,3 +1,4 @@
+pub mod alias;
 pub mod completions;
 pub mod info;
 pub mod install;
