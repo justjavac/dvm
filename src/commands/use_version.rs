@@ -107,7 +107,7 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
     }
   };
 
-  fs::copy(&exe_path, &old_exe_path)?;
+  fs::hard_link(&exe_path, &old_exe_path)?;
   println!("Now using deno {}", version);
   Ok(())
 }
