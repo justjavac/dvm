@@ -31,11 +31,7 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
     }
     AliasCommands::List => {
       for (key, val) in DEFAULT_ALIAS.entries() {
-        println!(
-          "{} -> {}",
-          apply_alias_color(key, "darker"),
-          val
-        );
+        println!("{} -> {}", apply_alias_color(key, "darker"), val);
       }
 
       for alias in &meta.alias {
