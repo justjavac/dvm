@@ -8,7 +8,7 @@ use std::fs::{read_to_string, write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-const DEFAULT_ALIAS: phf::Map<&'static str, &'static str> = phf::phf_map! {
+pub const DEFAULT_ALIAS: phf::Map<&'static str, &'static str> = phf::phf_map! {
   "latest" => "*"
 };
 
@@ -52,8 +52,8 @@ impl ToVersionReq for VersionMapping {
 
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Alias {
-  name: String,
-  required: String,
+  pub name: String,
+  pub required: String,
 }
 
 impl ToVersionReq for Alias {
@@ -137,6 +137,7 @@ impl DvmMeta {
     } else {
       self.versions.push(VersionMapping { required, current });
     }
+    self.save();
   }
 
   ///
@@ -159,6 +160,8 @@ impl DvmMeta {
     if let Some(index) = result {
       self.versions.remove(index);
     }
+
+    self.save();
   }
 
   /// set a alias
@@ -174,6 +177,8 @@ impl DvmMeta {
     } else {
       self.alias.push(Alias { name, required });
     }
+
+    self.save();
   }
 
   pub fn has_alias(&self, name: &str) -> bool {
@@ -199,6 +204,8 @@ impl DvmMeta {
     if let Some(index) = result {
       self.alias.remove(index);
     }
+
+    self.save();
   }
 
   pub fn resolve_version_req(&self, required: &str) -> VersionArg {
