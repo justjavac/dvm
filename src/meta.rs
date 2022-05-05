@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::consts::{DVM_BIN_PATH_PREFIX, REGISTRY_OFFICIAL};
-use crate::utils::{deno_bin_path, dvm_root};
+use crate::utils::{deno_version_path, dvm_root};
 use crate::version::VersionArg;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
@@ -94,7 +94,7 @@ impl DvmMeta {
         if let Ok(mut config) = config {
           let mut i = 0;
           while i < config.versions.len() {
-            if !deno_bin_path(&Version::parse(&config.versions[i].current).unwrap()).exists() {
+            if !deno_version_path(&Version::parse(&config.versions[i].current).unwrap()).exists() {
               config.versions.remove(i);
             } else {
               i += 1;

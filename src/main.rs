@@ -9,9 +9,11 @@ pub mod version;
 use clap::{CommandFactory, Parser};
 use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
+use colored::Colorize;
 use meta::DvmMeta;
 
 use crate::meta::DEFAULT_ALIAS;
+use crate::utils::deno_bin_path;
 #[cfg(windows)]
 use ctor::*;
 
@@ -117,6 +119,13 @@ pub enum AliasCommands {
 pub fn main() {
   let cli = Cli::parse();
   let mut meta = DvmMeta::new();
+
+  // TODO(CGQAQ): remove these after add activate and deactivate command
+  let path = set_env::get("PATH").unwrap();
+  if !path.contains(deno_bin_path().to_str().unwrap()) {
+    set_env::prepend(path, deno_bin_path().to_str().unwrap().to_string()).unwrap();
+    println!("{}", "Please restart your shell of choice to take effects.".red());
+  }
 
   let result = match cli.command {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),

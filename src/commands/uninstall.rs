@@ -1,4 +1,4 @@
-use crate::utils::{deno_bin_path, dvm_root};
+use crate::utils::{deno_version_path, dvm_root};
 use crate::version::current_version;
 use anyhow::Result;
 use semver::Version;
@@ -16,7 +16,7 @@ pub fn exec(version: Option<String>) -> Result<()> {
     },
     None => unimplemented!(),
   };
-  let target_exe_path = deno_bin_path(&target_version);
+  let target_exe_path = deno_version_path(&target_version);
 
   if !target_exe_path.exists() {
     eprintln!("deno v{} is not installed.", target_version);

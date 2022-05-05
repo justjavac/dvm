@@ -2,7 +2,8 @@ use crate::meta::DvmMeta;
 use std::io::{stdin, Read, Write};
 
 use crate::commands::install;
-use crate::utils::{best_version, deno_bin_path, update_stub};
+use crate::deno_bin_path;
+use crate::utils::{best_version, deno_version_path, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc};
 use crate::version::remote_versions;
 use crate::version::{get_latest_version, VersionArg};
@@ -44,7 +45,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
     }
   };
 
-  let new_exe_path = deno_bin_path(&used_version);
+  let new_exe_path = deno_version_path(&used_version);
 
   if !new_exe_path.exists() {
     print!(
@@ -73,42 +74,11 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
 pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
   check_exe(exe_path, version)?;
 
-  let old_exe_path = match which("deno") {
-    Ok(old_exe_path) => {
-      let permissions = fs::metadata(&old_exe_path)?.permissions();
-      fs::set_permissions(&exe_path, permissions)?;
-
-      if cfg!(windows) {
-        // On windows you cannot replace the currently running executable.
-        // so first we rename it to deno.old.exe
-        fs::rename(&old_exe_path, &old_exe_path.with_extension("old.exe"))?;
-      } else {
-        fs::remove_file(&old_exe_path)?;
-      }
-
-      old_exe_path
-    }
-    Err(_) => {
-      let deno_install = match env::var_os("DENO_INSTALL") {
-        Some(deno_install) => PathBuf::from(deno_install),
-        None => {
-          println!("DENO_INSTALL is not defined, use $HOME/.deno/bin");
-          let home_env_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-          env::var_os(home_env_var).map(PathBuf::from).unwrap().join(".deno")
-        }
-      };
-
-      let deno_bin_path = deno_install.join("bin");
-      if !deno_bin_path.exists() {
-        fs::create_dir_all(&deno_bin_path).unwrap();
-      }
-
-      let exe_ext = if cfg!(windows) { "exe" } else { "" };
-      deno_bin_path.join("deno").with_extension(exe_ext)
-    }
-  };
-
-  fs::copy(&exe_path, &old_exe_path)?;
+  let bin_path = deno_bin_path();
+  if !bin_path.parent().unwrap().exists() {
+    fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
+  }
+  fs::hard_link(&exe_path, &bin_path)?;
   println!("Now using deno {}", version);
   Ok(())
 }
