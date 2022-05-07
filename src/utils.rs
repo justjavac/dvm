@@ -100,9 +100,6 @@ pub fn dvm_root() -> PathBuf {
         }
       };
       home_path.push(".dvm");
-
-      // actually set DVM_DIR env var if not exist.
-      set_env::set("DVM_DIR", home_path.to_str().unwrap()).unwrap();
       home_path
     }
   }

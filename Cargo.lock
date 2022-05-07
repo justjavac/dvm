@@ -173,15 +173,8 @@ dependencies = [
  "set_env",
  "tempfile",
  "tinyget",
- "which",
  "winapi",
 ]
-
-[[package]]
-name = "either"
-version = "1.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
 name = "foreign-types"
@@ -596,9 +589,9 @@ dependencies = [
 
 [[package]]
 name = "set_env"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9e7e8dc40b4ebf6cf72d2e73a48ae3c5b02947d1784be28398df21e84db8615"
+checksum = "8bdfcc79c3db6e2a3dc37b8f84811943a2529d53d781381a72f00a9b11fb4976"
 dependencies = [
  "dirs",
  "windows",
@@ -708,17 +701,6 @@ name = "wasi"
 version = "0.10.2+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
-
-[[package]]
-name = "which"
-version = "4.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea187a8ef279bc014ec368c27a920da2024d2a711109bfbe3440585d5cf27ad9"
-dependencies = [
- "either",
- "lazy_static",
- "libc",
-]
 
 [[package]]
 name = "winapi"

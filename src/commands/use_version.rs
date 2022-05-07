@@ -9,11 +9,9 @@ use crate::version::remote_versions;
 use crate::version::{get_latest_version, VersionArg};
 use anyhow::Result;
 use semver::Version;
-use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
-use which::which;
 
 pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
   let version_req: VersionArg;
