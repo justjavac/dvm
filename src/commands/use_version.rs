@@ -51,8 +51,8 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
       used_version
     );
     std::io::stdout().flush().unwrap();
-    let confirm = stdin().bytes().next().and_then(|it| it.ok()).map(char::from).unwrap();
-    if confirm == '\n' || confirm.to_ascii_lowercase() == 'y' {
+    let confirm = stdin().bytes().next().and_then(|it| it.ok()).map(char::from).unwrap_or_else(|| 'y');
+    if confirm == '\n' || confirm == '\r' || confirm.to_ascii_lowercase() == 'y' {
       install::exec(true, Some(used_version.to_string())).unwrap();
       let version = version.unwrap_or_else(|| version_req.to_string());
       if !is_exact_version(&version) {
@@ -75,6 +75,9 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
   let bin_path = deno_bin_path();
   if !bin_path.parent().unwrap().exists() {
     fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
+  }
+  if bin_path.exists() {
+    fs::remove_file(&bin_path)?;
   }
   fs::hard_link(&exe_path, &bin_path)?;
   println!("Now using deno {}", version);

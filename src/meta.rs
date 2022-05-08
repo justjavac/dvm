@@ -4,7 +4,7 @@ use crate::utils::{deno_version_path, dvm_root};
 use crate::version::VersionArg;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
-use std::fs::{read_to_string, write};
+use std::fs::{read_to_string, write, create_dir_all};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -225,7 +225,12 @@ impl DvmMeta {
 
   /// write to disk
   pub fn save(&self) {
-    write(DvmMeta::path(), serde_json::to_string_pretty(self).unwrap()).unwrap();
+    let file_path = DvmMeta::path();
+    let dir_path = file_path.parent().unwrap();
+    if !dir_path.exists() {
+      create_dir_all(dir_path).unwrap();
+    }
+    write(file_path, serde_json::to_string_pretty(self).unwrap()).unwrap();
   }
 }
 
