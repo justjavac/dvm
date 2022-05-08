@@ -11,7 +11,7 @@ use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
 use colored::Colorize;
 use meta::DvmMeta;
-use utils::{dvm_root};
+use utils::dvm_root;
 
 use crate::meta::DEFAULT_ALIAS;
 use crate::utils::deno_bin_path;
@@ -124,7 +124,7 @@ pub fn main() {
   // TODO(CGQAQ): remove these after add activate and deactivate command
   // actually set DVM_DIR env var if not exist.
   let home_path = dvm_root();
-  set_env::set("DVM_DIR", home_path.to_str().unwrap()).unwrap();
+  set_env::check_or_set("DVM_DIR", home_path.to_str().unwrap()).unwrap();
   let path = set_env::get("PATH").unwrap();
   let looking_for = deno_bin_path().parent().unwrap().to_str().unwrap().to_string();
   if !path.contains(looking_for.as_str()) {

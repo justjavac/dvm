@@ -51,7 +51,12 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
       used_version
     );
     std::io::stdout().flush().unwrap();
-    let confirm = stdin().bytes().next().and_then(|it| it.ok()).map(char::from).unwrap_or_else(|| 'y');
+    let confirm = stdin()
+      .bytes()
+      .next()
+      .and_then(|it| it.ok())
+      .map(char::from)
+      .unwrap_or_else(|| 'y');
     if confirm == '\n' || confirm == '\r' || confirm.to_ascii_lowercase() == 'y' {
       install::exec(true, Some(used_version.to_string())).unwrap();
       let version = version.unwrap_or_else(|| version_req.to_string());

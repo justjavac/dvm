@@ -4,7 +4,7 @@ use crate::utils::{deno_version_path, dvm_root};
 use crate::version::VersionArg;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
-use std::fs::{read_to_string, write, create_dir_all};
+use std::fs::{create_dir_all, read_to_string, write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
