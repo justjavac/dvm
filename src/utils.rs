@@ -105,7 +105,15 @@ pub fn dvm_root() -> PathBuf {
   }
 }
 
-pub fn deno_bin_path(version: &Version) -> PathBuf {
+/// CGQAQ: Put hardlink to executable to this file,
+///        and prepend this folder to env when dvm activated.
+pub fn deno_bin_path() -> PathBuf {
+  let dvm_bin_dir = dvm_root().join("bin");
+  let exe_ext = if cfg!(windows) { "exe" } else { "" };
+  dvm_bin_dir.join("deno").with_extension(exe_ext)
+}
+
+pub fn deno_version_path(version: &Version) -> PathBuf {
   let dvm_dir = dvm_root().join(format!("{}/{}", DVM_BIN_PATH_PREFIX, version));
   let exe_ext = if cfg!(windows) { "exe" } else { "" };
   dvm_dir.join("deno").with_extension(exe_ext)

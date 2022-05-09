@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 use crate::consts::{DVM_BIN_PATH_PREFIX, REGISTRY_OFFICIAL};
-use crate::utils::{deno_bin_path, dvm_root};
+use crate::utils::{deno_version_path, dvm_root};
 use crate::version::VersionArg;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
-use std::fs::{read_to_string, write};
+use std::fs::{create_dir_all, read_to_string, write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -94,7 +94,7 @@ impl DvmMeta {
         if let Ok(mut config) = config {
           let mut i = 0;
           while i < config.versions.len() {
-            if !deno_bin_path(&Version::parse(&config.versions[i].current).unwrap()).exists() {
+            if !deno_version_path(&Version::parse(&config.versions[i].current).unwrap()).exists() {
               config.versions.remove(i);
             } else {
               i += 1;
@@ -225,7 +225,12 @@ impl DvmMeta {
 
   /// write to disk
   pub fn save(&self) {
-    write(DvmMeta::path(), serde_json::to_string_pretty(self).unwrap()).unwrap();
+    let file_path = DvmMeta::path();
+    let dir_path = file_path.parent().unwrap();
+    if !dir_path.exists() {
+      create_dir_all(dir_path).unwrap();
+    }
+    write(file_path, serde_json::to_string_pretty(self).unwrap()).unwrap();
   }
 }
 
