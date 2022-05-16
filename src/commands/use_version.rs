@@ -13,10 +13,19 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+/// using a tag or a specific version
 pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
   let version_req: VersionArg;
   if let Some(ref version) = version {
-    version_req = meta.resolve_version_req(version)
+    if is_exact_version(version) {
+      version_req = VersionArg::Exact(Version::parse(version).unwrap());
+    } else if meta.has_alias(version) {
+      version_req = meta.resolve_version_req(version);
+    } else {
+      // dvm will reject for using semver range directly now.
+      eprintln!("`{}` is not a valid semver version or tag and will not be used\ntype `dvm help` for more info", version);
+      std::process::exit(1);
+    }
   } else {
     println!("No version input detect, try to use version in .dvmrc file");
     version_req = load_dvmrc();
