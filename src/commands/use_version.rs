@@ -23,7 +23,10 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
       version_req = meta.resolve_version_req(version);
     } else {
       // dvm will reject for using semver range directly now.
-      eprintln!("`{}` is not a valid semver version or tag and will not be used\ntype `dvm help` for more info", version);
+      eprintln!(
+        "`{}` is not a valid semver version or tag and will not be used\ntype `dvm help` for more info",
+        version
+      );
       std::process::exit(1);
     }
   } else {
