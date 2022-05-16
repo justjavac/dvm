@@ -95,6 +95,11 @@ enum Commands {
     #[clap(subcommand)]
     command: AliasCommands,
   },
+
+  #[clap(about = "Activate Dvm")]
+  Activate,
+  #[clap(about = "Deactivate Dvm")]
+  Deactivate,
 }
 
 #[derive(Subcommand)]
@@ -121,7 +126,7 @@ pub fn main() {
   let cli = Cli::parse();
   let mut meta = DvmMeta::new();
 
-  // TODO(CGQAQ): remove these after add activate and deactivate command
+  // Init enviroments if need
   // actually set DVM_DIR env var if not exist.
   let home_path = dvm_root();
   set_env::check_or_set("DVM_DIR", home_path.to_str().unwrap()).unwrap();
@@ -141,6 +146,8 @@ pub fn main() {
     Commands::Uninstall { version } => commands::uninstall::exec(version),
     Commands::Use { version } => commands::use_version::exec(&mut meta, version),
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
+    Commands::Activate => commands::activate::exec(&mut meta),
+    Commands::Deactivate => commands::deactivate::exec(&mut meta),
   };
 
   if let Err(err) = result {

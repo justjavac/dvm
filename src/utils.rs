@@ -11,6 +11,12 @@ use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::TempDir;
 
+pub fn check_is_deactivated() -> bool {
+  let mut home = dvm_root();
+  home.push(".deactivated");
+  home.exists() && home.is_file()
+}
+
 pub fn now() -> u128 {
   SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
 }
