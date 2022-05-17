@@ -148,7 +148,7 @@ pub fn main() {
     Commands::Use { version } => commands::use_version::exec(&mut meta, version),
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
     Commands::Activate => commands::activate::exec(&mut meta),
-    Commands::Deactivate => commands::deactivate::exec(&mut meta),
+    Commands::Deactivate => commands::deactivate::exec(),
   };
 
   if let Err(err) = result {
