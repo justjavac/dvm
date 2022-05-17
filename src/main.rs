@@ -126,6 +126,7 @@ pub fn main() {
   let cli = Cli::parse();
   let mut meta = DvmMeta::new();
 
+  // TODO(CGQAQ): Move this into the `doctor` command
   // Init enviroments if need
   // actually set DVM_DIR env var if not exist.
   let home_path = dvm_root();
