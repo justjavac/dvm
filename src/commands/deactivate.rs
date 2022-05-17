@@ -1,5 +1,5 @@
 use crate::utils::check_is_deactivated;
-use crate::{deno_bin_path, dvm_root, DvmMeta};
+use crate::{deno_bin_path, dvm_root};
 use anyhow::{anyhow, Result};
 
 pub fn exec() -> Result<()> {
