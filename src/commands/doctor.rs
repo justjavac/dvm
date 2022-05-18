@@ -28,7 +28,10 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
       let name = path.file_name().unwrap().to_str().unwrap();
       if is_exact_version(name) {
         // move to `versions` subdir
-        println!("Found old dvm cache of version `{}`, migrating to new dvm cache location...", name);
+        println!(
+          "Found old dvm cache of version `{}`, migrating to new dvm cache location...",
+          name
+        );
         fs::rename(path.clone(), path.parent().unwrap().join("versions").join(name)).unwrap();
       }
     }
@@ -37,7 +40,6 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   if !dirs::home_dir().unwrap().join(".dvmrc").exists() {
     super::use_version::exec(meta, None).unwrap();
   }
-
 
   println!("{}", "All fixes applied, DVM is ready to use.".green());
   Ok(())
