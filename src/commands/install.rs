@@ -21,7 +21,7 @@ const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
 pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   let install_version = match version {
-    Some(passed_version) => match Version::parse(&passed_version) {
+    Some(ref passed_version) => match Version::parse(passed_version) {
       Ok(ver) => ver,
       Err(_) => {
         eprintln!("Invalid semver");
@@ -41,7 +41,11 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   }
 
   if !no_use {
-    use_version::use_this_bin_path(&exe_path, &install_version)?;
+    use_version::use_this_bin_path(
+      &exe_path,
+      &install_version,
+      version.unwrap_or_else(|| "latest".to_string()),
+    )?;
   }
 
   Ok(())
