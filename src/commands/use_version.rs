@@ -71,9 +71,10 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
       .unwrap_or_else(|| 'y');
     if confirm == '\n' || confirm == '\r' || confirm.to_ascii_lowercase() == 'y' {
       install::exec(true, Some(used_version.to_string())).unwrap();
-      let version = version.unwrap_or_else(|| version_req.to_string());
-      if !is_exact_version(&version) {
-        meta.set_version_mapping(version, used_version.to_string());
+      let temp = version_req.to_string();
+      let version = version.as_ref().unwrap_or(&temp);
+      if !is_exact_version(version) {
+        meta.set_version_mapping(version.clone(), used_version.to_string());
         meta.save();
       }
     } else {
@@ -81,12 +82,16 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
     }
   }
 
-  use_this_bin_path(&new_exe_path, &used_version)?;
+  use_this_bin_path(
+    &new_exe_path,
+    &used_version,
+    version.unwrap_or_else(|| "latest".to_string()),
+  )?;
   update_stub(used_version.to_string().as_str());
   Ok(())
 }
 
-pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
+pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String) -> Result<()> {
   check_exe(exe_path, version)?;
 
   let bin_path = deno_bin_path();
@@ -97,6 +102,7 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version) -> Result<()> {
     fs::remove_file(&bin_path)?;
   }
   fs::hard_link(&exe_path, &bin_path)?;
+  fs::write(dirs::home_dir().unwrap().join(".dvmrc"), raw_version)?;
   println!("Now using deno {}", version);
   Ok(())
 }
