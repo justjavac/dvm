@@ -1,7 +1,7 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
 use super::use_version;
-use crate::consts::DVM_BIN_PATH_PREFIX;
+use crate::consts::DVM_CACHE_PATH_PREFIX;
 use crate::utils::{deno_version_path, dvm_root, is_china_mainland};
 use anyhow::Result;
 use semver::Version;
@@ -101,7 +101,7 @@ fn compose_url_to_exec(version: &Version) -> String {
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
-  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_BIN_PATH_PREFIX, version));
+  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
   fs::create_dir_all(&dvm_dir)?;
   let exe_path = deno_version_path(version);
 

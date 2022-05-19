@@ -3,4 +3,4 @@ pub const REGISTRY_OFFICIAL: &str = "https://dl.deno.land/";
 pub const REGISTRY_CN: &str = "https://dl.deno.js.cn/";
 pub const REGISTRY_LATEST_RELEASE_PATH: &str = "release-latest.txt";
 
-pub const DVM_BIN_PATH_PREFIX: &str = "versions";
+pub const DVM_CACHE_PATH_PREFIX: &str = "versions";

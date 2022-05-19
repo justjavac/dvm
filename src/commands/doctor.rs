@@ -1,3 +1,4 @@
+use crate::consts::DVM_CACHE_PATH_PREFIX;
 use anyhow::Result;
 use colored::Colorize;
 use std::fs;
@@ -20,6 +21,13 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   }
 
   // migrating from old dvm cache.
+  let cache_folder = home_path.join(DVM_CACHE_PATH_PREFIX);
+  if !cache_folder.exists() {
+    fs::create_dir_all(cache_folder)?;
+  } else if !home_path.join(DVM_CACHE_PATH_PREFIX).is_dir() {
+    fs::remove_file(cache_folder.clone())?;
+    fs::create_dir_all(cache_folder)?;
+  }
   let list = fs::read_dir(home_path).unwrap();
   for entry in list {
     let entry = entry.unwrap();
