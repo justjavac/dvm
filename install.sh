@@ -54,7 +54,8 @@ fi
 
 echo "Dvm was installed successfully to $exe"
 if command -v dvm >/dev/null; then
-	echo "Run 'dvm --help' to get started"
+	command dvm doctor
+	echo "Run 'dvm --help' to get started."
 else
 	echo "Reopen your shell, or run 'source $HOME/$shell_profile' to get started"
 fi
