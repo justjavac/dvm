@@ -52,10 +52,12 @@ if (!(";$Path;".ToLower() -like "*;$DenoBinDir;*".ToLower())) {
   [Environment]::SetEnvironmentVariable('Path', "$Path;$DenoBinDir", $User)
   $Env:Path += ";$DenoBinDir"
 }
+
 if (!(";$Path;".ToLower() -like "*;$BinDir;*".ToLower())) {
   [Environment]::SetEnvironmentVariable('Path', "$Path;$BinDir", $User)
   $Env:Path += ";$BinDir"
 }
 
 Write-Output "Dvm was installed successfully to $DvmExe"
+Invoke-Expression -Command "dvm doctor"
 Write-Output "Run 'dvm --help' to get started"
