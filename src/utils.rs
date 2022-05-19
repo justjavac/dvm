@@ -1,4 +1,4 @@
-use crate::consts::DVM_BIN_PATH_PREFIX;
+use crate::consts::DVM_CACHE_PATH_PREFIX;
 use crate::version::VersionArg;
 use anyhow::anyhow;
 use dirs::home_dir;
@@ -120,7 +120,7 @@ pub fn deno_bin_path() -> PathBuf {
 }
 
 pub fn deno_version_path(version: &Version) -> PathBuf {
-  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_BIN_PATH_PREFIX, version));
+  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
   let exe_ext = if cfg!(windows) { "exe" } else { "" };
   dvm_dir.join("deno").with_extension(exe_ext)
 }

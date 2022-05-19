@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::consts::{DVM_BIN_PATH_PREFIX, REGISTRY_OFFICIAL};
+use crate::consts::{DVM_CACHE_PATH_PREFIX, REGISTRY_OFFICIAL};
 use crate::utils::{deno_version_path, dvm_root};
 use crate::version::VersionArg;
 use semver::{Version, VersionReq};
@@ -111,7 +111,7 @@ impl DvmMeta {
   }
 
   pub fn clean_files(&self) {
-    let bin_path = dvm_root().join(Path::new(DVM_BIN_PATH_PREFIX));
+    let bin_path = dvm_root().join(Path::new(DVM_CACHE_PATH_PREFIX));
     for entry in bin_path.read_dir().expect("read_dir call failed").flatten() {
       if entry.metadata().unwrap().is_dir()
         && !self
