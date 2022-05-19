@@ -87,6 +87,12 @@ jobs:
       - name: Build release
         run: cargo build --release --locked
 
+      - name: Build release(aarch64-apple-darwin)
+        if: startsWith(matrix.os, 'macOS')
+        run: |
+          rustup target add aarch64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin --locked
+
       - name: Run cargo test
         run: cargo test --locked
 
@@ -101,6 +107,12 @@ jobs:
         run: |
           cd target/release
           zip -r dvm-x86_64-apple-darwin.zip dvm
+
+      - name: Pre-release (mac-aarch64)
+        if: startsWith(matrix.os, 'macOS')
+        run: |
+          cd target/aarch64-apple-darwin/release
+          zip -r dvm-aarch64-apple-darwin.zip dvm
 
       - name: Pre-release (windows)
         if: startsWith(matrix.os, 'windows')
@@ -119,6 +131,7 @@ jobs:
             target/release/dvm-x86_64-pc-windows-msvc.zip
             target/release/dvm-x86_64-unknown-linux-gnu.zip
             target/release/dvm-x86_64-apple-darwin.zip
+            target/aarch64-apple-darwin/release/dvm-aarch64-apple-darwin.zip
           draft: true
 
       - name: Release DVM
@@ -133,6 +146,7 @@ jobs:
             target/release/dvm-x86_64-pc-windows-msvc.zip
             target/release/dvm-x86_64-unknown-linux-gnu.zip
             target/release/dvm-x86_64-apple-darwin.zip
+            target/aarch64-apple-darwin/release/dvm-aarch64-apple-darwin.zip
 
       - name: Publish
         if: |
