@@ -13,10 +13,11 @@ fi
 if [ "$OS" = "Windows_NT" ]; then
 	target="x86_64-pc-windows-msvc"
 else
-	case $(uname -s) in
+	case $(uname -sm) in
 	"Darwin x86_64") target="x86_64-apple-darwin" ;;
 	"Darwin arm64") target="aarch64-apple-darwin" ;;
-	*) target="x86_64-unknown-linux-gnu" ;;
+	"Linux x86_64") target="x86_64-unknown-linux-gnu" ;;
+	*) echo "Unsupported OS + CPU combination: $(uname -sm)"; exit 1 ;;
 	esac
 fi
 
@@ -31,11 +32,21 @@ if [ ! -d "$dvm_bin_dir" ]; then
 	mkdir -p "$dvm_bin_dir"
 fi
 
-curl --fail --location --progress-bar --output "$exe.zip" "$dvm_uri"
+if [ "$1" = "" ]; then
+	cd "$dvm_bin_dir"
+	curl --fail --location --progress-bar --output "$exe.zip" "$dvm_uri"
+	unzip -o "$exe.zip"
+	rm "$exe.zip"
+else
+	echo "Install path override detected: $1"
+	if [ ! -f "$1" ]; then
+		echo "File does not exist: $1"
+		exit 1
+	fi
+	cp "$1" "$exe"
+fi
 cd "$dvm_bin_dir"
-unzip -o "$exe.zip"
 chmod +x "$exe"
-rm "$exe.zip"
 
 case $SHELL in
 /bin/zsh) shell_profile=".zshrc" ;;
