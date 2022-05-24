@@ -96,6 +96,10 @@ jobs:
       - name: Run cargo test
         run: cargo test --locked
 
+      - name: Test install from local file (bash)
+        if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macOS')
+        run: ./install.sh ./target/release/dvm
+
       - name: Pre-release (linux)
         if: startsWith(matrix.os, 'ubuntu')
         run: |
