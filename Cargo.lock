@@ -589,9 +589,9 @@ dependencies = [
 
 [[package]]
 name = "set_env"
-version = "1.2.2"
+version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6508a6abe763e5b35e3be92e17be72df6a7cebdf065ea873a9eeaa6a295e612"
+checksum = "f4d84a97e8068ac431f7c19ff1e5940042eac28c16e5b5130404a33a82ba1837"
 dependencies = [
  "dirs",
  "winreg",
