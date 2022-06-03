@@ -9,5 +9,5 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
     std::fs::remove_file(home.join(".deactivated")).unwrap();
   }
 
-  use_version::exec(meta, None)
+  use_version::exec(meta, None, false)
 }
