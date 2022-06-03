@@ -5,11 +5,25 @@ use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
 use std::fs::{read_to_string, write};
+use std::io::{stdin, Read, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::TempDir;
+
+pub fn prompt_request(prompt: &str) -> bool {
+  print!("{} (Y/n)", prompt);
+
+  std::io::stdout().flush().unwrap();
+  let confirm = stdin()
+    .bytes()
+    .next()
+    .and_then(|it| it.ok())
+    .map(char::from)
+    .unwrap_or_else(|| 'y');
+  confirm == '\n' || confirm == '\r' || confirm.to_ascii_lowercase() == 'y'
+}
 
 pub fn check_is_deactivated() -> bool {
   let mut home = dvm_root();

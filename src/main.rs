@@ -115,6 +115,15 @@ enum Commands {
     #[clap(help = "The alias to upgrade, upgrade all aliases if not present")]
     alias: Option<String>,
   },
+
+  #[clap(about = "Execute deno command with a specific deno version")]
+  Exec {
+    #[clap(help = "The command given to deno")]
+    command: Option<String>,
+
+    #[clap(help = "The version to use", long, short)]
+    verison: Option<String>,
+  },
 }
 
 #[derive(Subcommand)]
@@ -154,6 +163,9 @@ pub fn main() {
     Commands::Deactivate => commands::deactivate::exec(),
     Commands::Doctor => commands::doctor::exec(&mut meta),
     Commands::Upgrade { alias } => commands::upgrade::exec(&mut meta, alias),
+    Commands::Exec { command, verison } => {
+      commands::exec::exec(&mut meta, command.unwrap_or_default().as_str(), verison.as_deref())
+    }
   };
 
   if let Err(err) = result {
