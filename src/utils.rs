@@ -25,7 +25,7 @@ pub fn update_stub(verison: &str) {
   let mut home = dvm_root();
   home.push("versions");
   home.push(verison);
-  println!("update_stub {}", home.to_str().unwrap());
+  // println!("update_stub {}", home.to_str().unwrap());
   if home.is_dir() {
     home.push(".dvmstub");
     write(home, now().to_string()).unwrap();

@@ -45,6 +45,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
       &exe_path,
       &install_version,
       version.unwrap_or_else(|| "latest".to_string()),
+      false,
     )?;
   }
 

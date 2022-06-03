@@ -46,7 +46,7 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   }
 
   if !dirs::home_dir().unwrap().join(".dvmrc").exists() {
-    super::use_version::exec(meta, None).unwrap();
+    super::use_version::exec(meta, None, false).unwrap();
   }
 
   println!("{}", "All fixes applied, DVM is ready to use.".green());

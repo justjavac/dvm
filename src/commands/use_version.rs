@@ -14,7 +14,7 @@ use std::path::Path;
 use std::process::Command;
 
 /// using a tag or a specific version
-pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
+pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<()> {
   let version_req: VersionArg;
   if let Some(ref version) = version {
     if is_exact_version(version) {
@@ -75,7 +75,6 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
       let version = version.as_ref().unwrap_or(&temp);
       if !is_exact_version(version) {
         meta.set_version_mapping(version.clone(), used_version.to_string());
-        meta.save();
       }
     } else {
       std::process::exit(1);
@@ -86,12 +85,13 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
     &new_exe_path,
     &used_version,
     version.unwrap_or_else(|| "latest".to_string()),
+    local,
   )?;
   update_stub(used_version.to_string().as_str());
   Ok(())
 }
 
-pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String) -> Result<()> {
+pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String, local: bool) -> Result<()> {
   check_exe(exe_path, version)?;
 
   let bin_path = deno_bin_path();
@@ -102,7 +102,14 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
     fs::remove_file(&bin_path)?;
   }
   fs::hard_link(&exe_path, &bin_path)?;
-  fs::write(dirs::home_dir().unwrap().join(".dvmrc"), raw_version)?;
+
+  if local {
+    println!("Writing to current folder config");
+    fs::write(std::path::Path::new("./.dvmrc"), raw_version)?;
+  } else {
+    println!("Writing to home folder config");
+    fs::write(dirs::home_dir().unwrap().join(".dvmrc"), raw_version)?;
+  }
   println!("Now using deno {}", version);
   Ok(())
 }
