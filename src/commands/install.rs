@@ -24,7 +24,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
     Some(ref passed_version) => match Version::parse(passed_version) {
       Ok(ver) => ver,
       Err(_) => {
-        eprintln!("Invalid semver");
+        eprintln!("Invalid semver {}", passed_version);
         std::process::exit(1)
       }
     },
@@ -34,7 +34,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   let exe_path = deno_version_path(&install_version);
 
   if exe_path.exists() {
-    println!("version v{} is already installed", install_version);
+    println!("Version v{} is already installed", install_version);
   } else {
     let archive_data = download_package(&compose_url_to_exec(&install_version), &install_version)?;
     unpack(archive_data, &install_version)?;
