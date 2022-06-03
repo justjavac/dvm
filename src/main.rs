@@ -102,6 +102,12 @@ enum Commands {
 
   #[clap(about = "Fixing dvm specific environment variables and other issues")]
   Doctor,
+
+  #[clap(about = "Upgrade aliases to the latest version")]
+  Upgrade {
+    #[clap(help = "The alias to upgrade, upgrade all aliases if not present")]
+    alias: Option<String>,
+  },
 }
 
 #[derive(Subcommand)]
@@ -140,6 +146,7 @@ pub fn main() {
     Commands::Activate => commands::activate::exec(&mut meta),
     Commands::Deactivate => commands::deactivate::exec(),
     Commands::Doctor => commands::doctor::exec(&mut meta),
+    Commands::Upgrade { alias } => commands::upgrade::exec(&mut meta, alias),
   };
 
   if let Err(err) = result {

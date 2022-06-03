@@ -50,7 +50,7 @@ impl ToVersionReq for VersionMapping {
   }
 }
 
-#[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Debug)]
 pub struct Alias {
   pub name: String,
   pub required: String,
@@ -130,8 +130,7 @@ impl DvmMeta {
   ///   `required` is either a semver range or a alias to a semver rage
   ///   `current` is the current directory that the deno located in
   pub fn set_version_mapping(&mut self, required: String, current: String) {
-    println!("{}, {}", &required, current);
-    let result = self.versions.iter().position(|it| it.required == current);
+    let result = self.versions.iter().position(|it| it.required == required);
     if let Some(index) = result {
       self.versions[index] = VersionMapping { required, current };
     } else {
@@ -162,6 +161,24 @@ impl DvmMeta {
     }
 
     self.save();
+  }
+
+  ///
+  /// list aliases
+  /// including predefined aliases
+  pub fn list_alias(&self) -> Vec<Alias> {
+    let mut alias = self.alias.clone();
+    for (k, v) in DEFAULT_ALIAS.into_iter() {
+      alias.insert(
+        0,
+        Alias {
+          name: k.to_string(),
+          required: v.to_string(),
+        },
+      );
+    }
+
+    alias
   }
 
   /// set a alias
