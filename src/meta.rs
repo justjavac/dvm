@@ -131,7 +131,7 @@ impl DvmMeta {
   ///   `current` is the current directory that the deno located in
   pub fn set_version_mapping(&mut self, required: String, current: String) {
     println!("{}, {}", &required, current);
-    let result = self.versions.iter().position(|it| it.required == current);
+    let result = self.versions.iter().position(|it| it.required == required);
     if let Some(index) = result {
       self.versions[index] = VersionMapping { required, current };
     } else {

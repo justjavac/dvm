@@ -87,6 +87,13 @@ enum Commands {
   Use {
     #[clap(help = "The version, semver range or alias to use")]
     version: Option<String>,
+
+    #[clap(
+      short,
+      long,
+      help = "Writing the version to the .dvmrc file of the current directory if present"
+    )]
+    local: bool,
   },
 
   #[clap(about = "Set or unset an alias")]
@@ -135,7 +142,7 @@ pub fn main() {
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
-    Commands::Use { version } => commands::use_version::exec(&mut meta, version),
+    Commands::Use { version, local } => commands::use_version::exec(&mut meta, version, local),
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
     Commands::Activate => commands::activate::exec(&mut meta),
     Commands::Deactivate => commands::deactivate::exec(),
