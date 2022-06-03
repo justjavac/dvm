@@ -19,7 +19,9 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
       std::process::exit(1);
     }
     println!("Upgrading alias {}", alias.bright_black());
-    let current = meta.get_version_mapping(alias.as_str()).unwrap_or("N/A".to_string());
+    let current = meta
+      .get_version_mapping(alias.as_str())
+      .unwrap_or_else(|| "N/A".to_string());
     let version_req = meta.resolve_version_req(&alias);
     match version_req {
       VersionArg::Exact(v) => {
@@ -31,20 +33,16 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         }
       }
       VersionArg::Range(r) => {
-        let version = best_version(
-          versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(),
-          r.clone(),
-        )
-        .unwrap();
+        let version = best_version(versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(), r).unwrap();
         install::exec(true, Some(version.to_string())).expect("Install failed");
-        meta.set_version_mapping(alias.clone(), version.to_string());
+        meta.set_version_mapping(alias, version.to_string());
       }
     }
   } else {
     for alias in meta.list_alias() {
       let current = meta
         .get_version_mapping(alias.name.as_str())
-        .unwrap_or("N/A".to_string());
+        .unwrap_or_else(|| "N/A".to_string());
 
       let latest = match VersionArg::from_str(alias.required.clone().as_str()).unwrap() {
         VersionArg::Exact(v) => v.to_string(),
