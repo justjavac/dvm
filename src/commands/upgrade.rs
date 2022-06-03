@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use crate::{
   commands::install,
   utils::best_version,
@@ -7,6 +6,7 @@ use crate::{
 };
 use anyhow::Result;
 use colored::Colorize;
+use std::str::FromStr;
 
 pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
   let versions = remote_versions().expect("Fetching version list failed.");
