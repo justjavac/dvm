@@ -35,19 +35,28 @@ OPTIONS:
     -V, --version    Print version information
 
 SUBCOMMANDS:
+    activate       Activate Dvm
+    alias          Set or unset an alias
     completions    Generate shell completions
+    deactivate     Deactivate Dvm
+    doctor         Fixing dvm specific environment variables and other issues
+    exec           Execute deno command with a specific deno version
     help           Print this message or the help of the given subcommand(s)
     info           Show dvm info.
     install        Install deno executable to the given version. [aliases: i, add]
-    list           List installed versions, matching a given <version> if provided [aliases: ls, ll, la]
+    list           List installed versions, matching a given <version> if provided [aliases: ls,
+                       ll, la]
     list-remote    List released versions [aliases: lr, ls-remote]
     uninstall      Uninstall a given version [aliases: un, unlink, rm, remove]
-    use            Use a given version
+    upgrade        Upgrade aliases to the latest version
+    use            Use a given version or a semver range or a alias to the range.
 
 EXAMPLE:
   dvm install 1.3.2     Install v1.3.2 release
   dvm install           Install the latest available version
   dvm use 1.0.0         Use v1.0.0 release
+  dvm use latest        Use the latest alias that comes with dvm, equivalent to *
+  dvm use ^1.0.0        Use 1.x version (~1.0.0, >=1.0.0 are supported as well)
 
 NOTE:
   To remove, delete, or uninstall dvm - just remove the `$DVM_DIR` folder (usually `~/.dvm`)
