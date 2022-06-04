@@ -3,6 +3,7 @@ pub mod alias;
 pub mod completions;
 pub mod deactivate;
 pub mod doctor;
+pub mod exec;
 pub mod info;
 pub mod install;
 pub mod list;

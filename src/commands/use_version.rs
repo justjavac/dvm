@@ -1,9 +1,7 @@
-use crate::meta::DvmMeta;
-use std::io::{stdin, Read, Write};
-
 use crate::commands::install;
 use crate::deno_bin_path;
-use crate::utils::{best_version, deno_version_path, update_stub};
+use crate::meta::DvmMeta;
+use crate::utils::{best_version, deno_version_path, prompt_request, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc};
 use crate::version::remote_versions;
 use crate::version::{get_latest_version, VersionArg};
@@ -58,18 +56,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
   let new_exe_path = deno_version_path(&used_version);
 
   if !new_exe_path.exists() {
-    print!(
-      "deno v{} is not installed. do you want to install it? (Y/n)",
-      used_version
-    );
-    std::io::stdout().flush().unwrap();
-    let confirm = stdin()
-      .bytes()
-      .next()
-      .and_then(|it| it.ok())
-      .map(char::from)
-      .unwrap_or_else(|| 'y');
-    if confirm == '\n' || confirm == '\r' || confirm.to_ascii_lowercase() == 'y' {
+    if prompt_request(format!("deno v{} is not installed. do you want to install it?", used_version).as_str()) {
       install::exec(true, Some(used_version.to_string())).unwrap();
       let temp = version_req.to_string();
       let version = version.as_ref().unwrap_or(&temp);
