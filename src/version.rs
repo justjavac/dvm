@@ -127,5 +127,5 @@ pub fn get_latest_canary(registry: &str) -> Result<String> {
 
   let body = response.as_str()?;
   let v = body.trim().replace('v', "");
-  Ok(v.to_string())
+  Ok(v)
 }

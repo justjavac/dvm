@@ -22,7 +22,7 @@ const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
 pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   if let Some(version) = version.clone() {
-    if version == "canary".to_string() {
+    if version == *"canary" {
       let canary_path = deno_canary_path();
       std::fs::create_dir_all(canary_path.parent().unwrap())?;
       let hash = get_latest_canary(REGISTRY_OFFICIAL).expect("Failed to get latest canary");
@@ -128,7 +128,7 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
 }
 
 fn unpack_canary(archive_data: Vec<u8>) -> Result<PathBuf> {
-  let dvm_dir = dvm_root().join(format!("{}", DVM_CANARY_PATH_PREFIX));
+  let dvm_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
   fs::create_dir_all(&dvm_dir)?;
   let exe_path = deno_canary_path();
 

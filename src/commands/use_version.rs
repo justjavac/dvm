@@ -18,7 +18,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
     if version == &"canary".to_string() {
       let canary_path = deno_canary_path();
       if !canary_path.exists() {
-        if prompt_request(format!("deno canary is not installed. do you want to install it?").as_str()) {
+        if prompt_request("deno canary is not installed. do you want to install it?") {
           install::exec(true, Some("canary".to_string())).unwrap();
           use_canary_bin_path(local).unwrap();
         } else {
