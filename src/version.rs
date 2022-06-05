@@ -1,6 +1,6 @@
 use std::fmt::Formatter;
 // Copyright 2020 justjavac. All rights reserved. MIT license.
-use crate::consts::{REGISTRY_LATEST_RELEASE_PATH, REGISTRY_LATEST_CANARY_PATH};
+use crate::consts::{REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH};
 use crate::utils::{dvm_root, is_china_mainland, is_exact_version, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
