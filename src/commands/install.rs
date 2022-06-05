@@ -1,8 +1,9 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
 use super::use_version;
-use crate::consts::DVM_CACHE_PATH_PREFIX;
-use crate::utils::{deno_version_path, dvm_root, is_china_mainland};
+use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, REGISTRY_OFFICIAL};
+use crate::utils::{deno_canary_path, deno_version_path, dvm_root, is_china_mainland};
+use crate::version::get_latest_canary;
 use anyhow::Result;
 use semver::Version;
 use std::fs;
@@ -20,6 +21,22 @@ const ARCHIVE_NAME: &str = "deno-x86_64-apple-darwin.zip";
 const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
 pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
+  if let Some(version) = version.clone() {
+    if version == "canary".to_string() {
+      let canary_path = deno_canary_path();
+      std::fs::create_dir_all(canary_path.parent().unwrap())?;
+      let hash = get_latest_canary(REGISTRY_OFFICIAL).expect("Failed to get latest canary");
+      let data = download_canary(&hash)?;
+      unpack_canary(data)?;
+
+      if !no_use {
+        use_version::use_canary_bin_path(false).unwrap();
+      }
+
+      std::process::exit(0);
+    }
+  }
+
   let install_version = match version {
     Some(ref passed_version) => match Version::parse(passed_version) {
       Ok(ver) => ver,
@@ -28,6 +45,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
         std::process::exit(1)
       }
     },
+
     None => get_latest_version()?,
   };
 
@@ -102,17 +120,29 @@ fn compose_url_to_exec(version: &Version) -> String {
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
-  let dvm_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
-  fs::create_dir_all(&dvm_dir)?;
+  let canary_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
+  fs::create_dir_all(&canary_dir)?;
   let exe_path = deno_version_path(version);
 
+  unpack_impl(archive_data, canary_dir, exe_path)
+}
+
+fn unpack_canary(archive_data: Vec<u8>) -> Result<PathBuf> {
+  let dvm_dir = dvm_root().join(format!("{}", DVM_CANARY_PATH_PREFIX));
+  fs::create_dir_all(&dvm_dir)?;
+  let exe_path = deno_canary_path();
+
+  unpack_impl(archive_data, dvm_dir, exe_path)
+}
+
+fn unpack_impl(archive_data: Vec<u8>, canary_dir: PathBuf, path: PathBuf) -> Result<PathBuf> {
   let archive_ext = Path::new(ARCHIVE_NAME)
     .extension()
     .and_then(|ext| ext.to_str())
     .unwrap();
   let unpack_status = match archive_ext {
     "zip" if cfg!(windows) => {
-      let archive_path = dvm_dir.join("deno.zip");
+      let archive_path = canary_dir.join("deno.zip");
       fs::write(&archive_path, &archive_data)?;
       Command::new("powershell.exe")
         .arg("-NoLogo")
@@ -133,15 +163,15 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
         .arg("-Path")
         .arg(format!("'{}'", &archive_path.to_str().unwrap()))
         .arg("-DestinationPath")
-        .arg(format!("'{}'", &dvm_dir.to_str().unwrap()))
+        .arg(format!("'{}'", &canary_dir.to_str().unwrap()))
         .spawn()?
         .wait()?
     }
     "zip" => {
-      let archive_path = dvm_dir.join("deno.zip");
+      let archive_path = canary_dir.join("deno.zip");
       fs::write(&archive_path, &archive_data)?;
       Command::new("unzip")
-        .current_dir(&dvm_dir)
+        .current_dir(&canary_dir)
         .arg(archive_path)
         .spawn()?
         .wait()?
@@ -149,8 +179,26 @@ fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
     ext => panic!("Unsupported archive type: '{}'", ext),
   };
   assert!(unpack_status.success());
-  assert!(exe_path.exists());
-  Ok(exe_path)
+  assert!(path.exists());
+  Ok(canary_dir)
+}
+
+fn download_canary(hash: &str) -> Result<Vec<u8>> {
+  // TODO: remove this when deno canary support m1 chip,
+  let archive_name = if ARCHIVE_NAME == "deno-aarch64-apple-darwin.zip" {
+    "deno-x86_64-apple-darwin.zip"
+  } else {
+    ARCHIVE_NAME
+  };
+
+  let url = if is_china_mainland() {
+    format!("https://dl.deno.js.cn/canary/{}/{}", hash, archive_name)
+  } else {
+    format!("https://dl.deno.land/canary/{}/{}", hash, archive_name)
+  };
+
+  let resp = tinyget::get(url).send()?;
+  Ok(resp.into_bytes())
 }
 
 #[test]
