@@ -19,8 +19,8 @@ pub trait ToVersionReq {
 
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
 pub struct VersionMapping {
-  required: String,
-  current: String,
+  pub required: String,
+  pub current: String,
 }
 impl VersionMapping {
   pub fn is_valid_mapping(&self) -> bool {

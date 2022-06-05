@@ -1,5 +1,6 @@
 pub mod activate;
 pub mod alias;
+pub mod clean;
 pub mod completions;
 pub mod deactivate;
 pub mod doctor;
