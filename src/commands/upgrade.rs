@@ -13,7 +13,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
   if let Some(alias) = alias {
     if alias == "canary" {
       println!("Upgrading {}", alias.bright_black());
-      install::exec(true, Some(alias.clone())).unwrap();
+      install::exec(true, Some(alias)).unwrap();
       println!("All aliases have been upgraded");
       return Ok(());
     }
