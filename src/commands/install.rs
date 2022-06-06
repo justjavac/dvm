@@ -33,7 +33,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
         use_version::use_canary_bin_path(false).unwrap();
       }
 
-      std::process::exit(0);
+      return Ok(());
     }
   }
 
@@ -131,6 +131,10 @@ fn unpack_canary(archive_data: Vec<u8>) -> Result<PathBuf> {
   let dvm_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
   fs::create_dir_all(&dvm_dir)?;
   let exe_path = deno_canary_path();
+
+  if exe_path.exists() {
+    fs::remove_file(exe_path.clone())?;
+  }
 
   unpack_impl(archive_data, dvm_dir, exe_path)
 }
