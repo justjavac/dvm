@@ -124,6 +124,9 @@ enum Commands {
     #[clap(help = "The version to use", long, short)]
     verison: Option<String>,
   },
+
+  #[clap(about = "Clean dvm cache")]
+  Clean,
 }
 
 #[derive(Subcommand)]
@@ -166,6 +169,7 @@ pub fn main() {
     Commands::Exec { command, verison } => {
       commands::exec::exec(&mut meta, command.unwrap_or_default().as_str(), verison.as_deref())
     }
+    Commands::Clean => commands::clean::exec(&mut meta),
   };
 
   if let Err(err) = result {
