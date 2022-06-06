@@ -1,7 +1,7 @@
 use crate::commands::install;
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
-use crate::utils::{best_version, deno_version_path, prompt_request, update_stub};
+use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc};
 use crate::version::remote_versions;
 use crate::version::{get_latest_version, VersionArg};
@@ -15,6 +15,21 @@ use std::process::Command;
 pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<()> {
   let version_req: VersionArg;
   if let Some(ref version) = version {
+    if version == &"canary".to_string() {
+      let canary_path = deno_canary_path();
+      if !canary_path.exists() {
+        if prompt_request("deno canary is not installed. do you want to install it?") {
+          install::exec(true, Some("canary".to_string())).unwrap();
+          use_canary_bin_path(local).unwrap();
+        } else {
+          std::process::exit(1);
+        }
+      }
+
+      use_canary_bin_path(local).unwrap();
+      return Ok(());
+    }
+
     if is_exact_version(version) {
       version_req = VersionArg::Exact(Version::parse(version).unwrap());
     } else if meta.has_alias(version) {
@@ -75,6 +90,35 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
     local,
   )?;
   update_stub(used_version.to_string().as_str());
+  Ok(())
+}
+
+pub fn use_canary_bin_path(local: bool) -> Result<()> {
+  let canary_dir = deno_canary_path();
+
+  if !canary_dir.exists() {
+    eprintln!("Canary dir not found, will not be used");
+    std::process::exit(1);
+  }
+
+  let bin_path = deno_bin_path();
+  if !bin_path.parent().unwrap().exists() {
+    fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
+  }
+  if bin_path.exists() {
+    fs::remove_file(&bin_path)?;
+  }
+  fs::hard_link(&canary_dir, &bin_path)?;
+
+  if local {
+    println!("Writing to current folder config");
+    fs::write(std::path::Path::new("./.dvmrc"), "canary")?;
+  } else {
+    println!("Writing to home folder config");
+    fs::write(dirs::home_dir().unwrap().join(".dvmrc"), "canary")?;
+  }
+
+  println!("Now using deno canary");
   Ok(())
 }
 

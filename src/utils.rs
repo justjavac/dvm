@@ -1,4 +1,4 @@
-use crate::consts::DVM_CACHE_PATH_PREFIX;
+use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
 use crate::version::VersionArg;
 use anyhow::anyhow;
 use dirs::home_dir;
@@ -123,6 +123,12 @@ pub fn dvm_root() -> PathBuf {
       home_path
     }
   }
+}
+
+pub fn deno_canary_path() -> PathBuf {
+  let dvm_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
+  let exe_ext = if cfg!(windows) { "exe" } else { "" };
+  dvm_dir.join("deno").with_extension(exe_ext)
 }
 
 /// CGQAQ: Put hardlink to executable to this file,
