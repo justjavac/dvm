@@ -6,3 +6,4 @@ pub const REGISTRY_LATEST_CANARY_PATH: &str = "canary-latest.txt";
 
 pub const DVM_CACHE_PATH_PREFIX: &str = "versions";
 pub const DVM_CANARY_PATH_PREFIX: &str = "canary";
+pub const DVM_CACHE_INVALID_TIMEOUT: u128 = 60 * 60 * 24 * 7;
