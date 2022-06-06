@@ -56,7 +56,7 @@ EXAMPLE:
   dvm install           Install the latest available version
   dvm use 1.0.0         Use v1.0.0 release
   dvm use latest        Use the latest alias that comes with dvm, equivalent to *
-  dvm use ^1.0.0        Use 1.x version (~1.0.0, >=1.0.0 are supported as well)
+  dvm use canry         Use the canary version of the Deno
 
 NOTE:
   To remove, delete, or uninstall dvm - just remove the `$DVM_DIR` folder (usually `~/.dvm`)
