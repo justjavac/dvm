@@ -11,6 +11,13 @@ use std::str::FromStr;
 pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
   let versions = remote_versions().expect("Fetching version list failed.");
   if let Some(alias) = alias {
+    if alias == "canary" {
+      println!("Upgrading {}", alias.bright_black());
+      install::exec(true, Some(alias)).unwrap();
+      println!("All aliases have been upgraded");
+      return Ok(());
+    }
+
     if !meta.has_alias(&alias) {
       eprintln!(
         "{} is not a valid semver version or tag and will not be upgraded",
@@ -63,7 +70,11 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
       );
       install::exec(true, Some(latest.clone()))?;
       meta.set_version_mapping(alias.name, latest);
+
+      println!("Upgrading {}", "canary".bright_black());
+      install::exec(true, Some("canary".to_string())).unwrap();
     }
+
     println!("All aliases have been upgraded");
   }
 
