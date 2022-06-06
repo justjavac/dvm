@@ -82,20 +82,21 @@ Creating /Users/justjavac/.dvm
 
 ### .dvmrc
 
-你可以在项目根目录创建一个 `.dvmrc` 文件，然后把 Deno 的版本号写在里面。这样当你运行 `dvm use`、`dvm install`
-命令时，如果没有在命令行上提供版本参数，那么 dvm 会自动从 `.dvmrc` 文件读取 Deno 的版本号。
+你可以让 dvm 在当前目录生成配置文件，之后`dvm use`和`dvm install`如果没指定版本号就会优先采用当前目录下的配置文件
 
-举个例子，我们想把当前仓库的 Deno 版本号设置为 `1.17.0`，那么我们可以在根目录运行：
+举个栗子：我们先设置 1.17.0 为默认版本
 
 ```bash
-echo "1.17.0" > .dvmrc
+dvm use --local 1.17.0
 ```
 
-然后运行 dvm：
+然后假设另一个人拿到了你这个项目并且根目录里有你生成的 dvm 配置文件，并运行`dvm use`
 
 ```plain
 $ dvm use
-Found '.dvmrc' with version <1.17.0>
+No version input detect, try to use version in .dvmrc file
+Using semver range: 1.17.0
+Writing to home folder config
 Now using deno 1.17.0
 ```
 
@@ -149,6 +150,10 @@ Error: unzip is required to install dvm (see: https://github.com/justjavac/dvm#u
 - MacOs 使用 `brew install unzip` 安装 unzip。
 - Ubuntu，Debian 使用`apt-get install unzip -y` 安装 unzip。
 - CentOS 使用 `yum install -y unzip zip` 安装 unzip。
+
+### Windows 平台 需要使用 Powershell 来运行 dvm
+
+目前我们因为一些原因使用的是 Powershell profile 来设置环境变量, 所以 Powershell 是必需的.
 
 ## 开源协议
 

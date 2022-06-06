@@ -84,22 +84,23 @@ Creating /Users/justjavac/.dvm
 
 ### .dvmrc
 
-You can create a `.dvmrc` file containing a deno version number in the project
-root directory. Afterwards, `dvm use`, `dvm install` will use the version
+You can let dvm to writing config to current directery by add the `--local` flag to `dvm use`. Afterwards, `dvm use`, `dvm install` will use the version
 specified in the `.dvmrc` file if no version is supplied on the command line.
 
 For example, to make dvm default to the `1.17.0` release for the current
 directory:
 
 ```bash
-echo "1.17.0" > .dvmrc
+dvm use --local 1.17.0
 ```
 
-Then when you run dvm:
+Then when someone else with a copy of your project and run dvm:
 
 ```plain
 $ dvm use
-Found '.dvmrc' with version <1.17.0>
+No version input detect, try to use version in .dvmrc file
+Using semver range: 1.17.0
+Writing to home folder config
 Now using deno 1.17.0
 ```
 
@@ -134,9 +135,9 @@ deno v1.2.0 is not installed. Use `dvm install 1.2.0` to install it first.
   [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about),
   [MSYS](https://www.msys2.org) or equivalent set of tools.
 
-## Known Issues
+## Caveats
 
-### unzip is required
+### unzip is **required**
 
 The program [`unzip`](https://linux.die.net/man/1/unzip) is a requirement for
 the Shell installer.
@@ -154,6 +155,10 @@ During the `install.sh` process, `unzip` is used to extract the zip archive.
 
 You can install unzip via `brew install unzip` on MacOS or
 `apt-get install unzip -y` on Linux(Ubuntu,Debian,Deepin).
+
+### Powershell on Windows is **required**
+
+Currently, we use PowerShell profile to set environment variables due to various reasons, so it's required.
 
 ## License
 
