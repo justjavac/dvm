@@ -34,7 +34,7 @@ fi
 
 if [ "$1" = "" ]; then
 	cd "$dvm_bin_dir"
-	curl --fail --location --progress-bar --output "$exe.zip" "$dvm_uri"
+	curl --fail --location --progress-bar -k --output "$exe.zip" "$dvm_uri"
 	unzip -o "$exe.zip"
 	rm "$exe.zip"
 else
