@@ -145,7 +145,7 @@ pub enum AliasCommands {
     name: String,
   },
 
-  #[clap(about = "List all alias")]
+  #[clap(about = "List all aliases")]
   List,
 }
 
