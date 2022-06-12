@@ -24,11 +24,9 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
       set_env::prepend("PATH", looking_for.as_str()).unwrap();
       println!("{}", "Please restart your shell of choice to take effects.".red());
     }
-  } else {
-    if !path.contains(looking_for.as_str()) {
-      set_env::prepend("PATH", looking_for.as_str()).unwrap();
-      println!("{}", "Please restart your shell of choice to take effects.".red());
-    }
+  } else if !path.contains(looking_for.as_str()) {
+    set_env::prepend("PATH", looking_for.as_str()).unwrap();
+    println!("{}", "Please restart your shell of choice to take effects.".red());
   }
 
   // migrating from old dvm cache.
