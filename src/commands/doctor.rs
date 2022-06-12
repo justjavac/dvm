@@ -15,10 +15,20 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   set_env::check_or_set("DVM_DIR", home_path.to_str().unwrap()).unwrap();
   let path = set_env::get("PATH").unwrap();
   let looking_for = deno_bin_path().parent().unwrap().to_str().unwrap().to_string();
-  // check if deno is in *the beginning* of PATH
-  if !path.starts_with(looking_for.as_str()) {
-    set_env::prepend("PATH", looking_for.as_str()).unwrap();
-    println!("{}", "Please restart your shell of choice to take effects.".red());
+  let current = which::which("deno");
+
+  if let Ok(current) = current {
+    if current.to_str().unwrap().starts_with(&looking_for) {
+      println!("{}", "DVM deno bin is already set correctly.".green());
+    } else {
+      set_env::prepend("PATH", looking_for.as_str()).unwrap();
+      println!("{}", "Please restart your shell of choice to take effects.".red());
+    }
+  } else {
+    if !path.contains(looking_for.as_str()) {
+      set_env::prepend("PATH", looking_for.as_str()).unwrap();
+      println!("{}", "Please restart your shell of choice to take effects.".red());
+    }
   }
 
   // migrating from old dvm cache.
