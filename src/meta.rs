@@ -251,7 +251,7 @@ impl DvmMeta {
   }
 }
 
-impl<'a> Default for DvmMeta {
+impl Default for DvmMeta {
   fn default() -> Self {
     Self {
       registry: REGISTRY_OFFICIAL.to_string(),
