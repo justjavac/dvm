@@ -13,7 +13,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
   if let Some(alias) = alias {
     if alias == "canary" {
       println!("Upgrading {}", alias.bright_black());
-      install::exec(&meta, true, Some(alias)).unwrap();
+      install::exec(meta, true, Some(alias)).unwrap();
       println!("All aliases have been upgraded");
       return Ok(());
     }
@@ -36,12 +36,12 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
           println!("{} is already the latest version", alias);
           std::process::exit(0);
         } else {
-          install::exec(&meta, true, Some(v.to_string())).expect("Install failed");
+          install::exec(meta, true, Some(v.to_string())).expect("Install failed");
         }
       }
       VersionArg::Range(r) => {
         let version = best_version(versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(), r).unwrap();
-        install::exec(&meta, true, Some(version.to_string())).expect("Install failed");
+        install::exec(meta, true, Some(version.to_string())).expect("Install failed");
         meta.set_version_mapping(alias, version.to_string());
       }
     }
@@ -68,11 +68,11 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         current.bright_red(),
         latest.clone().bright_green()
       );
-      install::exec(&meta, true, Some(latest.clone()))?;
+      install::exec(meta, true, Some(latest.clone()))?;
       meta.set_version_mapping(alias.name, latest);
 
       println!("Upgrading {}", "canary".bright_black());
-      install::exec(&meta, true, Some("canary".to_string())).unwrap();
+      install::exec(meta, true, Some("canary".to_string())).unwrap();
     }
 
     println!("All aliases have been upgraded");

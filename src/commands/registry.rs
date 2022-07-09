@@ -7,12 +7,12 @@ use crate::DvmMeta;
 use anyhow::Result;
 
 pub fn exec(meta: &mut DvmMeta, registry: Option<String>) -> Result<()> {
-  let registry = registry.unwrap_or("official".to_string());
+  let registry = registry.unwrap_or_else(|| "official".to_string());
 
-  if registry == "official".to_string() {
+  if registry == *"official" {
     meta.registry = REGISTRY_OFFICIAL.to_string();
     println!("Registry now set to the official registry \"{}\"", REGISTRY_OFFICIAL);
-  } else if registry == "cn".to_string() {
+  } else if registry == *"cn" {
     meta.registry = REGISTRY_CN.to_string();
     println!(
       "Registry now set to the CN mirror (that provided by @justjavac) \"{}\"",
