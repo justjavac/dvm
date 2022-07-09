@@ -11,13 +11,21 @@ pub fn exec(meta: &mut DvmMeta, registry: Option<String>) -> Result<()> {
 
   if registry == "official".to_string() {
     meta.registry = REGISTRY_OFFICIAL.to_string();
+    println!("Registry now set to the official registry \"{}\"", REGISTRY_OFFICIAL);
   } else if registry == "cn".to_string() {
     meta.registry = REGISTRY_CN.to_string();
+    println!(
+      "Registry now set to the CN mirror (that provided by @justjavac) \"{}\"",
+      REGISTRY_CN
+    )
   } else if registry.starts_with("http://") || registry.starts_with("https://") {
     meta.registry = registry;
   } else {
-    eprintln!("{} is not valid URL, please starts with `http` or `https`", registry);
-    eprintln!("registry will not be changed");
+    eprintln!(
+      "The {} is not valid URL, please starts with `http` or `https`",
+      registry
+    );
+    eprintln!("Registry will not be changed");
     process::exit(1)
   }
 
