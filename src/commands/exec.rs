@@ -37,7 +37,8 @@ pub fn exec(meta: &mut DvmMeta, command: &str, verison: Option<&str>) -> Result<
 
   if !executable_path.exists() {
     if prompt_request(format!("deno v{} is not installed. do you want to install it?", version).as_str()) {
-      install::exec(true, Some(version.clone())).unwrap_or_else(|_| panic!("Failed to install deno {}", version));
+      install::exec(&meta, true, Some(version.clone()))
+        .unwrap_or_else(|_| panic!("Failed to install deno {}", version));
     } else {
       eprintln!("{}", "No such version found.".red());
       std::process::exit(1);
