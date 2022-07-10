@@ -1,8 +1,9 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2021 justjavac. All rights reserved. MIT license.
 use super::use_version;
-use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, REGISTRY_OFFICIAL};
-use crate::utils::{deno_canary_path, deno_version_path, dvm_root, is_china_mainland};
+use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
+use crate::meta::DvmMeta;
+use crate::utils::{deno_canary_path, deno_version_path, dvm_root};
 use crate::version::get_latest_canary;
 use anyhow::Result;
 use semver::Version;
@@ -20,13 +21,13 @@ const ARCHIVE_NAME: &str = "deno-x86_64-apple-darwin.zip";
 #[cfg(target_os = "linux")]
 const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
 
-pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
+pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   if let Some(version) = version.clone() {
     if version == *"canary" {
       let canary_path = deno_canary_path();
       std::fs::create_dir_all(canary_path.parent().unwrap())?;
-      let hash = get_latest_canary(REGISTRY_OFFICIAL).expect("Failed to get latest canary");
-      let data = download_canary(&hash)?;
+      let hash = get_latest_canary(&meta.registry).expect("Failed to get latest canary");
+      let data = download_canary(&meta.registry, &hash)?;
       unpack_canary(data)?;
 
       if !no_use {
@@ -46,7 +47,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
       }
     },
 
-    None => get_latest_version()?,
+    None => get_latest_version(&meta.registry)?,
   };
 
   let exe_path = deno_version_path(&install_version);
@@ -54,7 +55,7 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   if exe_path.exists() {
     println!("Version v{} is already installed", install_version);
   } else {
-    let archive_data = download_package(&compose_url_to_exec(&install_version), &install_version)?;
+    let archive_data = download_package(&compose_url_to_exec(&meta.registry, &install_version), &install_version)?;
     unpack(archive_data, &install_version)?;
   }
 
@@ -70,13 +71,10 @@ pub fn exec(no_use: bool, version: Option<String>) -> Result<()> {
   Ok(())
 }
 
-fn get_latest_version() -> Result<Version> {
+fn get_latest_version(registry: &str) -> Result<Version> {
   println!("Checking for latest version");
-  let response = if is_china_mainland() {
-    tinyget::get("https://dl.deno.js.cn/release-latest.txt").send()?
-  } else {
-    tinyget::get("https://dl.deno.land/release-latest.txt").send()?
-  };
+
+  let response = tinyget::get(format!("{}release-latest.txt", registry)).send()?;
 
   let body = response.as_str()?;
   let v = body.trim().replace('v', "");
@@ -111,12 +109,8 @@ fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
   Ok(response.into_bytes())
 }
 
-fn compose_url_to_exec(version: &Version) -> String {
-  if is_china_mainland() {
-    format!("https://dl.deno.js.cn/release/v{}/{}", version, ARCHIVE_NAME)
-  } else {
-    format!("https://dl.deno.land/release/v{}/{}", version, ARCHIVE_NAME)
-  }
+fn compose_url_to_exec(registry: &str, version: &Version) -> String {
+  format!("{}release/v{}/{}", registry, version, ARCHIVE_NAME)
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
@@ -187,7 +181,7 @@ fn unpack_impl(archive_data: Vec<u8>, canary_dir: PathBuf, path: PathBuf) -> Res
   Ok(canary_dir)
 }
 
-fn download_canary(hash: &str) -> Result<Vec<u8>> {
+fn download_canary(registry: &str, hash: &str) -> Result<Vec<u8>> {
   // TODO: remove this when deno canary support m1 chip,
   let archive_name = if ARCHIVE_NAME == "deno-aarch64-apple-darwin.zip" {
     "deno-x86_64-apple-darwin.zip"
@@ -195,11 +189,7 @@ fn download_canary(hash: &str) -> Result<Vec<u8>> {
     ARCHIVE_NAME
   };
 
-  let url = if is_china_mainland() {
-    format!("https://dl.deno.js.cn/canary/{}/{}", hash, archive_name)
-  } else {
-    format!("https://dl.deno.land/canary/{}/{}", hash, archive_name)
-  };
+  let url = format!("{}canary/{}/{}", registry, hash, archive_name);
 
   let resp = tinyget::get(url).send()?;
   Ok(resp.into_bytes())
@@ -207,9 +197,11 @@ fn download_canary(hash: &str) -> Result<Vec<u8>> {
 
 #[test]
 fn test_compose_url_to_exec() {
+  use crate::consts::REGISTRY_OFFICIAL;
   use asserts_rs::asserts_eq_one_of;
+
   let v = Version::parse("1.7.0").unwrap();
-  let url = compose_url_to_exec(&v);
+  let url = compose_url_to_exec(REGISTRY_OFFICIAL, &v);
   #[cfg(windows)]
   asserts_eq_one_of!(
     url.as_str(),

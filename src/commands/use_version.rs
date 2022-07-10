@@ -19,7 +19,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
       let canary_path = deno_canary_path();
       if !canary_path.exists() {
         if prompt_request("deno canary is not installed. do you want to install it?") {
-          install::exec(true, Some("canary".to_string())).unwrap();
+          install::exec(meta, true, Some("canary".to_string())).unwrap();
           use_canary_bin_path(local).unwrap();
         } else {
           std::process::exit(1);
@@ -72,7 +72,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
 
   if !new_exe_path.exists() {
     if prompt_request(format!("deno v{} is not installed. do you want to install it?", used_version).as_str()) {
-      install::exec(true, Some(used_version.to_string())).unwrap();
+      install::exec(meta, true, Some(used_version.to_string())).unwrap();
       let temp = version_req.to_string();
       let version = version.as_ref().unwrap_or(&temp);
       if !is_exact_version(version) {

@@ -127,6 +127,12 @@ enum Commands {
 
   #[clap(about = "Clean dvm cache")]
   Clean,
+
+  #[clap(about = "Change registry that dvm fetch from")]
+  Registry {
+    #[clap(help = "The registry to be set, `official`, `cn`, or url you desired")]
+    registry: Option<String>,
+  },
 }
 
 #[derive(Subcommand)]
@@ -156,7 +162,7 @@ pub fn main() {
   let result = match cli.command {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
     Commands::Info => commands::info::exec(),
-    Commands::Install { no_use, version } => commands::install::exec(no_use, version),
+    Commands::Install { no_use, version } => commands::install::exec(&meta, no_use, version),
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
@@ -170,6 +176,7 @@ pub fn main() {
       commands::exec::exec(&mut meta, command.unwrap_or_default().as_str(), verison.as_deref())
     }
     Commands::Clean => commands::clean::exec(&mut meta),
+    Commands::Registry { registry } => commands::registry::exec(&mut meta, registry),
   };
 
   if let Err(err) = result {
