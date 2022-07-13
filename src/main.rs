@@ -188,8 +188,8 @@ pub fn main() {
       } else {
         // TODO(CGQAQ): print help
       }
+      return;
     }
-    return;
   }
 
   println!("hello?");
