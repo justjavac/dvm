@@ -84,7 +84,8 @@ Creating /Users/justjavac/.dvm
 
 ### .dvmrc
 
-You can let dvm to writing config to current directery by add the `--local` flag to `dvm use`. Afterwards, `dvm use`, `dvm install` will use the version
+You can let dvm to writing config to current directery by add the `--local` flag
+to `dvm use`. Afterwards, `dvm use`, `dvm install` will use the version
 specified in the `.dvmrc` file if no version is supplied on the command line.
 
 For example, to make dvm default to the `1.17.0` release for the current
@@ -158,7 +159,8 @@ You can install unzip via `brew install unzip` on MacOS or
 
 ### Powershell on Windows is **required**
 
-Currently, we use PowerShell profile to set environment variables due to various reasons, so it's required.
+Currently, we use PowerShell profile to set environment variables due to various
+reasons, so it's required.
 
 ## License
 
