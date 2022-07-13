@@ -209,7 +209,10 @@ pub fn main() {
     Commands::Deactivate => commands::deactivate::exec(),
     Commands::Doctor => commands::doctor::exec(&mut meta),
     Commands::Upgrade { alias } => commands::upgrade::exec(&mut meta, alias),
-    Commands::Exec { command, deno_version } => {
+    Commands::Exec {
+      command: _,
+      deno_version: _,
+    } => {
       /* unused */
       Ok(())
     }
