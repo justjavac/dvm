@@ -161,35 +161,33 @@ pub fn main() {
   let mut meta = DvmMeta::new();
 
   let args: Vec<String> = env::args().collect();
-  if args.len() > 1 {
-    if args[1] == "exec" {
-      if args.len() > 2 {
-        let version: Option<String>;
-        if args[2] == "--version" || args[2] == "-V" {
-          if args.len() > 3 {
-            version = Some(args[3].clone());
-            commands::exec::exec(&mut meta, version, args[4..].to_vec()).unwrap();
-          } else {
-            eprintln!("A version should be followed after {}", args[2]);
-            std::process::exit(1)
-          }
-        } else if args[2].starts_with("--version=") || args[2].starts_with("-V=") {
-          version = Some(
-            args[2]
-              .trim_start_matches("-V=")
-              .trim_start_matches("--version=")
-              .to_string(),
-          );
-          commands::exec::exec(&mut meta, version, args[3..].to_vec()).unwrap();
+  if args.len() > 1 && args[1] == "exec" {
+    if args.len() > 2 {
+      let version: Option<String>;
+      if args[2] == "--version" || args[2] == "-V" {
+        if args.len() > 3 {
+          version = Some(args[3].clone());
+          commands::exec::exec(&mut meta, version, args[4..].to_vec()).unwrap();
         } else {
-          version = None;
-          commands::exec::exec(&mut meta, version, args[2..].to_vec()).unwrap();
+          eprintln!("A version should be followed after {}", args[2]);
+          std::process::exit(1)
         }
+      } else if args[2].starts_with("--version=") || args[2].starts_with("-V=") {
+        version = Some(
+          args[2]
+            .trim_start_matches("-V=")
+            .trim_start_matches("--version=")
+            .to_string(),
+        );
+        commands::exec::exec(&mut meta, version, args[3..].to_vec()).unwrap();
       } else {
-        // TODO(CGQAQ): print help
+        version = None;
+        commands::exec::exec(&mut meta, version, args[2..].to_vec()).unwrap();
       }
-      return;
+    } else {
+      // TODO(CGQAQ): print help
     }
+    return;
   }
 
   println!("hello?");
