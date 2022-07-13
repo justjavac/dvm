@@ -192,8 +192,6 @@ pub fn main() {
     return;
   }
 
-  println!("hello?");
-
   let cli = Cli::parse();
 
   let result = match cli.command {
