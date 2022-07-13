@@ -6,6 +6,8 @@ mod meta;
 mod utils;
 pub mod version;
 
+use std::env;
+
 use clap::{CommandFactory, Parser};
 use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
@@ -122,7 +124,7 @@ enum Commands {
     command: Option<String>,
 
     #[clap(help = "The version to use", long, short)]
-    verison: Option<String>,
+    deno_version: Option<String>,
   },
 
   #[clap(about = "Clean dvm cache")]
@@ -156,8 +158,43 @@ pub enum AliasCommands {
 }
 
 pub fn main() {
-  let cli = Cli::parse();
   let mut meta = DvmMeta::new();
+
+  let args: Vec<String> = env::args().collect();
+  if args.len() > 1 {
+    if args[1] == "exec" {
+      if args.len() > 2 {
+        let version: Option<String>;
+        if args[2] == "--version" || args[2] == "-V" {
+          if args.len() > 3 {
+            version = Some(args[3].clone());
+            commands::exec::exec(&mut meta, version, args[4..].to_vec()).unwrap();
+          } else {
+            eprintln!("A version should be followed after {}", args[2]);
+            std::process::exit(1)
+          }
+        } else if args[2].starts_with("--version=") || args[2].starts_with("-V=") {
+          version = Some(
+            args[2]
+              .trim_start_matches("-V=")
+              .trim_start_matches("--version=")
+              .to_string(),
+          );
+          commands::exec::exec(&mut meta, version, args[3..].to_vec()).unwrap();
+        } else {
+          version = None;
+          commands::exec::exec(&mut meta, version, args[2..].to_vec()).unwrap();
+        }
+      } else {
+        // TODO(CGQAQ): print help
+      }
+    }
+    return;
+  }
+
+  println!("hello?");
+
+  let cli = Cli::parse();
 
   let result = match cli.command {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
@@ -172,8 +209,9 @@ pub fn main() {
     Commands::Deactivate => commands::deactivate::exec(),
     Commands::Doctor => commands::doctor::exec(&mut meta),
     Commands::Upgrade { alias } => commands::upgrade::exec(&mut meta, alias),
-    Commands::Exec { command, verison } => {
-      commands::exec::exec(&mut meta, command.unwrap_or_default().as_str(), verison.as_deref())
+    Commands::Exec { command, deno_version } => {
+      /* unused */
+      Ok(())
     }
     Commands::Clean => commands::clean::exec(&mut meta),
     Commands::Registry { registry } => commands::registry::exec(&mut meta, registry),

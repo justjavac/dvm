@@ -11,9 +11,9 @@ use semver::Version;
 
 use super::install;
 
-pub fn exec(meta: &mut DvmMeta, command: &str, verison: Option<&str>) -> Result<()> {
+pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> Result<()> {
   let versions = remote_versions().expect("Failed to get remote versions");
-  let version = verison.map(|v| v.to_string()).unwrap_or_else(|| "latest".to_string());
+  let version = version.unwrap_or_else(|| "latest".to_string());
 
   let version = if is_exact_version(&version) {
     version
@@ -45,7 +45,7 @@ pub fn exec(meta: &mut DvmMeta, command: &str, verison: Option<&str>) -> Result<
   }
 
   let mut cmd = std::process::Command::new(executable_path)
-    .arg(command)
+    .args(args)
     .stderr(Stdio::inherit())
     .stdout(Stdio::inherit())
     .stdin(Stdio::inherit())
