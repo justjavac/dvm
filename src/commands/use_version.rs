@@ -28,6 +28,10 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
 
       use_canary_bin_path(local).unwrap();
       return Ok(());
+    } else if version == &"system".to_string() {
+      std::fs::remove_file(deno_bin_path()).unwrap();
+      println!("Deno that was previously installed on your system will be activated now.");
+      return Ok(());
     }
 
     if is_exact_version(version) {
