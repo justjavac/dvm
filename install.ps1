@@ -4,13 +4,6 @@
 
 $ErrorActionPreference = 'Stop'
 
-$DenoInstall = $env:DENO_INSTALL
-$DenoBinDir = if ($DenoInstall) {
-  "$DenoInstall\bin"
-} else {
-  "$Home\.deno\bin"
-}
-
 $DvmDir = $env:DVM_DIR
 $BinDir = if ($DvmDir) {
   "$DvmDir\bin"
@@ -61,11 +54,6 @@ Remove-Item $DvmZip
 
 $User = [EnvironmentVariableTarget]::User
 $Path = [Environment]::GetEnvironmentVariable('Path', $User)
-
-if (!(";$Path;".ToLower() -like "*;$DenoBinDir;*".ToLower())) {
-  [Environment]::SetEnvironmentVariable('Path', "$Path;$DenoBinDir", $User)
-  $Env:Path += ";$DenoBinDir"
-}
 
 if (!(";$Path;".ToLower() -like "*;$BinDir;*".ToLower())) {
   [Environment]::SetEnvironmentVariable('Path', "$Path;$BinDir", $User)
