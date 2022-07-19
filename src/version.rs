@@ -1,10 +1,10 @@
-use std::fmt::Formatter;
-// Copyright 2020 justjavac. All rights reserved. MIT license.
+// Copyright 2022 justjavac. All rights reserved. MIT license.
 use crate::consts::{REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH};
 use crate::utils::{dvm_root, is_china_mainland, is_exact_version, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
 use semver::{Version, VersionReq};
+use std::fmt::Formatter;
 use std::fs::read_dir;
 use std::path::Path;
 use std::process::{Command, Stdio};

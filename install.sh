@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright 2019 the Deno authors. All rights reserved. MIT license.
-# Copyright 2020 justjavac. All rights reserved. MIT license.
+# Copyright 2022 justjavac. All rights reserved. MIT license.
 # TODO(everyone): Keep this script simple and easily auditable.
 
 set -e
