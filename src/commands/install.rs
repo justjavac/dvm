@@ -1,5 +1,5 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
-// Copyright 2020-2021 justjavac. All rights reserved. MIT license.
+// Copyright 2020-2022 justjavac. All rights reserved. MIT license.
 use super::use_version;
 use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
 use crate::meta::DvmMeta;
