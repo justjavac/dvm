@@ -1,5 +1,5 @@
 // Copyright 2022 justjavac. All rights reserved. MIT license.
-use crate::consts::{REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH};
+use crate::consts::{DVM_CACHE_PATH_PREFIX, REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH};
 use crate::utils::{dvm_root, is_china_mainland, is_exact_version, is_semver};
 use anyhow::Result;
 use json_minimal::Json;
@@ -58,7 +58,7 @@ pub fn current_version() -> Option<String> {
 pub fn local_versions() -> Vec<String> {
   let mut v: Vec<String> = Vec::new();
 
-  if let Ok(entries) = read_dir(dvm_root().join(Path::new("versions"))) {
+  if let Ok(entries) = read_dir(dvm_root().join(Path::new(DVM_CACHE_PATH_PREFIX))) {
     for entry in entries.flatten() {
       if let Ok(file_type) = entry.file_type() {
         if file_type.is_dir() {
