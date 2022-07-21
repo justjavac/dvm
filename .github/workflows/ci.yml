@@ -102,21 +102,18 @@ jobs:
 
       - name: Pre-release (linux)
         if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          cd target/release
-          zip -r dvm-x86_64-unknown-linux-gnu.zip dvm
+        run: zip -r dvm-x86_64-unknown-linux-gnu.zip dvm
+        working-directory: target/release
 
       - name: Pre-release (mac)
         if: startsWith(matrix.os, 'macOS')
-        run: |
-          cd target/release
-          zip -r dvm-x86_64-apple-darwin.zip dvm
+        run: zip -r dvm-x86_64-apple-darwin.zip dvm
+        working-directory: target/release
 
       - name: Pre-release (mac-aarch64)
         if: startsWith(matrix.os, 'macOS')
-        run: |
-          cd target/aarch64-apple-darwin/release
-          zip -r dvm-aarch64-apple-darwin.zip dvm
+        run: zip -r dvm-aarch64-apple-darwin.zip dvm
+        working-directory: target/aarch64-apple-darwin/release
 
       - name: Pre-release (windows)
         if: startsWith(matrix.os, 'windows')
