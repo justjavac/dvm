@@ -18,7 +18,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.58"
-clap = "3.2.13"
+clap = "3.2.14"
 clap_derive = "3.2.7"
 clap_complete = "3.2.3"
 semver = "1.0.12"
