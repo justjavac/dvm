@@ -114,33 +114,33 @@ fn compose_url_to_exec(registry: &str, version: &Version) -> String {
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
-  let canary_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
-  fs::create_dir_all(&canary_dir)?;
+  let version_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
+  fs::create_dir_all(&version_dir)?;
   let exe_path = deno_version_path(version);
 
-  unpack_impl(archive_data, canary_dir, exe_path)
+  unpack_impl(archive_data, version_dir, exe_path)
 }
 
 fn unpack_canary(archive_data: Vec<u8>) -> Result<PathBuf> {
-  let dvm_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
-  fs::create_dir_all(&dvm_dir)?;
+  let canary_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
+  fs::create_dir_all(&canary_dir)?;
   let exe_path = deno_canary_path();
 
   if exe_path.exists() {
     fs::remove_file(exe_path.clone())?;
   }
 
-  unpack_impl(archive_data, dvm_dir, exe_path)
+  unpack_impl(archive_data, canary_dir, exe_path)
 }
 
-fn unpack_impl(archive_data: Vec<u8>, canary_dir: PathBuf, path: PathBuf) -> Result<PathBuf> {
+fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Result<PathBuf> {
   let archive_ext = Path::new(ARCHIVE_NAME)
     .extension()
     .and_then(|ext| ext.to_str())
     .unwrap();
   let unpack_status = match archive_ext {
     "zip" if cfg!(windows) => {
-      let archive_path = canary_dir.join("deno.zip");
+      let archive_path = version_dir.join("deno.zip");
       fs::write(&archive_path, &archive_data)?;
       Command::new("powershell.exe")
         .arg("-NoLogo")
@@ -161,15 +161,15 @@ fn unpack_impl(archive_data: Vec<u8>, canary_dir: PathBuf, path: PathBuf) -> Res
         .arg("-Path")
         .arg(format!("'{}'", &archive_path.to_str().unwrap()))
         .arg("-DestinationPath")
-        .arg(format!("'{}'", &canary_dir.to_str().unwrap()))
+        .arg(format!("'{}'", &version_dir.to_str().unwrap()))
         .spawn()?
         .wait()?
     }
     "zip" => {
-      let archive_path = canary_dir.join("deno.zip");
+      let archive_path = version_dir.join("deno.zip");
       fs::write(&archive_path, &archive_data)?;
       Command::new("unzip")
-        .current_dir(&canary_dir)
+        .current_dir(&version_dir)
         .arg(archive_path)
         .spawn()?
         .wait()?
@@ -178,7 +178,7 @@ fn unpack_impl(archive_data: Vec<u8>, canary_dir: PathBuf, path: PathBuf) -> Res
   };
   assert!(unpack_status.success());
   assert!(path.exists());
-  Ok(canary_dir)
+  Ok(version_dir)
 }
 
 fn download_canary(registry: &str, hash: &str) -> Result<Vec<u8>> {
