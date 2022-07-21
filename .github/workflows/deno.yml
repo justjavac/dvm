@@ -1,0 +1,25 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v1
+
+      - name: Format
+        run: deno fmt --check
+
+      - name: Check
+        run: deno check --remote main.ts
+
+      - name: Lint
+        run: deno lint
