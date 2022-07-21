@@ -1,3 +1,4 @@
+use crate::consts::DVM_CACHE_PATH_PREFIX;
 use crate::utils::{deno_version_path, dvm_root};
 use crate::version::current_version;
 use anyhow::Result;
@@ -18,6 +19,8 @@ pub fn exec(version: Option<String>) -> Result<()> {
   };
   let target_exe_path = deno_version_path(&target_version);
 
+  println!("{}", target_exe_path.display());
+
   if !target_exe_path.exists() {
     eprintln!("deno v{} is not installed.", target_version);
     exit(1)
@@ -30,9 +33,9 @@ pub fn exec(version: Option<String>) -> Result<()> {
     exit(1);
   }
 
-  let dvm_dir = dvm_root().join(format!("{}", target_version));
+  let version_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, target_version));
 
-  fs::remove_dir_all(&dvm_dir).unwrap();
+  fs::remove_dir_all(&version_dir).unwrap();
   println!("deno v{} removed.", target_version);
 
   Ok(())
