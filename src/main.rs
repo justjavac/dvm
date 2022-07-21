@@ -30,8 +30,8 @@ static AFTER_HELP: &str = "\x1b[33mEXAMPLE:\x1b[39m
   dvm install           Install the latest available version
   dvm use 1.0.0         Use v1.0.0 release
   dvm use latest        Use the latest alias that comes with dvm, equivalent to *
-  dvm use ^1.0.0        Use 1.x version (~1.0.0, >=1.0.0 are supported as well)
-  
+  dvm use canry         Use the canary version of the Deno
+
 \x1b[33mNOTE:\x1b[39m
   To remove, delete, or uninstall dvm - just remove the \x1b[36m`$DVM_DIR`\x1b[39m folder (usually \x1b[36m`~/.dvm`\x1b[39m)";
 
@@ -70,11 +70,11 @@ enum Commands {
     version: Option<String>,
   },
 
-  #[clap(about = "List installed versions, matching a given <version> if provided")]
+  #[clap(about = "List all installed versions")]
   #[clap(visible_aliases=&["ls", "ll", "la"])]
   List,
 
-  #[clap(about = "List released versions")]
+  #[clap(about = "List all released versions")]
   #[clap(visible_aliases=&["lr", "ls-remote"])]
   ListRemote,
 
