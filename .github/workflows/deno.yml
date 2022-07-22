@@ -1,4 +1,4 @@
-name: ci
+name: deno
 
 on: [push, pull_request]
 
