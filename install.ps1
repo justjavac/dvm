@@ -14,10 +14,6 @@ $BinDir = if ($DvmDir) {
 
 $DvmZip = "$BinDir\dvm.zip"
 $DvmExe = "$BinDir\dvm.exe"
-
-# GitHub requires TLS 1.2
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
 $DvmUri = "https://cdn.jsdelivr.net/gh/justjavac/dvm_releases@main/dvm-x86_64-pc-windows-msvc.zip"
 
 if (!(Test-Path $BinDir)) {
