@@ -17,7 +17,7 @@ curl -fsSL https://deno.land/x/dvm/install.sh | sh
 **PowerShell 安装：**
 
 ```powershell
-iwr https://deno.land/x/dvm/install.ps1 -useb | iex
+irm https://deno.land/x/dvm/install.ps1 | iex
 ```
 
 ## 使用
