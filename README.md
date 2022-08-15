@@ -12,13 +12,13 @@ the [releases page](https://github.com/justjavac/dvm/releases).
 **With Shell:**
 
 ```sh
-curl -fsSL https://deno.land/x/dvm/install.sh | sh
+curl -fsSL https://dvm.deno.dev | sh
 ```
 
 **With PowerShell:**
 
 ```powershell
-irm https://deno.land/x/dvm/install.ps1 | iex
+irm https://dvm.deno.dev | iex
 ```
 
 ## Usage
