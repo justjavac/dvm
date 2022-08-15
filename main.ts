@@ -20,5 +20,6 @@ serve(async (req: Request) => {
   
   Install With PowerShell:
 
-    iwr https://dvm.deno.dev -useb | iex`);
+    irm https://dvm.deno.dev | iex
+  `);
 });
