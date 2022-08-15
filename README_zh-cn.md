@@ -20,6 +20,8 @@ curl -fsSL https://deno.land/x/dvm/install.sh | sh
 irm https://deno.land/x/dvm/install.ps1 | iex
 ```
 
+**设置中文镜像：`dvm registry cn`**。
+
 ## 使用
 
 ```plain
