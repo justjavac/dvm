@@ -24,32 +24,9 @@ if (!(Test-Path $BinDir)) {
   New-Item $BinDir -ItemType Directory | Out-Null
 }
 
-# Ignore SSL certificate errors
-# https://stackoverflow.com/questions/11696944/powershell-v3-invoke-webrequest-https-error
-add-type @"
-    using System.Net;
-    using System.Security.Cryptography.X509Certificates;
-    public class TrustAllCertsPolicy : ICertificatePolicy {
-        public bool CheckValidationResult(
-            ServicePoint srvPoint, X509Certificate certificate,
-            WebRequest request, int certificateProblem) {
-            return true;
-        }
-    }
-"@
-[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+curl.exe -Lo $DvmZip $DvmUri
 
-Invoke-WebRequest $DvmUri -OutFile $DvmZip -UseBasicParsing
-
-if (Get-Command Expand-Archive -ErrorAction SilentlyContinue) {
-  Expand-Archive $DvmZip -Destination $BinDir -Force
-} else {
-  if (Test-Path $DvmExe) {
-    Remove-Item $DvmExe
-  }
-  Add-Type -AssemblyName System.IO.Compression.FileSystem
-  [IO.Compression.ZipFile]::ExtractToDirectory($DvmZip, $BinDir)
-}
+tar.exe xf $DvmZip -C $BinDir
 
 Remove-Item $DvmZip
 
