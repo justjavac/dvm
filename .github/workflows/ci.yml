@@ -40,24 +40,13 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Configure cargo data directory
-        # After this point, all cargo registry and crate data is stored in
-        # $GITHUB_WORKSPACE/.cargo_home. This allows us to cache only the files
-        # that are needed during the build process. Additionally, this works
-        # around a bug in the 'cache' action that causes directories outside of
-        # the workspace dir to be saved/restored incorrectly.
-        run: |
-          echo "CARGO_HOME=$(pwd)/.cargo_home" >> $GITHUB_ENV
-
       - name: Cache
         uses: actions/cache@v2
         with:
-          # Note: crates from the denoland/deno git repo always get rebuilt,
-          # and their outputs ('deno', 'libdeno.rlib' etc.) are quite big,
-          # so we cache only those subdirectories of target/{debug|release} that
-          # contain the build output for crates that come from the registry.
           path: |-
-            .cargo_home
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
             target/*/.*
             target/*/build
             target/*/deps
