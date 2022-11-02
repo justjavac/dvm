@@ -164,10 +164,11 @@ pub fn main() {
   if args.len() > 1 && args[1] == "exec" {
     if args.len() > 2 {
       let version: Option<String>;
+      let exec_args: Vec<String>;
       if args[2] == "--version" || args[2] == "-V" {
         if args.len() > 3 {
           version = Some(args[3].clone());
-          commands::exec::exec(&mut meta, version, args[4..].to_vec()).unwrap();
+          exec_args = args[4..].to_vec();
         } else {
           eprintln!("A version should be followed after {}", args[2]);
           std::process::exit(1)
@@ -179,11 +180,12 @@ pub fn main() {
             .trim_start_matches("--version=")
             .to_string(),
         );
-        commands::exec::exec(&mut meta, version, args[3..].to_vec()).unwrap();
+        exec_args = args[3..].to_vec();
       } else {
         version = None;
-        commands::exec::exec(&mut meta, version, args[2..].to_vec()).unwrap();
+        exec_args = args[2..].to_vec();
       }
+      commands::exec::exec(&mut meta, version, exec_args).unwrap();
     } else {
       // TODO(CGQAQ): print help
     }
