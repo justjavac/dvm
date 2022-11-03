@@ -1,0 +1,27 @@
+name: deno
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.kind }} ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v1
+
+      - name: Format
+        run: deno fmt --check
+
+      - name: Check
+        run: deno check --remote main.ts
+
+      - name: Lint
+        run: deno lint

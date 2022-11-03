@@ -30,8 +30,8 @@ static AFTER_HELP: &str = "\x1b[33mEXAMPLE:\x1b[39m
   dvm install           Install the latest available version
   dvm use 1.0.0         Use v1.0.0 release
   dvm use latest        Use the latest alias that comes with dvm, equivalent to *
-  dvm use ^1.0.0        Use 1.x version (~1.0.0, >=1.0.0 are supported as well)
-  
+  dvm use canary        Use the canary version of the Deno
+
 \x1b[33mNOTE:\x1b[39m
   To remove, delete, or uninstall dvm - just remove the \x1b[36m`$DVM_DIR`\x1b[39m folder (usually \x1b[36m`~/.dvm`\x1b[39m)";
 
@@ -70,11 +70,11 @@ enum Commands {
     version: Option<String>,
   },
 
-  #[clap(about = "List installed versions, matching a given <version> if provided")]
+  #[clap(about = "List all installed versions")]
   #[clap(visible_aliases=&["ls", "ll", "la"])]
   List,
 
-  #[clap(about = "List released versions")]
+  #[clap(about = "List all released versions")]
   #[clap(visible_aliases=&["lr", "ls-remote"])]
   ListRemote,
 
@@ -164,10 +164,11 @@ pub fn main() {
   if args.len() > 1 && args[1] == "exec" {
     if args.len() > 2 {
       let version: Option<String>;
+      let exec_args: Vec<String>;
       if args[2] == "--version" || args[2] == "-V" {
         if args.len() > 3 {
           version = Some(args[3].clone());
-          commands::exec::exec(&mut meta, version, args[4..].to_vec()).unwrap();
+          exec_args = args[4..].to_vec();
         } else {
           eprintln!("A version should be followed after {}", args[2]);
           std::process::exit(1)
@@ -179,11 +180,12 @@ pub fn main() {
             .trim_start_matches("--version=")
             .to_string(),
         );
-        commands::exec::exec(&mut meta, version, args[3..].to_vec()).unwrap();
+        exec_args = args[3..].to_vec();
       } else {
         version = None;
-        commands::exec::exec(&mut meta, version, args[2..].to_vec()).unwrap();
+        exec_args = args[2..].to_vec();
       }
+      commands::exec::exec(&mut meta, version, exec_args).unwrap();
     } else {
       // TODO(CGQAQ): print help
     }

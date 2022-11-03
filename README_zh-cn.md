@@ -17,8 +17,10 @@ curl -fsSL https://deno.land/x/dvm/install.sh | sh
 **PowerShell 安装：**
 
 ```powershell
-iwr https://deno.land/x/dvm/install.ps1 -useb | iex
+irm https://deno.land/x/dvm/install.ps1 | iex
 ```
+
+**设置中文镜像：`dvm registry cn`**。
 
 ## 使用
 
@@ -36,6 +38,7 @@ OPTIONS:
 SUBCOMMANDS:
     activate       Activate Dvm
     alias          Set or unset an alias
+    clean          Clean dvm cache
     completions    Generate shell completions
     deactivate     Deactivate Dvm
     doctor         Fixing dvm specific environment variables and other issues
@@ -43,9 +46,9 @@ SUBCOMMANDS:
     help           Print this message or the help of the given subcommand(s)
     info           Show dvm info.
     install        Install deno executable to the given version. [aliases: i, add]
-    list           List installed versions, matching a given <version> if provided [aliases: ls,
-                       ll, la]
-    list-remote    List released versions [aliases: lr, ls-remote]
+    list           List all installed versions [aliases: ls, ll, la]
+    list-remote    List all released versions [aliases: lr, ls-remote]
+    registry       Change registry that dvm fetch from
     uninstall      Uninstall a given version [aliases: un, unlink, rm, remove]
     upgrade        Upgrade aliases to the latest version
     use            Use a given version or a semver range or a alias to the range.
@@ -54,8 +57,8 @@ EXAMPLE:
   dvm install 1.3.2     Install v1.3.2 release
   dvm install           Install the latest available version
   dvm use 1.0.0         Use v1.0.0 release
-  dvm use latest        Use the latest alias that comes with dvm
-  dvm use canry         Use the canary version of the Deno
+  dvm use latest        Use the latest alias that comes with dvm, equivalent to *
+  dvm use canary        Use the canary version of the Deno
 
 NOTE:
   To remove, delete, or uninstall dvm - just remove the `$DVM_DIR` folder (usually `~/.dvm`)
