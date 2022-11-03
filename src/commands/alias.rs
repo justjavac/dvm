@@ -23,7 +23,7 @@ fn apply_alias_color(a: &str, c: &str) -> ColoredString {
 pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
   match command {
     AliasCommands::Set { name, content } => {
-      VersionReq::parse(content.as_str()).expect(format!("unexpected semver content: {}", content).as_str());
+      VersionReq::parse(content.as_str()).expect(format!("unexpected alias content: {}", content).as_str());
       meta.set_alias(name, content);
       Ok(())
     }
