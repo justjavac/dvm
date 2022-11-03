@@ -45,12 +45,14 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
           let max_remote_version = find_max_matching_version(
             &alias.required.as_str(),
             remote_versions.iter().map(|string| string.as_str()),
-          ).unwrap();
+          )
+          .unwrap();
 
           let max_local_version = find_max_matching_version(
             &alias.required.as_str(),
             local_versions.iter().map(|string| string.as_str()),
-          ).unwrap();
+          )
+          .unwrap();
 
           if let (Some(max_remote), Some(max_local)) = (max_remote_version, max_local_version) {
             if max_remote > max_local {
