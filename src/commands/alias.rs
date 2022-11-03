@@ -2,6 +2,7 @@ use crate::{AliasCommands, DvmMeta, DEFAULT_ALIAS};
 use anyhow::Result;
 use colored::{ColoredString, Colorize};
 use phf::phf_map;
+use semver::VersionReq;
 
 const ALIAS_COLORS: phf::Map<&str, (u8, u8, u8)> = phf_map! {
     "lighter" => (0xD1, 0xFA, 0xFF),        // unused
@@ -22,6 +23,7 @@ fn apply_alias_color(a: &str, c: &str) -> ColoredString {
 pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
   match command {
     AliasCommands::Set { name, content } => {
+      VersionReq::parse(content.as_str()).unwrap_or_else(|_| panic!("unexpected alias content: {}", content));
       meta.set_alias(name, content);
       Ok(())
     }
