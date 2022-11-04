@@ -1,18 +1,20 @@
 use std::process;
 
 use crate::consts::REGISTRY_CN;
+use crate::consts::REGISTRY_NAME_CN;
+use crate::consts::REGISTRY_NAME_OFFICIAL;
 use crate::consts::REGISTRY_OFFICIAL;
 use crate::DvmMeta;
 
 use anyhow::Result;
 
 pub fn exec(meta: &mut DvmMeta, registry: Option<String>) -> Result<()> {
-  let registry = registry.unwrap_or_else(|| "official".to_string());
+  let registry = registry.unwrap_or_else(|| REGISTRY_NAME_OFFICIAL.to_string());
 
-  if registry == *"official" {
+  if registry == *REGISTRY_NAME_OFFICIAL {
     meta.registry = REGISTRY_OFFICIAL.to_string();
     println!("Registry now set to the official registry \"{}\"", REGISTRY_OFFICIAL);
-  } else if registry == *"cn" {
+  } else if registry == *REGISTRY_NAME_CN {
     meta.registry = REGISTRY_CN.to_string();
     println!(
       "Registry now set to the CN mirror (that provided by @justjavac) \"{}\"",
