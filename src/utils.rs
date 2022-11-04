@@ -60,27 +60,13 @@ pub fn best_version<'a, T>(choices: T, required: VersionReq) -> Option<Version>
 where
   T: IntoIterator<Item = &'a str>,
 {
-  let mut best: Option<Version> = None;
-
-  for candidate in choices {
-    let version = Version::parse(candidate);
-    if version.is_err() {
-      continue;
-    }
-    let version = version.unwrap();
-    if required.matches(&version) {
-      if best.is_none() {
-        best.replace(version);
-      } else {
-        let old = best.as_ref().unwrap();
-        if old.lt(&version) {
-          best.replace(version);
-        }
-      }
-    }
-  }
-
-  best
+  choices
+    .into_iter()
+    .filter_map(|v| {
+      let version = Version::parse(v).ok()?;
+      required.matches(&version).then(|| version)
+    })
+    .max_by(|a, b| a.partial_cmp(b).unwrap())
 }
 
 ///
