@@ -38,8 +38,7 @@ pub fn now() -> u128 {
 }
 
 pub fn update_stub(verison: &str) {
-  let mut home = dvm_root();
-  home.push("versions");
+  let mut home = dvm_versions();
   home.push(verison);
   if home.is_dir() {
     home.push(".dvmstub");
@@ -97,6 +96,12 @@ pub fn dvm_root() -> PathBuf {
       .map(|it| it.join(".dvm"))
       .unwrap_or_else(|| TempDir::new().unwrap().into_path().join(".dvm"))
   })
+}
+
+pub fn dvm_versions() -> PathBuf {
+  let mut home = dvm_root();
+  home.push(DVM_CACHE_PATH_PREFIX);
+  home
 }
 
 pub fn deno_canary_path() -> PathBuf {

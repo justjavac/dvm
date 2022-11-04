@@ -1,8 +1,5 @@
-use crate::consts::DVM_CACHE_INVALID_TIMEOUT;
-use crate::utils::now;
 use crate::{dvm_root, DvmMeta};
 use anyhow::Result;
-use colored::Colorize;
 
 pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   let home = dvm_root();
@@ -12,32 +9,23 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
     std::process::exit(0);
   }
 
-  if let Ok(dir) = cache_folder.read_dir() {
-    for entry in dir.flatten() {
-      let path = entry.path();
-      if path.is_dir() {
-        let name = path.file_name().unwrap().to_str().unwrap();
-
-        // it's been pointed by dvm versions
-        if meta.versions.iter().any(|it| it.current == name) {
-          continue;
-        }
-
-        // it's not been outdated
-        let stub = path.join(".dvmstub");
-        if stub.exists() && stub.is_file() {
-          let content = std::fs::read_to_string(stub).expect("read stub file failed");
-          let content: u128 = content.parse().expect("parse stub file failed");
-          if content > now() - DVM_CACHE_INVALID_TIMEOUT {
-            continue;
-          }
-        }
-
-        println!("Cleaning version {}", name.bright_black());
-        std::fs::remove_dir_all(path).unwrap();
+  let requires = meta
+    .versions
+    .iter()
+    .filter_map(|v| {
+      if v.is_valid_mapping() {
+        None
+      } else {
+        Some(v.required.clone())
       }
-    }
+    })
+    .collect::<Vec<_>>();
+
+  for required in requires {
+    meta.delete_version_mapping(required.clone());
   }
+
+  meta.clean_files();
 
   println!("Cleaned successfully");
   Ok(())
