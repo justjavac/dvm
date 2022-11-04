@@ -58,7 +58,7 @@ pub enum Commands {
   #[clap(about = "Generate shell completions")]
   #[clap(long_about=COMPLETIONS_HELP)]
   Completions {
-    #[clap(arg_enum)]
+    #[arg(value_enum)]
     shell: Shell,
   },
 

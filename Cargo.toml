@@ -20,9 +20,9 @@ path = "src/main.rs"
 cfg-if = "1.0.0"
 
 anyhow = "1.0.58"
-clap = "3.2.14"
-clap_derive = "3.2.7"
-clap_complete = "3.2.3"
+clap = "4.0.18"
+clap_derive = "4.0.18"
+clap_complete = "4.0.3"
 semver = "1.0.12"
 tempfile = "3.3.0"
 tinyget = { version = "1.0.1", features = ["https"] }
