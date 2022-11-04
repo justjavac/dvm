@@ -1,5 +1,6 @@
 use crate::{
   commands::install,
+  consts::{DVM_VERSION_CANARY, DVM_VERSION_INVALID},
   utils::best_version,
   version::{remote_versions, VersionArg},
   DvmMeta,
@@ -11,7 +12,7 @@ use std::str::FromStr;
 pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
   let versions = remote_versions().expect("Fetching version list failed.");
   if let Some(alias) = alias {
-    if alias == "canary" {
+    if alias == DVM_VERSION_CANARY {
       println!("Upgrading {}", alias.bright_black());
       install::exec(meta, true, Some(alias)).unwrap();
       println!("All aliases have been upgraded");
@@ -28,7 +29,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
     println!("Upgrading alias {}", alias.bright_black());
     let current = meta
       .get_version_mapping(alias.as_str())
-      .unwrap_or_else(|| "N/A".to_string());
+      .unwrap_or_else(|| DVM_VERSION_INVALID.to_string());
     let version_req = meta.resolve_version_req(&alias);
     match version_req {
       VersionArg::Exact(v) => {
@@ -49,7 +50,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
     for alias in meta.list_alias() {
       let current = meta
         .get_version_mapping(alias.name.as_str())
-        .unwrap_or_else(|| "N/A".to_string());
+        .unwrap_or_else(|| DVM_VERSION_INVALID.to_string());
 
       let latest = match VersionArg::from_str(alias.required.clone().as_str()).unwrap() {
         VersionArg::Exact(v) => v.to_string(),
@@ -69,8 +70,8 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
       install::exec(meta, true, Some(latest.clone()))?;
       meta.set_version_mapping(alias.name, latest);
 
-      println!("Upgrading {}", "canary".bright_black());
-      install::exec(meta, true, Some("canary".to_string())).unwrap();
+      println!("Upgrading {}", DVM_VERSION_CANARY.bright_black());
+      install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string())).unwrap();
     }
 
     println!("All aliases have been upgraded");

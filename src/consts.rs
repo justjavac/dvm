@@ -13,6 +13,7 @@ pub const DVM_CONFIG_FILENAME: &str = ".dvmrc";
 pub const DVM_VERSION_CANARY: &str = "canary";
 pub const DVM_VERSION_LATEST: &str = "latest";
 pub const DVM_VERSION_SYSTEM: &str = "system";
+pub const DVM_VERSION_INVALID: &str = "N/A";
 
 cfg_if::cfg_if! {
   if #[cfg(windows)] {
