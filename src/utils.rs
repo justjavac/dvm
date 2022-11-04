@@ -76,23 +76,16 @@ pub fn load_dvmrc() -> VersionArg {
   let project_config = Path::new(".dvmrc");
   let user_config = home_dir().unwrap().join(".dvmrc");
 
-  let mut found_config: Option<&Path> = None;
-  if Path::exists(project_config) {
-    found_config = Some(project_config)
-  } else if Path::exists(user_config.as_path()) {
-    found_config = Some(user_config.as_path())
-  }
-
-  if let Some(found) = found_config {
-    let result = read_to_string(found)
-      .map_err(|e| anyhow!(e))
-      .and_then(|content| VersionArg::from_str(&content).map_err(|_| anyhow!("")));
-    if let Ok(req) = result {
-      return req;
-    }
-  }
-
-  VersionArg::from_str("*").unwrap()
+  Path::exists(project_config)
+    .then_some(project_config)
+    .or_else(|| Path::exists(&user_config).then_some(&user_config))
+    .and_then(|found| {
+      read_to_string(found)
+        .map_err(|e| anyhow!(e))
+        .and_then(|content| VersionArg::from_str(&content).map_err(|_| anyhow!("")))
+        .ok()
+    })
+    .unwrap_or_else(|| VersionArg::from_str("*").unwrap())
 }
 
 pub fn dvm_root() -> PathBuf {
