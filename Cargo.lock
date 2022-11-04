@@ -158,6 +158,7 @@ version = "1.8.6"
 dependencies = [
  "anyhow",
  "asserts-rs",
+ "cfg-if",
  "clap",
  "clap_complete",
  "clap_derive",

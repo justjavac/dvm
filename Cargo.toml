@@ -17,6 +17,8 @@ name = "dvm"
 path = "src/main.rs"
 
 [dependencies]
+cfg-if = "1.0.0"
+
 anyhow = "1.0.58"
 clap = "3.2.14"
 clap_derive = "3.2.7"
