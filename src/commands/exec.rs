@@ -21,12 +21,9 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> R
     let req = meta.get_alias(&version).expect("Failed to get alias");
     match req {
       crate::version::VersionArg::Exact(v) => v.to_string(),
-      crate::version::VersionArg::Range(range) => best_version(
-        versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_ref(),
-        range,
-      )
-      .unwrap()
-      .to_string(),
+      crate::version::VersionArg::Range(range) => best_version(versions.iter().map(AsRef::as_ref), range)
+        .unwrap()
+        .to_string(),
     }
   } else {
     eprintln!("{}", "No such alias or version found.".red());

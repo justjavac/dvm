@@ -56,10 +56,13 @@ pub fn is_valid_semver_range(input: &str) -> bool {
   VersionReq::parse(input).is_ok()
 }
 
-pub fn best_version(choices: &[&str], required: VersionReq) -> Option<Version> {
+pub fn best_version<'a, T>(choices: T, required: VersionReq) -> Option<Version>
+where
+  T: IntoIterator<Item = &'a str>,
+{
   let mut best: Option<Version> = None;
 
-  for &candidate in choices {
+  for candidate in choices {
     let version = Version::parse(candidate);
     if version.is_err() {
       continue;
@@ -195,15 +198,15 @@ mod tests {
       "2.0.0",
     ];
     assert_eq!(
-      best_version(&versions, VersionReq::parse("*").unwrap()),
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("*").unwrap()),
       Some(Version::parse("2.0.0").unwrap())
     );
     assert_eq!(
-      best_version(&versions, VersionReq::parse("^1").unwrap()),
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("^1").unwrap()),
       Some(Version::parse("1.0.0").unwrap())
     );
     assert_eq!(
-      best_version(&versions, VersionReq::parse("~0.8").unwrap()),
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("~0.8").unwrap()),
       Some(Version::parse("0.8.5").unwrap())
     );
   }

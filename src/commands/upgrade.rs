@@ -40,7 +40,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         }
       }
       VersionArg::Range(r) => {
-        let version = best_version(versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(), r).unwrap();
+        let version = best_version(versions.iter().map(AsRef::as_ref), r).unwrap();
         install::exec(meta, true, Some(version.to_string())).expect("Install failed");
         meta.set_version_mapping(alias, version.to_string());
       }
@@ -53,9 +53,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
 
       let latest = match VersionArg::from_str(alias.required.clone().as_str()).unwrap() {
         VersionArg::Exact(v) => v.to_string(),
-        VersionArg::Range(v) => best_version(versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(), v)
-          .unwrap()
-          .to_string(),
+        VersionArg::Range(v) => best_version(versions.iter().map(AsRef::as_ref), v).unwrap().to_string(),
       };
 
       if current == latest {

@@ -63,11 +63,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
       VersionArg::Range(ref r) => {
         println!("Fetching version list");
         let versions = remote_versions().expect("Fetching version list failed.");
-        best_version(
-          versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_slice(),
-          r.clone(),
-        )
-        .unwrap()
+        best_version(versions.iter().map(AsRef::as_ref), r.clone()).unwrap()
       }
     }
   };
