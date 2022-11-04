@@ -89,23 +89,22 @@ pub fn load_dvmrc() -> VersionArg {
 }
 
 pub fn dvm_root() -> PathBuf {
-  match env::var_os("DVM_DIR").map(PathBuf::from) {
-    Some(dvm_dir) => dvm_dir,
-    None => {
-      // Note: on Windows, the $HOME environment variable may be set by users or by
-      // third party software, but it is non-standard and should not be relied upon.
-      let home_env_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-      let mut home_path = match env::var_os(home_env_var).map(PathBuf::from) {
-        Some(home_path) => home_path,
-        None => {
-          // Use temp dir
-          TempDir::new().unwrap().into_path()
-        }
-      };
-      home_path.push(".dvm");
-      home_path
+  cfg_if! {
+    if #[cfg(windows)] {
+      let home = env::var_os("USERPROFILE");
+    } else {
+      let home = env::var_os("HOME");
     }
   }
+
+  env::var_os("DVM_DIR").map(PathBuf::from).unwrap_or_else(|| {
+    // Note: on Windows, the $HOME environment variable may be set by users or by
+    // third party software, but it is non-standard and should not be relied upon.
+    home
+      .map(PathBuf::from)
+      .map(|it| it.join(".dvm"))
+      .unwrap_or_else(|| TempDir::new().unwrap().into_path().join(".dvm"))
+  })
 }
 
 pub fn deno_canary_path() -> PathBuf {
