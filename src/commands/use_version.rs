@@ -136,7 +136,7 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
   if bin_path.exists() {
     fs::remove_file(&bin_path)?;
   }
-  fs::hard_link(&exe_path, &bin_path)?;
+  fs::hard_link(exe_path, &bin_path)?;
 
   if local {
     println!("Writing to current folder config");

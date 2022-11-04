@@ -38,10 +38,10 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
       let local_versions = local_versions();
       let get_upgrade_version = |version_str: &str| {
         let max_remote_version =
-          find_max_matching_version(version_str, remote_versions.iter().map(|string| string.as_str())).unwrap();
+          find_max_matching_version(version_str, remote_versions.iter().map(AsRef::as_ref)).unwrap();
 
         let max_local_version =
-          find_max_matching_version(version_str, local_versions.iter().map(|string| string.as_str())).unwrap();
+          find_max_matching_version(version_str, local_versions.iter().map(AsRef::as_ref)).unwrap();
         if let (Some(max_remote), Some(max_local)) = (max_remote_version, max_local_version) {
           if max_remote > max_local {
             return Some(max_remote);
