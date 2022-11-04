@@ -64,7 +64,7 @@ where
     .into_iter()
     .filter_map(|v| {
       let version = Version::parse(v).ok()?;
-      required.matches(&version).then(|| version)
+      required.matches(&version).then_some(version)
     })
     .max_by(|a, b| a.partial_cmp(b).unwrap())
 }
