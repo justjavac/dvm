@@ -1,7 +1,7 @@
-#![allow(dead_code)]
-use crate::consts::{DVM_CACHE_PATH_PREFIX, REGISTRY_OFFICIAL};
-use crate::utils::{deno_version_path, dvm_root};
+use crate::consts::{DVM_CACHE_INVALID_TIMEOUT, REGISTRY_OFFICIAL};
+use crate::utils::{deno_version_path, dvm_root, dvm_versions, now};
 use crate::version::VersionArg;
+use colored::Colorize;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fs::{create_dir_all, read_to_string, write};
@@ -105,22 +105,37 @@ impl DvmMeta {
       }
     }
 
-    let config = DvmMeta::default();
-    config.save();
+    let mut config = DvmMeta::default();
+    config.save_and_reload();
     config
   }
 
   pub fn clean_files(&self) {
-    let bin_path = dvm_root().join(Path::new(DVM_CACHE_PATH_PREFIX));
-    for entry in bin_path.read_dir().expect("read_dir call failed").flatten() {
-      if entry.metadata().unwrap().is_dir()
-        && !self
-          .versions
-          .iter()
-          .map(|it| it.current.clone())
-          .any(|x| x == *entry.file_name().to_str().unwrap())
-      {
-        std::fs::remove_dir_all(entry.path()).unwrap();
+    let cache_folder = dvm_versions();
+    if let Ok(dir) = cache_folder.read_dir() {
+      for entry in dir.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+          let name = path.file_name().unwrap().to_str().unwrap();
+
+          // it's been pointed by dvm versions
+          if self.versions.iter().any(|it| it.current == name) {
+            continue;
+          }
+
+          // it's not been outdated
+          let stub = path.join(".dvmstub");
+          if stub.exists() && stub.is_file() {
+            let content = std::fs::read_to_string(stub).expect("read stub file failed");
+            let content: u128 = content.parse().expect("parse stub file failed");
+            if content > now() - DVM_CACHE_INVALID_TIMEOUT {
+              continue;
+            }
+          }
+
+          println!("Cleaning version {}", name.bright_black());
+          std::fs::remove_dir_all(path).unwrap();
+        }
       }
     }
   }
@@ -136,7 +151,7 @@ impl DvmMeta {
     } else {
       self.versions.push(VersionMapping { required, current });
     }
-    self.save();
+    self.save_and_reload();
   }
 
   ///
@@ -160,7 +175,7 @@ impl DvmMeta {
       self.versions.remove(index);
     }
 
-    self.save();
+    self.save_and_reload();
   }
 
   ///
@@ -195,7 +210,7 @@ impl DvmMeta {
       self.alias.push(Alias { name, required });
     }
 
-    self.save();
+    self.save_and_reload();
   }
 
   pub fn has_alias(&self, name: &str) -> bool {
@@ -222,7 +237,7 @@ impl DvmMeta {
       self.alias.remove(index);
     }
 
-    self.save();
+    self.save_and_reload();
   }
 
   pub fn resolve_version_req(&self, required: &str) -> VersionArg {
@@ -248,6 +263,11 @@ impl DvmMeta {
       create_dir_all(dir_path).unwrap();
     }
     write(file_path, serde_json::to_string_pretty(self).unwrap()).unwrap();
+  }
+
+  pub fn save_and_reload(&mut self) {
+    self.save();
+    self.reload();
   }
 }
 

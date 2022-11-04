@@ -1,4 +1,6 @@
-use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
+use cfg_if::cfg_if;
+
+use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
 use crate::version::VersionArg;
 use anyhow::anyhow;
 use dirs::home_dir;
@@ -36,10 +38,8 @@ pub fn now() -> u128 {
 }
 
 pub fn update_stub(verison: &str) {
-  let mut home = dvm_root();
-  home.push("versions");
+  let mut home = dvm_versions();
   home.push(verison);
-  // println!("update_stub {}", home.to_str().unwrap());
   if home.is_dir() {
     home.push(".dvmstub");
     write(home, now().to_string()).unwrap();
@@ -55,121 +55,101 @@ pub fn is_valid_semver_range(input: &str) -> bool {
   VersionReq::parse(input).is_ok()
 }
 
-pub fn best_version(choices: &[&str], required: VersionReq) -> Option<Version> {
-  let mut best: Option<Version> = None;
-
-  for &candidate in choices {
-    let version = Version::parse(candidate);
-    if version.is_err() {
-      continue;
-    }
-    let version = version.unwrap();
-    if required.matches(&version) {
-      if best.is_none() {
-        best.replace(version);
-      } else {
-        let old = best.as_ref().unwrap();
-        if old.lt(&version) {
-          best.replace(version);
-        }
-      }
-    }
-  }
-
-  best
+pub fn best_version<'a, T>(choices: T, required: VersionReq) -> Option<Version>
+where
+  T: IntoIterator<Item = &'a str>,
+{
+  choices
+    .into_iter()
+    .filter_map(|v| {
+      let version = Version::parse(v).ok()?;
+      required.matches(&version).then_some(version)
+    })
+    .max_by(|a, b| a.partial_cmp(b).unwrap())
 }
 
 ///
 /// Find and load the dvmrc
 /// local -> user -> default
 pub fn load_dvmrc() -> VersionArg {
-  let project_config = Path::new(".dvmrc");
-  let user_config = home_dir().unwrap().join(".dvmrc");
+  let project_config = PathBuf::from(".dvmrc");
+  let user_config = dvm_root();
 
-  let mut found_config: Option<&Path> = None;
-  if Path::exists(project_config) {
-    found_config = Some(project_config)
-  } else if Path::exists(user_config.as_path()) {
-    found_config = Some(user_config.as_path())
-  }
-
-  if let Some(found) = found_config {
-    let result = read_to_string(found)
-      .map_err(|e| anyhow!(e))
-      .and_then(|content| VersionArg::from_str(&content).map_err(|_| anyhow!("")));
-    if let Ok(req) = result {
-      return req;
-    }
-  }
-
-  VersionArg::from_str("*").unwrap()
+  Path::exists(project_config.as_path())
+    .then_some(project_config)
+    .or_else(|| Path::exists(&user_config).then_some(user_config))
+    .and_then(|found| {
+      read_to_string(found)
+        .map_err(|e| anyhow!(e))
+        .and_then(|content| VersionArg::from_str(&content).map_err(|_| anyhow!("")))
+        .ok()
+    })
+    .unwrap_or_else(|| VersionArg::from_str("*").unwrap())
 }
 
 pub fn dvm_root() -> PathBuf {
-  match env::var_os("DVM_DIR").map(PathBuf::from) {
-    Some(dvm_dir) => dvm_dir,
-    None => {
-      // Note: on Windows, the $HOME environment variable may be set by users or by
-      // third party software, but it is non-standard and should not be relied upon.
-      let home_env_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-      let mut home_path = match env::var_os(home_env_var).map(PathBuf::from) {
-        Some(home_path) => home_path,
-        None => {
-          // Use temp dir
-          TempDir::new().unwrap().into_path()
-        }
-      };
-      home_path.push(".dvm");
-      home_path
-    }
-  }
+  env::var_os("DVM_DIR").map(PathBuf::from).unwrap_or_else(|| {
+    // Note: on Windows, the $HOME environment variable may be set by users or by
+    // third party software, but it is non-standard and should not be relied upon.
+    home_dir()
+      .map(PathBuf::from)
+      .map(|it| it.join(".dvm"))
+      .unwrap_or_else(|| TempDir::new().unwrap().into_path().join(".dvm"))
+  })
+}
+
+pub fn dvm_versions() -> PathBuf {
+  let mut home = dvm_root();
+  home.push(DVM_CACHE_PATH_PREFIX);
+  home
 }
 
 pub fn deno_canary_path() -> PathBuf {
   let dvm_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
-  let exe_ext = if cfg!(windows) { "exe" } else { "" };
-  dvm_dir.join("deno").with_extension(exe_ext)
+  dvm_dir.join(DENO_EXE)
 }
 
 /// CGQAQ: Put hardlink to executable to this file,
 ///        and prepend this folder to env when dvm activated.
 pub fn deno_bin_path() -> PathBuf {
   let dvm_bin_dir = dvm_root().join("bin");
-  let exe_ext = if cfg!(windows) { "exe" } else { "" };
-  dvm_bin_dir.join("deno").with_extension(exe_ext)
+  dvm_bin_dir.join(DENO_EXE)
 }
 
 pub fn deno_version_path(version: &Version) -> PathBuf {
   let dvm_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
-  let exe_ext = if cfg!(windows) { "exe" } else { "" };
-  dvm_dir.join("deno").with_extension(exe_ext)
+  dvm_dir.join(DENO_EXE)
 }
 
+#[inline]
 pub fn is_semver(version: &str) -> bool {
   Version::parse(version).is_ok()
 }
 
-#[cfg(not(windows))]
-pub fn is_china_mainland() -> bool {
-  env::var("LANG").map(|lng| lng.starts_with("zh_CN.")).unwrap_or(false)
-}
+cfg_if! {
+  if #[cfg(windows)] {
+    pub fn is_china_mainland() -> bool {
+      use winapi::ctypes::c_int;
+      use winapi::um::winnls::GetUserDefaultLocaleName;
 
-#[cfg(windows)]
-pub fn is_china_mainland() -> bool {
-  use winapi::ctypes::c_int;
-  use winapi::um::winnls::GetUserDefaultLocaleName;
+      // The maximum number of characters allowed for this string is 85,
+      // including a terminating null character.
+      // https://docs.microsoft.com/en-us/windows/win32/intl/locale-sname
+      let mut buf = [0u16; 85];
+      // SAFETY: Call `winapi` raw binding to win32 api.
+      let len = unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as c_int) };
 
-  // The maximum number of characters allowed for this string is 85,
-  // including a terminating null character.
-  // https://docs.microsoft.com/en-us/windows/win32/intl/locale-sname
-  let mut buf = [0u16; 85];
-  let len = unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as c_int) };
+      if len <= 0 {
+        return false;
+      }
 
-  if len <= 0 {
-    return false;
+      String::from_utf16_lossy(&buf).starts_with("zh-CN")
+    }
+  } else {
+    pub fn is_china_mainland() -> bool {
+      env::var("LANG").map(|lng| lng.starts_with("zh_CN.")).unwrap_or(false)
+    }
   }
-
-  String::from_utf16_lossy(&buf).starts_with("zh-CN")
 }
 
 #[cfg(test)]
@@ -190,15 +170,15 @@ mod tests {
       "2.0.0",
     ];
     assert_eq!(
-      best_version(&versions, VersionReq::parse("*").unwrap()),
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("*").unwrap()),
       Some(Version::parse("2.0.0").unwrap())
     );
     assert_eq!(
-      best_version(&versions, VersionReq::parse("^1").unwrap()),
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("^1").unwrap()),
       Some(Version::parse("1.0.0").unwrap())
     );
     assert_eq!(
-      best_version(&versions, VersionReq::parse("~0.8").unwrap()),
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("~0.8").unwrap()),
       Some(Version::parse("0.8.5").unwrap())
     );
   }

@@ -1,9 +1,10 @@
 use std::process::Stdio;
 
 use crate::{
+  consts::DVM_VERSION_LATEST,
   meta::DvmMeta,
   utils::{best_version, deno_version_path, is_exact_version, prompt_request},
-  version::remote_versions,
+  version::{remote_versions, VersionArg},
 };
 use anyhow::Result;
 use colored::Colorize;
@@ -13,22 +14,19 @@ use super::install;
 
 pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> Result<()> {
   let versions = remote_versions().expect("Failed to get remote versions");
-  let version = version.unwrap_or_else(|| "latest".to_string());
+  let version = version.unwrap_or_else(|| DVM_VERSION_LATEST.to_string());
+  let v = version.clone();
 
-  let version = if is_exact_version(&version) {
-    version
-  } else if meta.has_alias(&version) {
-    let req = meta.get_alias(&version).expect("Failed to get alias");
-    match req {
-      crate::version::VersionArg::Exact(v) => v.to_string(),
-      crate::version::VersionArg::Range(range) => best_version(
-        versions.iter().map(AsRef::as_ref).collect::<Vec<&str>>().as_ref(),
-        range,
-      )
-      .unwrap()
-      .to_string(),
+  let Some(version) = is_exact_version(&version).then_some(version).or_else(|| {
+        meta.has_alias(&v).then(|| {
+          let version_req = meta.resolve_version_req(&v);
+          match version_req {
+            VersionArg::Exact(v) => v.to_string(),
+            VersionArg::Range(r) => best_version(versions.iter().map(AsRef::as_ref), r).unwrap().to_string(),
+          }
+        })
     }
-  } else {
+  ) else {
     eprintln!("{}", "No such alias or version found.".red());
     std::process::exit(1);
   };

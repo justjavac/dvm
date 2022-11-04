@@ -3,10 +3,8 @@ use anyhow::Result;
 use colored::Colorize;
 use std::fs;
 
-use crate::{
-  meta::DvmMeta,
-  utils::{deno_bin_path, dvm_root, is_exact_version},
-};
+use crate::meta::DvmMeta;
+use crate::utils::{deno_bin_path, dvm_root, is_exact_version};
 
 pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   // Init enviroments if need
@@ -54,7 +52,7 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
     }
   }
 
-  if !dirs::home_dir().unwrap().join(".dvmrc").exists() {
+  if dvm_root().exists() {
     super::use_version::exec(meta, None, false).unwrap();
   }
 
