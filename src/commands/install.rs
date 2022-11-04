@@ -1,7 +1,7 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2022 justjavac. All rights reserved. MIT license.
 use super::use_version;
-use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
+use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_VERSION_CANARY, DVM_VERSION_LATEST};
 use crate::meta::DvmMeta;
 use crate::utils::{deno_canary_path, deno_version_path, dvm_root};
 use crate::version::get_latest_canary;
@@ -27,7 +27,7 @@ cfg_if! {
 
 pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   if let Some(version) = version.clone() {
-    if version == *"canary" {
+    if version == *DVM_VERSION_CANARY {
       let canary_path = deno_canary_path();
       std::fs::create_dir_all(canary_path.parent().unwrap())?;
       let hash = get_latest_canary(&meta.registry).expect("Failed to get latest canary");
@@ -67,7 +67,7 @@ pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()>
     use_version::use_this_bin_path(
       &exe_path,
       &install_version,
-      version.unwrap_or_else(|| "latest".to_string()),
+      version.unwrap_or_else(|| DVM_VERSION_LATEST.to_string()),
       false,
     )?;
   }
