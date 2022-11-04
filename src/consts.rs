@@ -8,6 +8,14 @@ pub const DVM_CACHE_PATH_PREFIX: &str = "versions";
 pub const DVM_CANARY_PATH_PREFIX: &str = "canary";
 pub const DVM_CACHE_INVALID_TIMEOUT: u128 = 60 * 60 * 24 * 7;
 
+cfg_if::cfg_if! {
+  if #[cfg(windows)] {
+    pub const DENO_EXE: &str = "deno.exe";
+  } else {
+    pub const DENO_EXE: &str = "deno";
+  }
+}
+
 pub const AFTER_HELP: &str = "\x1b[33mEXAMPLE:\x1b[39m
   dvm install 1.3.2     Install v1.3.2 release
   dvm install           Install the latest available version

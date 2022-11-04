@@ -1,6 +1,6 @@
 use cfg_if::cfg_if;
 
-use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
+use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
 use crate::version::VersionArg;
 use anyhow::anyhow;
 use dirs::home_dir;
@@ -73,12 +73,12 @@ where
 /// Find and load the dvmrc
 /// local -> user -> default
 pub fn load_dvmrc() -> VersionArg {
-  let project_config = Path::new(".dvmrc");
-  let user_config = home_dir().unwrap().join(".dvmrc");
+  let project_config = PathBuf::from(".dvmrc");
+  let user_config = dvm_root();
 
-  Path::exists(project_config)
+  Path::exists(project_config.as_path())
     .then_some(project_config)
-    .or_else(|| Path::exists(&user_config).then_some(&user_config))
+    .or_else(|| Path::exists(&user_config).then_some(user_config))
     .and_then(|found| {
       read_to_string(found)
         .map_err(|e| anyhow!(e))
@@ -89,18 +89,10 @@ pub fn load_dvmrc() -> VersionArg {
 }
 
 pub fn dvm_root() -> PathBuf {
-  cfg_if! {
-    if #[cfg(windows)] {
-      let home = env::var_os("USERPROFILE");
-    } else {
-      let home = env::var_os("HOME");
-    }
-  }
-
   env::var_os("DVM_DIR").map(PathBuf::from).unwrap_or_else(|| {
     // Note: on Windows, the $HOME environment variable may be set by users or by
     // third party software, but it is non-standard and should not be relied upon.
-    home
+    home_dir()
       .map(PathBuf::from)
       .map(|it| it.join(".dvm"))
       .unwrap_or_else(|| TempDir::new().unwrap().into_path().join(".dvm"))
@@ -109,22 +101,19 @@ pub fn dvm_root() -> PathBuf {
 
 pub fn deno_canary_path() -> PathBuf {
   let dvm_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
-  let exe_ext = if cfg!(windows) { "exe" } else { "" };
-  dvm_dir.join("deno").with_extension(exe_ext)
+  dvm_dir.join(DENO_EXE)
 }
 
 /// CGQAQ: Put hardlink to executable to this file,
 ///        and prepend this folder to env when dvm activated.
 pub fn deno_bin_path() -> PathBuf {
   let dvm_bin_dir = dvm_root().join("bin");
-  let exe_ext = if cfg!(windows) { "exe" } else { "" };
-  dvm_bin_dir.join("deno").with_extension(exe_ext)
+  dvm_bin_dir.join(DENO_EXE)
 }
 
 pub fn deno_version_path(version: &Version) -> PathBuf {
   let dvm_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
-  let exe_ext = if cfg!(windows) { "exe" } else { "" };
-  dvm_dir.join("deno").with_extension(exe_ext)
+  dvm_dir.join(DENO_EXE)
 }
 
 #[inline]
