@@ -109,15 +109,15 @@ fn cached_versions() -> Option<Vec<String>> {
     return None;
   };
   let expired = (Local::now().timestamp() - cache_time.timestamp()) > CACHE_DURATION as i64;
-  if expired || cached.versions.len() == 0 {
+  if expired || cached.versions.is_empty() {
     return None;
   }
   Some(cached.versions)
 }
 
-fn cache_remote_versions(versions: &Vec<String>) {
+fn cache_remote_versions(versions: &[String]) {
   let cached = Cached {
-    versions: versions.clone(),
+    versions: versions.to_owned(),
     time: Local::now().to_string(),
   };
   let _ = write(
