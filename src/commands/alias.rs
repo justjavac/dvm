@@ -1,5 +1,5 @@
 use crate::cli::AliasCommands;
-use crate::version::{find_max_matching_version, local_versions, version_req_parse, remote_versions_or_cached};
+use crate::version::{find_max_matching_version, local_versions, remote_versions_or_cached, version_req_parse};
 use crate::{DvmMeta, DEFAULT_ALIAS};
 
 use anyhow::Result;
