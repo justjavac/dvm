@@ -1,5 +1,5 @@
 use crate::commands::install;
-use crate::consts::{DVM_CONFIG_FILENAME, DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_SYSTEM};
+use crate::consts::{DVM_CONFIGRC_FILENAME, DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_SYSTEM};
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
 use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, update_stub};
@@ -113,10 +113,13 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
 
   if local {
     println!("Writing to current folder config");
-    fs::write(std::path::Path::new(DVM_CONFIG_FILENAME), DVM_VERSION_CANARY)?;
+    fs::write(std::path::Path::new(DVM_CONFIGRC_FILENAME), DVM_VERSION_CANARY)?;
   } else {
     println!("Writing to home folder config");
-    fs::write(dirs::home_dir().unwrap().join(DVM_CONFIG_FILENAME), DVM_VERSION_CANARY)?;
+    fs::write(
+      dirs::home_dir().unwrap().join(DVM_CONFIGRC_FILENAME),
+      DVM_VERSION_CANARY,
+    )?;
   }
 
   println!("Now using deno canary");
@@ -137,10 +140,10 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
 
   if local {
     println!("Writing to current folder config");
-    fs::write(std::path::Path::new(DVM_CONFIG_FILENAME), raw_version)?;
+    fs::write(std::path::Path::new(DVM_CONFIGRC_FILENAME), raw_version)?;
   } else {
     println!("Writing to home folder config");
-    fs::write(dirs::home_dir().unwrap().join(DVM_CONFIG_FILENAME), raw_version)?;
+    fs::write(dirs::home_dir().unwrap().join(DVM_CONFIGRC_FILENAME), raw_version)?;
   }
   println!("Now using deno {}", version);
   Ok(())

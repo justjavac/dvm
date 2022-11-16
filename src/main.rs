@@ -2,6 +2,7 @@ extern crate core;
 
 mod cli;
 mod commands;
+mod configrc;
 mod consts;
 mod meta;
 mod utils;
