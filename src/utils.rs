@@ -129,7 +129,6 @@ pub fn is_http_like_url(url: &str) -> bool {
   url.starts_with("http://") || url.starts_with("https://")
 }
 
-
 #[cfg(test)]
 mod tests {
   use super::*;

@@ -59,7 +59,10 @@ pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()>
   if exe_path.exists() {
     println!("Version v{} is already installed", install_version);
   } else {
-    let archive_data = download_package(&compose_url_to_exec(&meta.registry.binary, &install_version), &install_version)?;
+    let archive_data = download_package(
+      &compose_url_to_exec(&meta.registry.binary, &install_version),
+      &install_version,
+    )?;
     unpack(archive_data, &install_version)?;
   }
 
