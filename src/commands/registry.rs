@@ -1,17 +1,25 @@
 use std::process;
 
 use crate::cli::{BinaryRegistryCommands, RegistryCommands, VersionRegistryCommands};
-use crate::consts::REGISTRY_NAME_CN;
 use crate::consts::REGISTRY_NAME_OFFICIAL;
 use crate::consts::REGISTRY_OFFICIAL;
+use crate::consts::{DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_NAME_CN};
 use crate::consts::{REGISTRY_CN, REGISTRY_LIST_CN, REGISTRY_LIST_OFFICIAL};
 use crate::DvmMeta;
 
+use crate::configrc::{rc_exists, rc_get, rc_init, rc_update};
 use crate::utils::is_http_like_url;
 use anyhow::Result;
 use colored::Colorize;
 
 pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
+  let rc_binary_registry = rc_get(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+  let rc_version_registry = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+
+  if !rc_exists() {
+    rc_init()?;
+  }
+
   match registry {
     RegistryCommands::List => {
       println!("{}:", "official".bright_blue());
@@ -26,24 +34,36 @@ pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
     }
     RegistryCommands::Show => {
       println! {"{}: ", "current registry info".bright_blue()};
-      println!("  binary_registry\t{}", meta.registry.binary);
-      println!("  version_registry\t{}", meta.registry.version);
+      println!("  binary_registry\t{}", rc_binary_registry);
+      println!("  version_registry\t{}", rc_version_registry);
     }
-    RegistryCommands::Set { predefined } => {
-      meta.registry.binary = predefined.get_binary_url();
-      meta.registry.version = predefined.get_version_url();
+    RegistryCommands::Set {
+      predefined,
+      write_local,
+    } => {
+      let write_local = write_local.unwrap_or(false);
+      rc_update(
+        write_local,
+        DVM_CONFIGRC_KEY_REGISTRY_BINARY,
+        &predefined.get_binary_url(),
+      )?;
+      rc_update(
+        write_local,
+        DVM_CONFIGRC_KEY_REGISTRY_VERSION,
+        &predefined.get_version_url(),
+      )?;
     }
     RegistryCommands::Binary { sub } => match sub {
       BinaryRegistryCommands::Show => {
-        println!("{}: {}", "current binary registry".bright_blue(), meta.registry.binary);
+        println!("{}: {}", "current binary registry".bright_blue(), rc_binary_registry);
       }
-      BinaryRegistryCommands::Set { custom } => {
+      BinaryRegistryCommands::Set { custom, write_local } => {
         if custom == REGISTRY_NAME_OFFICIAL {
-          meta.registry.binary = REGISTRY_OFFICIAL.to_string();
+          rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_BINARY, REGISTRY_OFFICIAL)?;
         } else if custom == REGISTRY_NAME_CN {
-          meta.registry.binary = REGISTRY_CN.to_string();
+          rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_BINARY, REGISTRY_CN)?;
         } else if is_http_like_url(&custom) {
-          meta.registry.binary = custom;
+          rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_BINARY, &custom)?;
         } else {
           println!("{}: {}", "invalid registry".bright_red(), custom);
           process::exit(1);
@@ -52,19 +72,15 @@ pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
     },
     RegistryCommands::Version { sub } => match sub {
       VersionRegistryCommands::Show => {
-        println!(
-          "{}: {}",
-          "current version registry".bright_blue(),
-          meta.registry.version
-        );
+        println!("{}: {}", "current version registry".bright_blue(), rc_version_registry);
       }
-      VersionRegistryCommands::Set { custom } => {
+      VersionRegistryCommands::Set { custom, write_local } => {
         if custom == REGISTRY_NAME_OFFICIAL {
-          meta.registry.version = REGISTRY_LIST_OFFICIAL.to_string();
+          rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LIST_OFFICIAL)?;
         } else if custom == REGISTRY_NAME_CN {
-          meta.registry.version = REGISTRY_LIST_CN.to_string();
+          rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LIST_CN)?;
         } else if is_http_like_url(&custom) {
-          meta.registry.version = custom;
+          rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_VERSION, &custom)?;
         } else {
           eprintln!("The {} is not valid URL, please starts with `http` or `https`", custom);
           eprintln!("Registry will not be changed");

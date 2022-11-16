@@ -1,4 +1,4 @@
-use crate::consts::{DVM_CACHE_INVALID_TIMEOUT, REGISTRY_LIST_OFFICIAL, REGISTRY_OFFICIAL};
+use crate::consts::{DVM_CACHE_INVALID_TIMEOUT, };
 use crate::utils::{deno_version_path, dvm_root, dvm_versions, now};
 use crate::version::VersionArg;
 use colored::Colorize;
@@ -67,24 +67,8 @@ impl ToVersionReq for Alias {
   }
 }
 
-#[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
-pub struct Registry {
-  pub binary: String,
-  pub version: String,
-}
-
-impl Default for Registry {
-  fn default() -> Self {
-    Registry {
-      binary: REGISTRY_OFFICIAL.to_string(),
-      version: REGISTRY_LIST_OFFICIAL.to_string(),
-    }
-  }
-}
-
 #[derive(Clone, Default, Eq, PartialEq, Deserialize, Serialize)]
 pub struct DvmMeta {
-  pub registry: Registry,
   pub versions: Vec<VersionMapping>,
   pub alias: Vec<Alias>,
 }

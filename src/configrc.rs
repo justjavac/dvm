@@ -2,8 +2,23 @@ use crate::consts::{
   DVM_CONFIGRC_FILENAME, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_CONFIGRC_KEY_REGISTRY_BINARY,
   DVM_CONFIGRC_KEY_REGISTRY_VERSION,
 };
+use crate::consts::{REGISTRY_LIST_OFFICIAL, REGISTRY_OFFICIAL};
 use std::fs;
 use std::io;
+
+/// check global rc file exists
+pub fn rc_exists() -> bool {
+  let dir = dirs::home_dir()
+    .and_then(|it| Some(it.join(DVM_CONFIGRC_FILENAME)))
+    .unwrap_or_default();
+  fs::metadata(dir).is_ok()
+}
+
+/// init user-wide rc file
+pub fn rc_init() -> io::Result<()> {
+  rc_update(false, DVM_CONFIGRC_KEY_REGISTRY_BINARY, REGISTRY_OFFICIAL)?;
+  rc_update(false, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LIST_OFFICIAL)
+}
 
 /// get value by key from configrc
 /// first try to get from current folder
@@ -75,11 +90,11 @@ fn rc_content(is_local: bool) -> io::Result<(std::path::PathBuf, String)> {
     std::path::PathBuf::from(DVM_CONFIGRC_FILENAME)
   } else {
     dirs::home_dir()
-      .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?
+      .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "helllllll"))?
       .join(DVM_CONFIGRC_FILENAME)
   };
 
-  Ok((config_path.to_path_buf(), fs::read_to_string(config_path)?))
+  Ok((config_path.clone(), fs::read_to_string(config_path)?))
 }
 
 /// remove all key value pair that ain't supported by dvm from config file

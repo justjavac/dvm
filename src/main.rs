@@ -42,7 +42,7 @@ pub fn main() {
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
-    Commands::Use { version, local } => commands::use_version::exec(&mut meta, version, local),
+    Commands::Use { version, write_local } => commands::use_version::exec(&mut meta, version, write_local),
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
     Commands::Activate => commands::activate::exec(&mut meta),
     Commands::Deactivate => commands::deactivate::exec(),

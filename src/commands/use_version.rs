@@ -1,5 +1,9 @@
 use crate::commands::install;
-use crate::consts::{DVM_CONFIGRC_FILENAME, DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_SYSTEM};
+use crate::configrc::{rc_get, rc_update};
+use crate::consts::{
+  DVM_CONFIGRC_KEY_DENO_VERSION, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_VERSION_CANARY, DVM_VERSION_LATEST,
+  DVM_VERSION_SYSTEM, REGISTRY_OFFICIAL,
+};
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
 use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, update_stub};
@@ -13,7 +17,9 @@ use std::path::Path;
 use std::process::Command;
 
 /// using a tag or a specific version
-pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<()> {
+pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> Result<()> {
+  let rc_binary_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+
   let version_req: VersionArg;
   if let Some(ref version) = version {
     if version == &DVM_VERSION_CANARY.to_string() {
@@ -21,13 +27,13 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
       if !canary_path.exists() {
         if prompt_request("deno canary is not installed. do you want to install it?") {
           install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string())).unwrap();
-          use_canary_bin_path(local).unwrap();
+          use_canary_bin_path(write_local).unwrap();
         } else {
           std::process::exit(1);
         }
       }
 
-      use_canary_bin_path(local).unwrap();
+      use_canary_bin_path(write_local).unwrap();
       return Ok(());
     } else if version == &DVM_VERSION_SYSTEM.to_string() {
       std::fs::remove_file(deno_bin_path()).unwrap();
@@ -55,7 +61,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
 
   let used_version = if version_req.to_string() == "*" {
     println!("Checking for latest version");
-    let version = get_latest_version(&meta.registry.binary).expect("Get latest version failed");
+    let version = get_latest_version(&rc_binary_url).expect("Get latest version failed");
     println!("The latest version is v{}", version);
     version
   } else {
@@ -88,7 +94,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
     &new_exe_path,
     &used_version,
     version.unwrap_or_else(|| DVM_VERSION_LATEST.to_string()),
-    local,
+    write_local,
   )?;
   update_stub(used_version.to_string().as_str());
   Ok(())
@@ -111,16 +117,7 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
   }
   fs::hard_link(&canary_dir, &bin_path)?;
 
-  if local {
-    println!("Writing to current folder config");
-    fs::write(std::path::Path::new(DVM_CONFIGRC_FILENAME), DVM_VERSION_CANARY)?;
-  } else {
-    println!("Writing to home folder config");
-    fs::write(
-      dirs::home_dir().unwrap().join(DVM_CONFIGRC_FILENAME),
-      DVM_VERSION_CANARY,
-    )?;
-  }
+  rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
 
   println!("Now using deno canary");
   Ok(())
@@ -138,13 +135,7 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
   }
   fs::hard_link(exe_path, &bin_path)?;
 
-  if local {
-    println!("Writing to current folder config");
-    fs::write(std::path::Path::new(DVM_CONFIGRC_FILENAME), raw_version)?;
-  } else {
-    println!("Writing to home folder config");
-    fs::write(dirs::home_dir().unwrap().join(DVM_CONFIGRC_FILENAME), raw_version)?;
-  }
+  rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;
   println!("Now using deno {}", version);
   Ok(())
 }

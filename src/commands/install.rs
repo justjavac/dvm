@@ -1,7 +1,11 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2022 justjavac. All rights reserved. MIT license.
 use super::use_version;
-use crate::consts::{DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_VERSION_CANARY, DVM_VERSION_LATEST};
+use crate::configrc::rc_get;
+use crate::consts::{
+  DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_VERSION_CANARY,
+  DVM_VERSION_LATEST, REGISTRY_OFFICIAL,
+};
 use crate::meta::DvmMeta;
 use crate::utils::{deno_canary_path, deno_version_path, dvm_root};
 use crate::version::get_latest_canary;
@@ -25,13 +29,15 @@ cfg_if! {
   }
 }
 
-pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
+pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
+  let binary_registry_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+
   if let Some(version) = version.clone() {
     if version == *DVM_VERSION_CANARY {
       let canary_path = deno_canary_path();
       std::fs::create_dir_all(canary_path.parent().unwrap())?;
-      let hash = get_latest_canary(&meta.registry.binary).expect("Failed to get latest canary");
-      let data = download_canary(&meta.registry.binary, &hash)?;
+      let hash = get_latest_canary(&binary_registry_url).expect("Failed to get latest canary");
+      let data = download_canary(&binary_registry_url, &hash)?;
       unpack_canary(data)?;
 
       if !no_use {
@@ -51,7 +57,7 @@ pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()>
       }
     },
 
-    None => get_latest_version(&meta.registry.binary)?,
+    None => get_latest_version(&binary_registry_url)?,
   };
 
   let exe_path = deno_version_path(&install_version);
@@ -60,7 +66,7 @@ pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()>
     println!("Version v{} is already installed", install_version);
   } else {
     let archive_data = download_package(
-      &compose_url_to_exec(&meta.registry.binary, &install_version),
+      &compose_url_to_exec(&binary_registry_url, &install_version),
       &install_version,
     )?;
     unpack(archive_data, &install_version)?;
