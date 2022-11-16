@@ -1,5 +1,5 @@
 use crate::cli::AliasCommands;
-use crate::version::{find_max_matching_version, local_versions, remote_versions, version_req_parse};
+use crate::version::{find_max_matching_version, local_versions, remote_versions_or_cached, version_req_parse};
 use crate::{DvmMeta, DEFAULT_ALIAS};
 
 use anyhow::Result;
@@ -34,7 +34,7 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
       Ok(())
     }
     AliasCommands::List => {
-      let remote_versions = remote_versions().unwrap();
+      let remote_versions = remote_versions_or_cached().unwrap();
       let local_versions = local_versions();
       let get_upgrade_version = |version_str: &str| {
         let max_remote_version =
