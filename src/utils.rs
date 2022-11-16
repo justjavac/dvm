@@ -1,5 +1,3 @@
-use cfg_if::cfg_if;
-
 use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
 use crate::version::VersionArg;
 use anyhow::anyhow;
@@ -126,31 +124,11 @@ pub fn is_semver(version: &str) -> bool {
   Version::parse(version).is_ok()
 }
 
-cfg_if! {
-  if #[cfg(windows)] {
-    pub fn is_china_mainland() -> bool {
-      use winapi::ctypes::c_int;
-      use winapi::um::winnls::GetUserDefaultLocaleName;
-
-      // The maximum number of characters allowed for this string is 85,
-      // including a terminating null character.
-      // https://docs.microsoft.com/en-us/windows/win32/intl/locale-sname
-      let mut buf = [0u16; 85];
-      // SAFETY: Call `winapi` raw binding to win32 api.
-      let len = unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as c_int) };
-
-      if len <= 0 {
-        return false;
-      }
-
-      String::from_utf16_lossy(&buf).starts_with("zh-CN")
-    }
-  } else {
-    pub fn is_china_mainland() -> bool {
-      env::var("LANG").map(|lng| lng.starts_with("zh_CN.")).unwrap_or(false)
-    }
-  }
+#[inline]
+pub fn is_http_like_url(url: &str) -> bool {
+  url.starts_with("http://") || url.starts_with("https://")
 }
+
 
 #[cfg(test)]
 mod tests {

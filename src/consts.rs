@@ -1,6 +1,8 @@
 pub const REGISTRY_OFFICIAL: &str = "https://dl.deno.land/";
-#[allow(unused)]
 pub const REGISTRY_CN: &str = "https://dl.deno.js.cn/";
+pub const REGISTRY_LIST_OFFICIAL: &str = "https://api.github.com/repos/denoland/deno/tags";
+pub const REGISTRY_LIST_CN: &str = "https://cdn.jsdelivr.net/gh/denoland/dotland@main/versions.json";
+
 pub const REGISTRY_LATEST_RELEASE_PATH: &str = "release-latest.txt";
 pub const REGISTRY_LATEST_CANARY_PATH: &str = "canary-latest.txt";
 pub const REGISTRY_NAME_CN: &str = "cn";
@@ -17,9 +19,6 @@ pub const DVM_VERSION_CANARY: &str = "canary";
 pub const DVM_VERSION_LATEST: &str = "latest";
 pub const DVM_VERSION_SYSTEM: &str = "system";
 pub const DVM_VERSION_INVALID: &str = "N/A";
-
-pub const DVM_CHINA_MAINLAND_REGISTRY: &str = "https://cdn.jsdelivr.net/gh/denoland/dotland@main/versions.json";
-pub const DVM_INTERNATIONAL_REGISTRY: &str = "https://api.github.com/repos/denoland/deno/tags";
 
 cfg_if::cfg_if! {
   if #[cfg(windows)] {

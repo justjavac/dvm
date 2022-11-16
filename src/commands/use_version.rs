@@ -55,7 +55,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, local: bool) -> Result<
 
   let used_version = if version_req.to_string() == "*" {
     println!("Checking for latest version");
-    let version = get_latest_version(&meta.registry).expect("Get latest version failed");
+    let version = get_latest_version(&meta.registry.binary).expect("Get latest version failed");
     println!("The latest version is v{}", version);
     version
   } else {

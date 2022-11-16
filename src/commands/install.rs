@@ -30,8 +30,8 @@ pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()>
     if version == *DVM_VERSION_CANARY {
       let canary_path = deno_canary_path();
       std::fs::create_dir_all(canary_path.parent().unwrap())?;
-      let hash = get_latest_canary(&meta.registry).expect("Failed to get latest canary");
-      let data = download_canary(&meta.registry, &hash)?;
+      let hash = get_latest_canary(&meta.registry.binary).expect("Failed to get latest canary");
+      let data = download_canary(&meta.registry.binary, &hash)?;
       unpack_canary(data)?;
 
       if !no_use {
@@ -51,7 +51,7 @@ pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()>
       }
     },
 
-    None => get_latest_version(&meta.registry)?,
+    None => get_latest_version(&meta.registry.binary)?,
   };
 
   let exe_path = deno_version_path(&install_version);
@@ -59,7 +59,7 @@ pub fn exec(meta: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()>
   if exe_path.exists() {
     println!("Version v{} is already installed", install_version);
   } else {
-    let archive_data = download_package(&compose_url_to_exec(&meta.registry, &install_version), &install_version)?;
+    let archive_data = download_package(&compose_url_to_exec(&meta.registry.binary, &install_version), &install_version)?;
     unpack(archive_data, &install_version)?;
   }
 

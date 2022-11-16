@@ -47,15 +47,12 @@ pub fn main() {
     Commands::Deactivate => commands::deactivate::exec(),
     Commands::Doctor => commands::doctor::exec(&mut meta),
     Commands::Upgrade { alias } => commands::upgrade::exec(&mut meta, alias),
-    Commands::Exec {
-      command: _,
-      deno_version: _,
-    } => {
+    Commands::Exec { command: _, version: _ } => {
       /* unused */
       Ok(())
     }
     Commands::Clean => commands::clean::exec(&mut meta),
-    Commands::Registry { registry } => commands::registry::exec(&mut meta, registry),
+    Commands::Registry { command } => commands::registry::exec(&mut meta, command),
   };
 
   if let Err(err) = result {
