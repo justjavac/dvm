@@ -277,7 +277,7 @@ mod tests {
     assert!(result.is_ok());
     assert_eq!(
       result.unwrap(),
-      "{\"registry\":\"https://dl.deno.land/\",\"versions\":[],\"alias\":[]}"
+      "{\"versions\":[],\"alias\":[]}"
     );
   }
 
@@ -292,7 +292,7 @@ mod tests {
     assert!(result.is_ok());
     assert_eq!(
             result.unwrap(),
-            "{\"registry\":\"https://dl.deno.land/\",\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
+            "{\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
         )
   }
 
@@ -311,7 +311,7 @@ mod tests {
     assert!(result.is_ok());
     assert_eq!(
             result.unwrap(),
-            "{\"registry\":\"https://dl.deno.land/\",\"versions\":[],\"alias\":[{\"name\":\"stable\",\"required\":\"1.0.0\"},{\"name\":\"two-point-o\",\"required\":\"2.0.0\"}]}"
+            "{\"versions\":[],\"alias\":[{\"name\":\"stable\",\"required\":\"1.0.0\"},{\"name\":\"two-point-o\",\"required\":\"2.0.0\"}]}"
         )
   }
 
