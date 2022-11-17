@@ -2,6 +2,7 @@ extern crate core;
 
 mod cli;
 mod commands;
+mod configrc;
 mod consts;
 mod meta;
 mod utils;
@@ -41,21 +42,18 @@ pub fn main() {
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
-    Commands::Use { version, local } => commands::use_version::exec(&mut meta, version, local),
+    Commands::Use { version, write_local } => commands::use_version::exec(&mut meta, version, write_local),
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
     Commands::Activate => commands::activate::exec(&mut meta),
     Commands::Deactivate => commands::deactivate::exec(),
     Commands::Doctor => commands::doctor::exec(&mut meta),
     Commands::Upgrade { alias } => commands::upgrade::exec(&mut meta, alias),
-    Commands::Exec {
-      command: _,
-      deno_version: _,
-    } => {
+    Commands::Exec { command: _, version: _ } => {
       /* unused */
       Ok(())
     }
     Commands::Clean => commands::clean::exec(&mut meta),
-    Commands::Registry { registry } => commands::registry::exec(&mut meta, registry),
+    Commands::Registry { command } => commands::registry::exec(&mut meta, command),
   };
 
   if let Err(err) = result {

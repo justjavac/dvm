@@ -1,4 +1,4 @@
-use crate::consts::{DVM_CACHE_INVALID_TIMEOUT, REGISTRY_OFFICIAL};
+use crate::consts::DVM_CACHE_INVALID_TIMEOUT;
 use crate::utils::{deno_version_path, dvm_root, dvm_versions, now};
 use crate::version::VersionArg;
 use colored::Colorize;
@@ -22,6 +22,7 @@ pub struct VersionMapping {
   pub required: String,
   pub current: String,
 }
+
 impl VersionMapping {
   pub fn is_valid_mapping(&self) -> bool {
     let current = Version::parse(&self.current);
@@ -66,16 +67,10 @@ impl ToVersionReq for Alias {
   }
 }
 
-#[derive(Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Default, Eq, PartialEq, Deserialize, Serialize)]
 pub struct DvmMeta {
-  #[serde(default = "default_registry")]
-  pub registry: String,
   pub versions: Vec<VersionMapping>,
   pub alias: Vec<Alias>,
-}
-
-pub fn default_registry() -> String {
-  REGISTRY_OFFICIAL.to_string()
 }
 
 impl DvmMeta {
@@ -271,16 +266,6 @@ impl DvmMeta {
   }
 }
 
-impl Default for DvmMeta {
-  fn default() -> Self {
-    Self {
-      registry: REGISTRY_OFFICIAL.to_string(),
-      versions: vec![],
-      alias: vec![],
-    }
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -290,10 +275,7 @@ mod tests {
   fn test_default_config() {
     let result = serde_json::to_string(&DvmMeta::default());
     assert!(result.is_ok());
-    assert_eq!(
-      result.unwrap(),
-      "{\"registry\":\"https://dl.deno.land/\",\"versions\":[],\"alias\":[]}"
-    );
+    assert_eq!(result.unwrap(), "{\"versions\":[],\"alias\":[]}");
   }
 
   #[test]
@@ -307,7 +289,7 @@ mod tests {
     assert!(result.is_ok());
     assert_eq!(
       result.unwrap(),
-      "{\"registry\":\"https://dl.deno.land/\",\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
+      "{\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
     )
   }
 
@@ -326,7 +308,7 @@ mod tests {
     assert!(result.is_ok());
     assert_eq!(
             result.unwrap(),
-            "{\"registry\":\"https://dl.deno.land/\",\"versions\":[],\"alias\":[{\"name\":\"stable\",\"required\":\"1.0.0\"},{\"name\":\"two-point-o\",\"required\":\"2.0.0\"}]}"
+            "{\"versions\":[],\"alias\":[{\"name\":\"stable\",\"required\":\"1.0.0\"},{\"name\":\"two-point-o\",\"required\":\"2.0.0\"}]}"
         )
   }
 

@@ -1,11 +1,15 @@
 use std::env;
 
-use clap::Parser;
+use clap::builder::PossibleValue;
+use clap::{Parser, ValueEnum};
 use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
 
 use crate::commands;
-use crate::consts::{AFTER_HELP, COMPLETIONS_HELP};
+use crate::consts::{
+  AFTER_HELP, COMPLETIONS_HELP, REGISTRY_CN, REGISTRY_LIST_CN, REGISTRY_LIST_OFFICIAL, REGISTRY_NAME_CN,
+  REGISTRY_NAME_OFFICIAL, REGISTRY_OFFICIAL,
+};
 use crate::meta::DvmMeta;
 
 pub fn cli_parse(meta: &mut DvmMeta) -> Result<Cli, ()> {
@@ -36,7 +40,7 @@ pub fn cli_parse(meta: &mut DvmMeta) -> Result<Cli, ()> {
       }
       commands::exec::exec(meta, version, exec_args).unwrap();
     } else {
-      // TODO(CGQAQ): print help
+      commands::exec::exec(meta, None, vec![]).unwrap();
     }
     return Err(());
   }
@@ -56,7 +60,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
   #[clap(about = "Generate shell completions")]
-  #[clap(long_about=COMPLETIONS_HELP)]
+  #[clap(long_about = COMPLETIONS_HELP)]
   Completions {
     #[arg(value_enum)]
     shell: Shell,
@@ -66,7 +70,7 @@ pub enum Commands {
   Info,
 
   #[clap(about = "Install deno executable to the given version.")]
-  #[clap(visible_aliases=&["i", "add"])]
+  #[clap(visible_aliases = & ["i", "add"])]
   Install {
     #[clap(long, help = "Only install to local, but not use")]
     no_use: bool,
@@ -75,31 +79,32 @@ pub enum Commands {
   },
 
   #[clap(about = "List all installed versions")]
-  #[clap(visible_aliases=&["ls", "ll", "la"])]
+  #[clap(visible_aliases = & ["ls", "ll", "la"])]
   List,
 
   #[clap(about = "List all released versions")]
-  #[clap(visible_aliases=&["lr", "ls-remote"])]
+  #[clap(visible_aliases = & ["lr", "ls-remote"])]
   ListRemote,
 
   #[clap(about = "Uninstall a given version")]
-  #[clap(visible_aliases=&["un", "unlink", "rm", "remove"])]
+  #[clap(visible_aliases = & ["un", "unlink", "rm", "remove"])]
   Uninstall {
     #[clap(help = "The version to install")]
     version: Option<String>,
   },
 
   #[clap(about = "Use a given version or a semver range or a alias to the range.")]
+  #[clap(disable_version_flag = true)]
   Use {
     #[clap(help = "The version, semver range or alias to use")]
     version: Option<String>,
 
     #[clap(
-      short,
-      long,
+      short = 'L',
+      long = "write-local",
       help = "Writing the version to the .dvmrc file of the current directory if present"
     )]
-    local: bool,
+    write_local: bool,
   },
 
   #[clap(about = "Set or unset an alias")]
@@ -123,12 +128,13 @@ pub enum Commands {
   },
 
   #[clap(about = "Execute deno command with a specific deno version")]
+  #[clap(disable_version_flag = true)]
   Exec {
     #[clap(help = "The command given to deno")]
     command: Option<String>,
 
     #[clap(help = "The version to use", long, short)]
-    deno_version: Option<String>,
+    version: Option<String>,
   },
 
   #[clap(about = "Clean dvm cache")]
@@ -136,8 +142,8 @@ pub enum Commands {
 
   #[clap(about = "Change registry that dvm fetch from")]
   Registry {
-    #[clap(help = "The registry to be set, `official`, `cn`, or url you desired")]
-    registry: Option<String>,
+    #[clap(subcommand)]
+    command: RegistryCommands,
   },
 }
 
@@ -159,4 +165,116 @@ pub enum AliasCommands {
 
   #[clap(about = "List all aliases")]
   List,
+}
+
+#[derive(Subcommand)]
+pub enum RegistryCommands {
+  #[clap(about = "List predefined registries")]
+  List,
+
+  #[clap(about = "Show current binary registry and version registry")]
+  Show,
+
+  #[clap(about = "Set registry to one of predefined registries")]
+  Set {
+    predefined: RegistryPredefined,
+
+    #[clap(
+      long = "write-local",
+      short = 'L',
+      help = "Write to current directory .dvmrc file instead of global(user-wide) config"
+    )]
+    write_local: bool,
+  },
+
+  #[clap(about = "Binary registry operations")]
+  Binary {
+    #[clap(subcommand)]
+    sub: BinaryRegistryCommands,
+  },
+
+  #[clap(about = "Version registry operations")]
+  Version {
+    #[clap(subcommand)]
+    sub: VersionRegistryCommands,
+  },
+}
+
+#[derive(Subcommand)]
+pub enum BinaryRegistryCommands {
+  #[clap(about = "Show current binary registry")]
+  Show,
+  #[clap(about = "Set binary registry to one of predefined registries")]
+  Set {
+    custom: String,
+    #[clap(
+      long = "write-local",
+      short = 'L',
+      help = "Write to current directory .dvmrc file instead of global(user-wide) config"
+    )]
+    write_local: bool,
+  },
+}
+
+#[derive(Subcommand)]
+pub enum VersionRegistryCommands {
+  #[clap(about = "Show current version registry")]
+  Show,
+  #[clap(about = "Set version registry to one of predefined registries")]
+  Set {
+    custom: String,
+    #[clap(
+      long = "write-local",
+      short = 'L',
+      help = "Write to current directory .dvmrc file instead of global(user-wide) config"
+    )]
+    write_local: bool,
+  },
+}
+
+#[derive(Clone)]
+pub enum RegistryPredefined {
+  Official,
+  CN,
+}
+
+impl ValueEnum for RegistryPredefined {
+  fn value_variants<'a>() -> &'a [Self] {
+    &[RegistryPredefined::Official, RegistryPredefined::CN]
+  }
+
+  fn from_str(input: &str, ignore_case: bool) -> Result<Self, String> {
+    if (ignore_case && REGISTRY_NAME_OFFICIAL == input.to_ascii_lowercase()) || REGISTRY_NAME_OFFICIAL == input {
+      Ok(RegistryPredefined::Official)
+    } else if (ignore_case && REGISTRY_NAME_CN == input.to_ascii_lowercase()) || REGISTRY_NAME_CN == input {
+      Ok(RegistryPredefined::CN)
+    } else {
+      Err(format!("{} is not a valid registry", input))
+    }
+  }
+
+  fn to_possible_value(&self) -> Option<PossibleValue> {
+    Some(PossibleValue::new(match self {
+      RegistryPredefined::Official => REGISTRY_NAME_OFFICIAL,
+      RegistryPredefined::CN => REGISTRY_NAME_CN,
+    }))
+  }
+}
+
+impl RegistryPredefined {
+  pub fn get_version_url(&self) -> String {
+    match self {
+      RegistryPredefined::Official => REGISTRY_LIST_OFFICIAL,
+      RegistryPredefined::CN => REGISTRY_LIST_CN,
+    }
+    .to_string()
+  }
+
+  pub fn get_binary_url(&self) -> String {
+    match self {
+      RegistryPredefined::Official => REGISTRY_OFFICIAL,
+      RegistryPredefined::CN => REGISTRY_CN,
+    }
+    .to_string()
+  }
 }

@@ -1,24 +1,23 @@
 // Copyright 2022 justjavac. All rights reserved. MIT license.
+use crate::configrc::rc_get;
 use crate::consts::{
-  DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CHINA_MAINLAND_REGISTRY, DVM_INTERNATIONAL_REGISTRY,
-  REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH,
+  DVM_CACHE_PATH_PREFIX, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH,
+  REGISTRY_LIST_OFFICIAL,
 };
-use crate::utils::{dvm_root, is_china_mainland, is_exact_version, is_semver};
+use crate::utils::{dvm_root, is_exact_version, is_semver};
 use anyhow::Result;
-use chrono::{DateTime, Local};
 use json_minimal::Json;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
-use serde_json::from_str;
 use std::fmt::Formatter;
-use std::fs::{read_dir, read_to_string, write};
+use std::fs::read_dir;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::string::String;
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
-const CACHE_DURATION: i32 = 60 * 60 * 24;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Cached {
   versions: Vec<String>,
@@ -86,83 +85,22 @@ pub fn local_versions() -> Vec<String> {
   v
 }
 
-pub fn remote_versions_or_cached() -> Result<Vec<String>> {
-  let versions = cached_versions();
-  if let Some(versions) = versions {
-    return Ok(versions);
-  }
-  remote_versions()
-}
-
-fn cached_versions() -> Option<Vec<String>> {
-  let content = read_to_string(dvm_root().join(Path::new(DVM_CACHE_REMOTE_PATH)));
-
-  let Ok(content) = content else {
-    return None;
-  };
-  let cached = from_str::<Cached>(content.as_str());
-  let Ok(cached) = cached else {
-    return None;
-  };
-  let cache_time: Result<DateTime<Local>, _> = DateTime::from_str(cached.time.as_str());
-  let Ok(cache_time) = cache_time else {
-    return None;
-  };
-  let expired = (Local::now().timestamp() - cache_time.timestamp()) > CACHE_DURATION as i64;
-  if expired || cached.versions.is_empty() {
-    return None;
-  }
-  Some(cached.versions)
-}
-
-fn cache_remote_versions(versions: &[String]) {
-  let cached = Cached {
-    versions: versions.to_owned(),
-    time: Local::now().to_string(),
-  };
-  let _ = write(
-    dvm_root().join(Path::new(DVM_CACHE_REMOTE_PATH)),
-    serde_json::to_string(&cached).unwrap(),
-  );
-}
-
 pub fn remote_versions() -> Result<Vec<String>> {
-  if is_china_mainland() {
-    let response = tinyget::get(DVM_CHINA_MAINLAND_REGISTRY).send()?;
-    let body = response.as_str()?;
-    let json = Json::parse(body.as_bytes()).unwrap();
-    let mut result: Vec<String> = Vec::new();
-
-    if let Json::OBJECT { name: _, value } = json.get("cli").unwrap() {
-      if let Json::ARRAY(list) = value.unbox() {
-        for item in list {
-          if let Json::STRING(val) = item.unbox() {
-            result.push(val.replace('v', "").to_string());
-          }
-        }
-      }
-    }
-    cache_remote_versions(&result);
-    return Ok(result);
-  }
-
-  let response = tinyget::get(DVM_INTERNATIONAL_REGISTRY)
-    .with_header("User-Agent", "tinyget") // http://developer.github.com/v3/#user-agent-required
-    .send()?;
+  let url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
+  let response = tinyget::get(url).send()?;
   let body = response.as_str()?;
   let json = Json::parse(body.as_bytes()).unwrap();
   let mut result: Vec<String> = Vec::new();
 
-  if let Json::ARRAY(list) = json {
-    for item in &list {
-      if let Json::OBJECT { name: _, value } = item.get("name").unwrap() {
-        if let Json::STRING(val) = value.unbox() {
+  if let Json::OBJECT { name: _, value } = json.get("cli").unwrap() {
+    if let Json::ARRAY(list) = value.unbox() {
+      for item in list {
+        if let Json::STRING(val) = item.unbox() {
           result.push(val.replace('v', "").to_string());
         }
       }
     }
   }
-  cache_remote_versions(&result);
   Ok(result)
 }
 
