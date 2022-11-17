@@ -41,7 +41,6 @@ pub fn rc_get(key: &str) -> io::Result<String> {
 /// update the config file key with the new value
 /// create the file if it doesn't exist
 /// create key value pair if it doesn't exist
-#[allow(dead_code)]
 pub fn rc_update(is_local: bool, key: &str, value: &str) -> io::Result<()> {
   let (config_path, content) = rc_content(is_local).unwrap_or_default();
   let mut config = rc_parse(content.as_str());
