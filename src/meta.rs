@@ -275,10 +275,7 @@ mod tests {
   fn test_default_config() {
     let result = serde_json::to_string(&DvmMeta::default());
     assert!(result.is_ok());
-    assert_eq!(
-      result.unwrap(),
-      "{\"versions\":[],\"alias\":[]}"
-    );
+    assert_eq!(result.unwrap(), "{\"versions\":[],\"alias\":[]}");
   }
 
   #[test]
@@ -291,9 +288,9 @@ mod tests {
     let result = serde_json::to_string(&conf);
     assert!(result.is_ok());
     assert_eq!(
-            result.unwrap(),
-            "{\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
-        )
+      result.unwrap(),
+      "{\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
+    )
   }
 
   #[test]
