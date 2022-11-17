@@ -93,7 +93,7 @@ fn rc_content(is_local: bool) -> io::Result<(std::path::PathBuf, String)> {
     std::path::PathBuf::from(DVM_CONFIGRC_FILENAME)
   } else {
     dirs::home_dir()
-      .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "helllllll"))?
+      .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?
       .join(DVM_CONFIGRC_FILENAME)
   };
 
