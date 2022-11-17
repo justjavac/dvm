@@ -1,12 +1,11 @@
-use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX};
+use crate::configrc::rc_get;
+use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_DENO_VERSION};
 use crate::version::VersionArg;
-use anyhow::anyhow;
 use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
-use std::fs::{read_to_string, write};
+use std::fs::write;
 use std::io::{stdin, Read, Write};
-use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -70,19 +69,9 @@ where
 /// Find and load the dvmrc
 /// local -> user -> default
 pub fn load_dvmrc() -> VersionArg {
-  let project_config = PathBuf::from(".dvmrc");
-  let user_config = dvm_root();
-
-  Path::exists(project_config.as_path())
-    .then_some(project_config)
-    .or_else(|| Path::exists(&user_config).then_some(user_config))
-    .and_then(|found| {
-      read_to_string(found)
-        .map_err(|e| anyhow!(e))
-        .and_then(|content| VersionArg::from_str(&content).map_err(|_| anyhow!("")))
-        .ok()
-    })
-    .unwrap_or_else(|| VersionArg::from_str("*").unwrap())
+  rc_get(DVM_CONFIGRC_KEY_DENO_VERSION)
+    .map(|v| VersionArg::from_str(&v).unwrap())
+    .unwrap_or_else(|_| VersionArg::from_str("*").unwrap())
 }
 
 pub fn dvm_root() -> PathBuf {

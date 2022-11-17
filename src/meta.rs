@@ -1,4 +1,4 @@
-use crate::consts::{DVM_CACHE_INVALID_TIMEOUT, };
+use crate::consts::DVM_CACHE_INVALID_TIMEOUT;
 use crate::utils::{deno_version_path, dvm_root, dvm_versions, now};
 use crate::version::VersionArg;
 use colored::Colorize;

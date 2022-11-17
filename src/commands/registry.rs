@@ -7,7 +7,7 @@ use crate::consts::{DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_CONFIGRC_KEY_REGISTRY_
 use crate::consts::{REGISTRY_CN, REGISTRY_LIST_CN, REGISTRY_LIST_OFFICIAL};
 use crate::DvmMeta;
 
-use crate::configrc::{rc_exists, rc_get, rc_init, rc_update};
+use crate::configrc::{rc_get, rc_update};
 use crate::utils::is_http_like_url;
 use anyhow::Result;
 use colored::Colorize;
@@ -15,10 +15,6 @@ use colored::Colorize;
 pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
   let rc_binary_registry = rc_get(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
   let rc_version_registry = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
-
-  if !rc_exists() {
-    rc_init()?;
-  }
 
   match registry {
     RegistryCommands::List => {
@@ -41,7 +37,6 @@ pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
       predefined,
       write_local,
     } => {
-      let write_local = write_local.unwrap_or(false);
       rc_update(
         write_local,
         DVM_CONFIGRC_KEY_REGISTRY_BINARY,

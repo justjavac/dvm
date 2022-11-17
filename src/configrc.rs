@@ -9,7 +9,7 @@ use std::io;
 /// check global rc file exists
 pub fn rc_exists() -> bool {
   let dir = dirs::home_dir()
-    .and_then(|it| Some(it.join(DVM_CONFIGRC_FILENAME)))
+    .map(|it| it.join(DVM_CONFIGRC_FILENAME))
     .unwrap_or_default();
   fs::metadata(dir).is_ok()
 }
@@ -25,6 +25,10 @@ pub fn rc_init() -> io::Result<()> {
 /// if not found, try to get from home folder
 /// if not found, return Err
 pub fn rc_get(key: &str) -> io::Result<String> {
+  if !rc_exists() {
+    rc_init()?;
+  }
+
   let (_, content) = rc_content(true).or_else(|_| rc_content(false))?;
   let config = rc_parse(content.as_str());
 
@@ -94,7 +98,7 @@ fn rc_content(is_local: bool) -> io::Result<(std::path::PathBuf, String)> {
       .join(DVM_CONFIGRC_FILENAME)
   };
 
-  Ok((config_path.clone(), fs::read_to_string(config_path)?))
+  Ok((config_path.clone(), fs::read_to_string(config_path).unwrap_or_default()))
 }
 
 /// remove all key value pair that ain't supported by dvm from config file
