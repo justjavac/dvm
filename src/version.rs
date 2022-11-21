@@ -12,6 +12,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use std::fs::read_dir;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
@@ -105,10 +106,11 @@ pub fn cache_remote_versions() -> Result<()> {
 pub fn remote_versions() -> Result<Vec<String>> {
   if !is_versions_cache_exists() {
     println!("It seems that you have not updated the remote version cache, please run `dvm update` first.");
-    println!("Do you want to update the remote version cache now? [Y/n]");
+    print!("Do you want to update the remote version cache now? [Y/n]");
+    std::io::stdout().lock().flush().unwrap();
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
-    if input.trim().to_lowercase() == "y" {
+    if input.trim().to_lowercase() == "y" || input.trim().is_empty() {
       cache_remote_versions()?;
     } else {
       println!("Please run `dvm update` to update the remote version cache.");
