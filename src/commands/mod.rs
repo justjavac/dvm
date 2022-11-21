@@ -13,3 +13,4 @@ pub mod uninstall;
 pub mod update;
 pub mod upgrade;
 pub mod use_version;
+pub mod update;
