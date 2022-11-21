@@ -54,6 +54,7 @@ pub fn main() {
     }
     Commands::Clean => commands::clean::exec(&mut meta),
     Commands::Registry { command } => commands::registry::exec(&mut meta, command),
+    Commands::Update => commands::update::exec(&mut meta),
   };
 
   if let Err(err) = result {

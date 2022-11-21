@@ -12,3 +12,4 @@ pub mod registry;
 pub mod uninstall;
 pub mod upgrade;
 pub mod use_version;
+pub mod update;
