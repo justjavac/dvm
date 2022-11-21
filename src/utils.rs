@@ -1,6 +1,7 @@
 use crate::configrc::rc_get;
 use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_DENO_VERSION};
 use crate::version::VersionArg;
+use anyhow::Error;
 use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
@@ -8,8 +9,28 @@ use std::fs::write;
 use std::io::{stdin, Read, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::TempDir;
+
+pub fn run_with_spinner(
+  message: &'static str,
+  finish_message: &'static str,
+  f: impl FnOnce() -> Result<(), Error>,
+) -> Result<(), Error> {
+  let spinner = indicatif::ProgressBar::new_spinner().with_message(message);
+  spinner.set_style(
+    indicatif::ProgressStyle::default_spinner()
+      .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ")
+      .template("{spinner:.green} {msg}")
+      .unwrap(),
+  );
+  spinner.enable_steady_tick(time::Duration::from_millis(100));
+  let result = f();
+  spinner.finish_with_message(format!("{} in {}s", finish_message, spinner.elapsed().as_secs_f32()));
+
+  result
+}
 
 pub fn prompt_request(prompt: &str) -> bool {
   print!("{} (Y/n)", prompt);

@@ -4,7 +4,7 @@ use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LATEST_CANARY_PATH,
   REGISTRY_LATEST_RELEASE_PATH,
 };
-use crate::utils::{dvm_root, is_exact_version, is_semver};
+use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
 use colored::Colorize;
 use json_minimal::Json;
@@ -92,13 +92,13 @@ pub fn cached_remote_versions_location() -> PathBuf {
 }
 
 pub fn cache_remote_versions() -> Result<()> {
-  let cached_remote_versions_location = cached_remote_versions_location();
+  run_with_spinner("fetching remote versions...", "updated remote versions", || {
+    let cached_remote_versions_location = cached_remote_versions_location();
 
-  let remote_versions_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
-  let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
-  std::fs::write(cached_remote_versions_location, remote_versions)?;
-
-  Ok(())
+    let remote_versions_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
+    let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
+    std::fs::write(cached_remote_versions_location, remote_versions).map_err(|e| anyhow::anyhow!(e))
+  })
 }
 
 /// use cached remote versions if exists, otherwise ask user to fetch remote versions
@@ -131,7 +131,12 @@ pub fn remote_versions() -> Result<Vec<String>> {
 
   let mut result: Vec<String> = Vec::new();
 
-  if let Json::OBJECT { name: _, value } = json.get("cli").unwrap() {
+  let Some(cli_versions) = json.get("cli") else {
+    eprintln!("The remote version cache is corrupted(missing cli property), please run `dvm update` to update the remote version cache.");
+    std::process::exit(1);
+  };
+
+  if let Json::OBJECT { name: _, value } = cli_versions {
     if let Json::ARRAY(list) = value.unbox() {
       for item in list {
         if let Json::STRING(val) = item.unbox() {
