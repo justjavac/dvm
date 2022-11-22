@@ -1,5 +1,6 @@
 use crate::{dvm_root, DvmMeta};
 use anyhow::Result;
+use crate::configrc::rc_clean;
 
 pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   let home = dvm_root();
@@ -26,6 +27,10 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   }
 
   meta.clean_files();
+
+  // clean user-wide rc file
+  rc_clean(true).expect("clean local rc file failed");
+  rc_clean(false).expect("clean user-wide rc file failed");
 
   println!("Cleaned successfully");
   Ok(())
