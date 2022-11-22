@@ -23,7 +23,7 @@ irm https://dvm.deno.dev | iex
 
 ## Usage
 
-```bash
+```console
 ➜  ~  dvm --help
 Deno Version Manager - Easy way to manage multiple active deno versions.
 
