@@ -9,7 +9,6 @@ pub const REGISTRY_NAME_CN: &str = "cn";
 pub const REGISTRY_NAME_OFFICIAL: &str = "official";
 
 pub const DVM_CACHE_PATH_PREFIX: &str = "versions";
-#[allow(dead_code)]
 pub const DVM_CACHE_REMOTE_PATH: &str = "cached-remote-versions.json";
 pub const DVM_CANARY_PATH_PREFIX: &str = "canary";
 pub const DVM_CACHE_INVALID_TIMEOUT: u128 = 60 * 60 * 24 * 7;

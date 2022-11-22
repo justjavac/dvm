@@ -37,6 +37,9 @@ native-tls = { version = "0.2.10", features = ["vendored"] }
 set_env = "1.3.4"
 which = "4.2.5"
 
+# for user experience
+indicatif = "0.17.2"
+
 [target.'cfg(windows)'.dependencies]
 output_vt100 = "0.1.3"
 ctor = "0.1.22"

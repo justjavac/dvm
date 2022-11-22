@@ -145,6 +145,9 @@ pub enum Commands {
     #[clap(subcommand)]
     command: RegistryCommands,
   },
+
+  #[clap(about = "Update remove version list local cache to the latest")]
+  Update,
 }
 
 #[derive(Subcommand)]
