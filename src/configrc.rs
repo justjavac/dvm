@@ -103,8 +103,11 @@ fn rc_content(is_local: bool) -> io::Result<(std::path::PathBuf, String)> {
 }
 
 /// remove all key value pair that ain't supported by dvm from config file
-#[allow(dead_code)]
 pub fn rc_clean(is_local: bool) -> io::Result<()> {
+  if !rc_exists() {
+    rc_init()?;
+  }
+
   let (config_path, content) = rc_content(is_local).unwrap_or_default();
   let config = rc_parse(content.as_str());
   let config = config
