@@ -78,7 +78,7 @@ pub fn rc_remove(is_local: bool, key: &str) -> io::Result<()> {
 fn rc_parse(content: &str) -> Vec<(&str, &str)> {
   let config = content
     .lines()
-      // throw away non key value pair
+    // throw away non key value pair
     .filter(|it| it.contains('='))
     .map(|line| {
       let mut parts = line.splitn(2, '=');

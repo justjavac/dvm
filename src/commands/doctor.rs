@@ -1,8 +1,8 @@
+use crate::configrc::rc_clean;
 use crate::consts::DVM_CACHE_PATH_PREFIX;
 use anyhow::Result;
 use colored::Colorize;
 use std::fs;
-use crate::configrc::rc_clean;
 
 use crate::meta::DvmMeta;
 use crate::utils::{deno_bin_path, dvm_root, is_exact_version};

@@ -1,6 +1,6 @@
+use crate::configrc::rc_clean;
 use crate::{dvm_root, DvmMeta};
 use anyhow::Result;
-use crate::configrc::rc_clean;
 
 pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   let home = dvm_root();
