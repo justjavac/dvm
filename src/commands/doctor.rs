@@ -1,4 +1,4 @@
-use crate::configrc::{rc_clean, rc_init};
+use crate::configrc::{rc_clean, rc_fix};
 use crate::consts::DVM_CACHE_PATH_PREFIX;
 use anyhow::Result;
 use colored::Colorize;
@@ -60,7 +60,7 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   // clean user-wide rc file
   rc_clean(true).expect("clean local rc file failed");
   rc_clean(false).expect("clean user-wide rc file failed");
-  rc_init().expect("init user-wide rc file failed");
+  rc_fix().expect("fix rc file failed");
 
   println!("{}", "All fixes applied, DVM is ready to use.".green());
   Ok(())

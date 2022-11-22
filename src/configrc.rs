@@ -20,6 +20,41 @@ pub fn rc_init() -> io::Result<()> {
   rc_update(false, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LIST_OFFICIAL)
 }
 
+/// fix missing rc properties
+pub fn rc_fix() -> io::Result<()> {
+  if !rc_exists() {
+    rc_init()?;
+  } else {
+    if !rc_has(DVM_CONFIGRC_KEY_REGISTRY_BINARY) {
+      rc_update(false, DVM_CONFIGRC_KEY_REGISTRY_BINARY, REGISTRY_OFFICIAL)?;
+    }
+    if !rc_has(DVM_CONFIGRC_KEY_REGISTRY_VERSION) {
+      rc_update(false, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LIST_OFFICIAL)?;
+    }
+    if !rc_has(DVM_CONFIGRC_KEY_DENO_VERSION) {
+      rc_update(false, DVM_CONFIGRC_KEY_DENO_VERSION, "latest")?;
+    }
+  }
+
+  Ok(())
+}
+
+/// check if key exists in rc file
+pub fn rc_has(key: &str) -> bool {
+  let  Ok((_, content)) = rc_content(false).or_else(|_| rc_content(true)) else {
+    return false;
+  };
+
+  content
+    .lines()
+    .filter(|it| it.contains('='))
+    .map(|it| {
+      let mut it = it.split('=');
+      (it.next().unwrap().trim(), it.next().unwrap().trim())
+    })
+    .any(|(k, _)| k == key)
+}
+
 /// get value by key from configrc
 /// first try to get from current folder
 /// if not found, try to get from home folder
