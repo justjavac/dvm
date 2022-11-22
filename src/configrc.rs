@@ -97,7 +97,7 @@ fn rc_content(is_local: bool) -> io::Result<(std::path::PathBuf, String)> {
       .join(DVM_CONFIGRC_FILENAME)
   };
 
-  Ok((config_path.clone(), fs::read_to_string(config_path).unwrap_or_default()))
+  fs::read_to_string(&config_path).map(|content| (config_path, content))
 }
 
 /// remove all key value pair that ain't supported by dvm from config file
