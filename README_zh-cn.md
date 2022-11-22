@@ -24,34 +24,34 @@ irm https://deno.land/x/dvm/install.ps1 | iex
 
 ## 使用
 
-```plain
+```console
 ➜  ~  dvm --help
 Deno Version Manager - Easy way to manage multiple active deno versions.
 
-USAGE:
-    dvm <SUBCOMMAND>
+Usage: dvm.exe <COMMAND>
 
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
+Commands:
+  completions  Generate shell completions
+  info         Show dvm info.
+  install      Install deno executable to the given version. [aliases: i, add]
+  list         List all installed versions [aliases: ls, ll, la]
+  list-remote  List all released versions [aliases: lr, ls-remote]
+  uninstall    Uninstall a given version [aliases: un, unlink, rm, remove]
+  use          Use a given version or a semver range or a alias to the range.
+  alias        Set or unset an alias
+  activate     Activate Dvm
+  deactivate   Deactivate Dvm
+  doctor       Fixing dvm specific environment variables and other issues
+  upgrade      Upgrade aliases to the latest version
+  exec         Execute deno command with a specific deno version
+  clean        Clean dvm cache
+  registry     Change registry that dvm fetch from
+  update       Update remove version list local cache to the latest
+  help         Print this message or the help of the given subcommand(s)
 
-SUBCOMMANDS:
-    activate       Activate Dvm
-    alias          Set or unset an alias
-    clean          Clean dvm cache
-    completions    Generate shell completions
-    deactivate     Deactivate Dvm
-    doctor         Fixing dvm specific environment variables and other issues
-    exec           Execute deno command with a specific deno version
-    help           Print this message or the help of the given subcommand(s)
-    info           Show dvm info.
-    install        Install deno executable to the given version. [aliases: i, add]
-    list           List all installed versions [aliases: ls, ll, la]
-    list-remote    List all released versions [aliases: lr, ls-remote]
-    registry       Change registry that dvm fetch from
-    uninstall      Uninstall a given version [aliases: un, unlink, rm, remove]
-    upgrade        Upgrade aliases to the latest version
-    use            Use a given version or a semver range or a alias to the range.
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
 
 EXAMPLE:
   dvm install 1.3.2     Install v1.3.2 release
