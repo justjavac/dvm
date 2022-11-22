@@ -108,7 +108,11 @@ pub fn rc_clean(is_local: bool) -> io::Result<()> {
     rc_init()?;
   }
 
-  let (config_path, content) = rc_content(is_local).unwrap_or_default();
+  let Ok((config_path, content) ) = rc_content(is_local) else {
+    // if file not found, just return Ok, 'cause it's not needed to be cleaned
+    return Ok(());
+  };
+
   let config = rc_parse(content.as_str());
   let config = config
     .iter()
