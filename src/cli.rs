@@ -71,6 +71,7 @@ pub enum Commands {
 
   #[clap(about = "Install deno executable to the given version.")]
   #[clap(visible_aliases = & ["i", "add"])]
+  #[clap(disable_version_flag = true)]
   Install {
     #[clap(long, help = "Only install to local, but not use")]
     no_use: bool,
@@ -88,6 +89,7 @@ pub enum Commands {
 
   #[clap(about = "Uninstall a given version")]
   #[clap(visible_aliases = & ["un", "unlink", "rm", "remove"])]
+  #[clap(disable_version_flag = true)]
   Uninstall {
     #[clap(help = "The version to install")]
     version: Option<String>,
