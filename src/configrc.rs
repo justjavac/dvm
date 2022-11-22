@@ -78,6 +78,8 @@ pub fn rc_remove(is_local: bool, key: &str) -> io::Result<()> {
 fn rc_parse(content: &str) -> Vec<(&str, &str)> {
   let config = content
     .lines()
+      // throw away non key value pair
+    .filter(|it| it.contains('='))
     .map(|line| {
       let mut parts = line.splitn(2, '=');
       let k = parts.next().unwrap();
@@ -126,7 +128,7 @@ pub fn rc_clean(is_local: bool) -> io::Result<()> {
 /// if is_local is true, delete the local rc file
 /// if is_local is false, delete the global(user-wide) rc file
 #[allow(dead_code)]
-pub fn rc_clear(is_local: bool) -> io::Result<()> {
+pub fn rc_unlink(is_local: bool) -> io::Result<()> {
   if is_local {
     std::fs::remove_file(DVM_CONFIGRC_FILENAME)
   } else {

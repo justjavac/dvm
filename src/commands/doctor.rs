@@ -2,6 +2,7 @@ use crate::consts::DVM_CACHE_PATH_PREFIX;
 use anyhow::Result;
 use colored::Colorize;
 use std::fs;
+use crate::configrc::{rc_clean, rc_unlink};
 
 use crate::meta::DvmMeta;
 use crate::utils::{deno_bin_path, dvm_root, is_exact_version};
@@ -55,6 +56,10 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   if dvm_root().exists() {
     super::use_version::exec(meta, None, false).unwrap();
   }
+
+  // clean user-wide rc file
+  rc_clean(true).expect("clean local rc file failed");
+  rc_clean(false).expect("clean user-wide rc file failed");
 
   println!("{}", "All fixes applied, DVM is ready to use.".green());
   Ok(())
