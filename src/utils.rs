@@ -16,7 +16,7 @@ use tempfile::TempDir;
 pub fn run_with_spinner(
   message: &'static str,
   finish_message: &'static str,
-  f: impl FnOnce(&dyn FnOnce(String)) -> Result<()>,
+  f: impl FnOnce(Box<dyn FnOnce(String) -> Result<()>>) -> Result<()>,
 ) -> Result<()> {
   let spinner = indicatif::ProgressBar::new_spinner().with_message(message);
   spinner.set_style(
@@ -26,11 +26,14 @@ pub fn run_with_spinner(
       .unwrap(),
   );
   spinner.enable_steady_tick(time::Duration::from_millis(100));
-  let result = f(&|err| {
-    spinner.finish_and_clear();
-    eprintln!("{}", err);
-    std::process::exit(1);
-  });
+  let result = f(Box::new({
+    let spinner = spinner.clone();
+    move |err| {
+      spinner.finish_and_clear();
+      eprintln!("{}", err);
+      std::process::exit(1);
+    }
+  }));
   spinner.finish_with_message(format!("{} in {}s", finish_message, spinner.elapsed().as_secs_f32()));
 
   result

@@ -13,7 +13,7 @@ use clap::CommandFactory;
 
 use cli::{Cli, Commands};
 use meta::DvmMeta;
-use utils::dvm_root;
+use utils::{dvm_root, run_with_spinner};
 
 use crate::meta::DEFAULT_ALIAS;
 use crate::utils::deno_bin_path;
@@ -38,7 +38,14 @@ pub fn main() {
   let result = match cli.command {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
     Commands::Info => commands::info::exec(),
-    Commands::Install { no_use, version } => commands::install::exec(&meta, no_use, version),
+    Commands::Install { no_use, version } => run_with_spinner(
+      format!("Installing {}", version.unwrap_or_else(|| "latest".to_string())).as_str(),
+      "Installed",
+      |stop_with_error| match commands::install::exec(&meta, no_use, version) {
+        Ok(ok) => Ok(ok),
+        Err(err) => stop_with_error(format!("Failed to install: {}", err.to_string())),
+      },
+    ),
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(version),
