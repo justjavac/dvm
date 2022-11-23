@@ -39,7 +39,7 @@ pub fn main() {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
     Commands::Info => commands::info::exec(),
     Commands::Install { no_use, version } => run_with_spinner(
-      format!("Installing {}", version.unwrap_or_else(|| "latest".to_string())).as_str(),
+      Box::leak(format!("Installing {}", version.clone().unwrap_or_else(|| "latest".to_string())).into_boxed_str()),
       "Installed",
       |stop_with_error| match commands::install::exec(&meta, no_use, version) {
         Ok(ok) => Ok(ok),
