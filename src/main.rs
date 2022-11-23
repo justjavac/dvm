@@ -43,7 +43,7 @@ pub fn main() {
       "Installed",
       |stop_with_error| match commands::install::exec(&meta, no_use, version) {
         Ok(ok) => Ok(ok),
-        Err(err) => stop_with_error(format!("Failed to install: {}", err.to_string())),
+        Err(err) => stop_with_error(format!("Failed to install: {}", err)),
       },
     ),
     Commands::List => commands::list::exec(),
