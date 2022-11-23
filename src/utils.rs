@@ -1,7 +1,7 @@
 use crate::configrc::rc_get;
 use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_DENO_VERSION};
 use crate::version::VersionArg;
-use anyhow::Error;
+use anyhow::Result;
 use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
@@ -16,8 +16,8 @@ use tempfile::TempDir;
 pub fn run_with_spinner(
   message: &'static str,
   finish_message: &'static str,
-  f: impl FnOnce() -> Result<(), Error>,
-) -> Result<(), Error> {
+  f: impl FnOnce(&dyn FnOnce(String)) -> Result<()>,
+) -> Result<()> {
   let spinner = indicatif::ProgressBar::new_spinner().with_message(message);
   spinner.set_style(
     indicatif::ProgressStyle::default_spinner()
@@ -26,7 +26,11 @@ pub fn run_with_spinner(
       .unwrap(),
   );
   spinner.enable_steady_tick(time::Duration::from_millis(100));
-  let result = f();
+  let result = f(&|err| {
+    spinner.finish_and_clear();
+    eprintln!("{}", err);
+    std::process::exit(1);
+  });
   spinner.finish_with_message(format!("{} in {}s", finish_message, spinner.elapsed().as_secs_f32()));
 
   result

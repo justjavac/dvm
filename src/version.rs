@@ -93,7 +93,7 @@ pub fn cached_remote_versions_location() -> PathBuf {
 }
 
 pub fn cache_remote_versions() -> Result<()> {
-  run_with_spinner("fetching remote versions...", "updated remote versions", || {
+  run_with_spinner("fetching remote versions...", "updated remote versions", |_| {
     let cached_remote_versions_location = cached_remote_versions_location();
 
     let remote_versions_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
