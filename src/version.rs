@@ -93,13 +93,17 @@ pub fn cached_remote_versions_location() -> PathBuf {
 }
 
 pub fn cache_remote_versions() -> Result<()> {
-  run_with_spinner("fetching remote versions...", "updated remote versions", |_| {
-    let cached_remote_versions_location = cached_remote_versions_location();
+  run_with_spinner(
+    "fetching remote versions...".to_string(),
+    "updated remote versions".to_string(),
+    |_| {
+      let cached_remote_versions_location = cached_remote_versions_location();
 
-    let remote_versions_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
-    let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
-    std::fs::write(cached_remote_versions_location, remote_versions).map_err(|e| anyhow::anyhow!(e))
-  })
+      let remote_versions_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
+      let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
+      std::fs::write(cached_remote_versions_location, remote_versions).map_err(|e| anyhow::anyhow!(e))
+    },
+  )
 }
 
 /// use cached remote versions if exists, otherwise ask user to fetch remote versions

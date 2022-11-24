@@ -12,6 +12,7 @@ use cfg_if::cfg_if;
 use clap::CommandFactory;
 
 use cli::{Cli, Commands};
+use colored::Colorize;
 use meta::DvmMeta;
 use utils::{dvm_root, run_with_spinner};
 
@@ -39,8 +40,8 @@ pub fn main() {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
     Commands::Info => commands::info::exec(),
     Commands::Install { no_use, version } => run_with_spinner(
-      Box::leak(format!("Installing {}", version.clone().unwrap_or_else(|| "latest".to_string())).into_boxed_str()),
-      "Installed",
+      format!("Installing {}", version.clone().unwrap_or_else(|| "latest".to_string())),
+      "Installed".to_string(),
       |stop_with_error| match commands::install::exec(&meta, no_use, version) {
         Ok(ok) => Ok(ok),
         Err(err) => stop_with_error(format!("Failed to install: {}", err)),
@@ -53,15 +54,45 @@ pub fn main() {
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
     Commands::Activate => commands::activate::exec(&mut meta),
     Commands::Deactivate => commands::deactivate::exec(),
-    Commands::Doctor => commands::doctor::exec(&mut meta),
-    Commands::Upgrade { alias } => commands::upgrade::exec(&mut meta, alias),
+    Commands::Doctor => run_with_spinner(
+      "Fixing...".to_string(),
+      "All fixes applied, DVM is ready to use.".green().to_string(),
+      |fail| match commands::doctor::exec(&mut meta) {
+        Ok(ok) => Ok(ok),
+        Err(err) => fail(format!("Failed to fix: {}", err)),
+      },
+    ),
+    Commands::Upgrade { alias } => run_with_spinner(
+      "Upgrading...".to_string(),
+      "All alias have been upgraded.".to_string(),
+      |fail| match commands::upgrade::exec(&mut meta, alias) {
+        Ok(ok) => Ok(ok),
+        Err(err) => fail(format!("Failed to upgrade: {}", err)),
+      },
+    ),
+
     Commands::Exec { command: _, version: _ } => {
       /* unused */
       Ok(())
     }
-    Commands::Clean => commands::clean::exec(&mut meta),
+    Commands::Clean => {
+      run_with_spinner(
+        "Cleaning...".to_string(),
+        "clean finished".to_string(),
+        |fail| match commands::clean::exec(&mut meta) {
+          Ok(ok) => Ok(ok),
+          Err(err) => fail(format!("Failed to clean: {}", err)),
+        },
+      )
+    }
+
     Commands::Registry { command } => commands::registry::exec(&mut meta, command),
-    Commands::Update => commands::update::exec(&mut meta),
+    Commands::Update => run_with_spinner("Updating cache...".to_string(), "Update success".to_string(), |fail| {
+      match commands::update::exec(&mut meta) {
+        Ok(ok) => Ok(ok),
+        Err(err) => fail(format!("Failed to update: {}", err)),
+      }
+    }),
   };
 
   if let Err(err) = result {

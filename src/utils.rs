@@ -14,8 +14,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::TempDir;
 
 pub fn run_with_spinner(
-  message: &'static str,
-  finish_message: &'static str,
+  message: String,
+  finish_message: String,
   f: impl FnOnce(Box<dyn FnOnce(String) -> Result<()>>) -> Result<()>,
 ) -> Result<()> {
   let spinner = indicatif::ProgressBar::new_spinner().with_message(message);
@@ -34,7 +34,7 @@ pub fn run_with_spinner(
       std::process::exit(1);
     }
   }));
-  spinner.finish_with_message(format!("{} in {}s", finish_message, spinner.elapsed().as_secs_f32()));
+  spinner.finish_with_message(format!("{} in {:.2}s", finish_message, spinner.elapsed().as_secs_f32()));
 
   result
 }
