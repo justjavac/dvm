@@ -6,7 +6,7 @@ use crate::consts::{
 };
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
-use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, update_stub};
+use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, run_with_spinner, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc};
 use crate::version::remote_versions;
 use crate::version::{get_latest_version, VersionArg};
@@ -101,43 +101,45 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
 }
 
 pub fn use_canary_bin_path(local: bool) -> Result<()> {
-  let canary_dir = deno_canary_path();
+  run_with_spinner("Processing".to_string(), "Now using deno canary".to_string(), |_| {
+    let canary_dir = deno_canary_path();
 
-  if !canary_dir.exists() {
-    eprintln!("Canary dir not found, will not be used");
-    std::process::exit(1);
-  }
+    if !canary_dir.exists() {
+      eprintln!("Canary dir not found, will not be used");
+      std::process::exit(1);
+    }
 
-  let bin_path = deno_bin_path();
-  if !bin_path.parent().unwrap().exists() {
-    fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
-  }
-  if bin_path.exists() {
-    fs::remove_file(&bin_path)?;
-  }
-  fs::hard_link(&canary_dir, &bin_path)?;
+    let bin_path = deno_bin_path();
+    if !bin_path.parent().unwrap().exists() {
+      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
+    }
+    if bin_path.exists() {
+      fs::remove_file(&bin_path)?;
+    }
+    fs::hard_link(&canary_dir, &bin_path)?;
 
-  rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
+    rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
 
-  println!("Now using deno canary");
-  Ok(())
+    Ok(())
+  })
 }
 
 pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String, local: bool) -> Result<()> {
-  check_exe(exe_path, version)?;
+  run_with_spinner("Processing".to_string(), format!("Now using deno {}", &version), |_| {
+    check_exe(exe_path, version)?;
 
-  let bin_path = deno_bin_path();
-  if !bin_path.parent().unwrap().exists() {
-    fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
-  }
-  if bin_path.exists() {
-    fs::remove_file(&bin_path)?;
-  }
-  fs::hard_link(exe_path, &bin_path)?;
+    let bin_path = deno_bin_path();
+    if !bin_path.parent().unwrap().exists() {
+      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
+    }
+    if bin_path.exists() {
+      fs::remove_file(&bin_path)?;
+    }
+    fs::hard_link(exe_path, &bin_path)?;
 
-  rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;
-  println!("Now using deno {}", version);
-  Ok(())
+    rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;
+    Ok(())
+  })
 }
 
 fn check_exe(exe_path: &Path, expected_version: &Version) -> Result<()> {

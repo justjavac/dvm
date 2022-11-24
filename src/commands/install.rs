@@ -49,14 +49,9 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   }
 
   let install_version = match version {
-    Some(ref passed_version) => match Version::parse(passed_version) {
-      Ok(ver) => ver,
-      Err(_) => {
-        eprintln!("Invalid semver {}", passed_version);
-        std::process::exit(1)
-      }
-    },
-
+    Some(ref passed_version) => {
+      Version::parse(passed_version).map_err(|_| anyhow::format_err!("Invalid semver {}", passed_version))?
+    }
     None => get_latest_version(&binary_registry_url)?,
   };
 
