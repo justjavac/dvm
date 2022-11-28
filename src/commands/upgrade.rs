@@ -1,17 +1,23 @@
 use crate::{
   commands::install,
-  consts::{DVM_VERSION_CANARY, DVM_VERSION_INVALID},
+  consts::{DVM_VERSION_CANARY, DVM_VERSION_INVALID, DVM_VERSION_SELF},
   utils::best_version,
   version::{remote_versions, VersionArg},
   DvmMeta,
 };
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use colored::Colorize;
+use std::fs;
 use std::str::FromStr;
 
 pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
   let versions = remote_versions().expect("Fetching version list failed.");
   if let Some(alias) = alias {
+    if alias == DVM_VERSION_SELF {
+      upgrade_self()?;
+      return Ok(());
+    }
+
     if alias == DVM_VERSION_CANARY {
       println!("Upgrading {}", alias.bright_black());
       install::exec(meta, true, Some(alias)).unwrap();
@@ -75,6 +81,31 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
     }
 
     println!("All aliases have been upgraded");
+  }
+
+  Ok(())
+}
+
+fn upgrade_self() -> Result<()> {
+  cfg_if::cfg_if! {
+    if #[cfg(windows)] {
+      let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.ps1";
+      let script = tinyget::get(url).send()?;
+      let script = script.as_str()?;
+      let tmp = tempfile::tempdir()?;
+      let tmp = tmp.path().join("install.ps1");
+      fs::write(&tmp, script)?;
+      let mut cmd = std::process::Command::new("powershell");
+      cmd.arg("-ExecutionPolicy").arg("Bypass").arg("-File").arg(tmp);
+      cmd.status()?;
+    } else {
+      let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.sh";
+      let script = tinyget::get(url).send()?.as_Str()?;
+      let tmp = tempfile::tempdir()?;
+      let tmp = tmp.path().join("install.sh");
+      fs::write(tmp, script)?;
+      std::process::Command::new("bash").arg(script).status()?;
+    }
   }
 
   Ok(())
