@@ -42,7 +42,7 @@ Commands:
   activate     Activate Dvm
   deactivate   Deactivate Dvm
   doctor       Fixing dvm specific environment variables and other issues
-  upgrade      Upgrade aliases to the latest version
+  upgrade      Upgrade aliases to the latest version, use `self` to upgrade dvm itself
   exec         Execute deno command with a specific deno version
   clean        Clean dvm cache
   registry     Change registry that dvm fetch from
