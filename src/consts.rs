@@ -18,6 +18,7 @@ pub const DVM_CONFIGRC_KEY_DENO_VERSION: &str = "deno_version";
 pub const DVM_CONFIGRC_KEY_REGISTRY_VERSION: &str = "registry_version";
 pub const DVM_CONFIGRC_KEY_REGISTRY_BINARY: &str = "registry_binary";
 
+pub const DVM_VERSION_SELF: &str = "self";
 pub const DVM_VERSION_CANARY: &str = "canary";
 pub const DVM_VERSION_LATEST: &str = "latest";
 pub const DVM_VERSION_SYSTEM: &str = "system";

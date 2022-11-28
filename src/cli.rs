@@ -123,9 +123,9 @@ pub enum Commands {
   #[clap(about = "Fixing dvm specific environment variables and other issues")]
   Doctor,
 
-  #[clap(about = "Upgrade aliases to the latest version")]
+  #[clap(about = "Upgrade aliases to the latest version, use `self` to upgrade dvm itself")]
   Upgrade {
-    #[clap(help = "The alias to upgrade, upgrade all aliases if not present")]
+    #[clap(help = "The alias to upgrade, use `self` to upgrade `dvm` itself, upgrade all aliases if not present")]
     alias: Option<String>,
   },
 

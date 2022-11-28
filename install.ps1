@@ -14,6 +14,8 @@ $BinDir = if ($DvmDir) {
 
 $DvmZip = "$BinDir\dvm.zip"
 $DvmExe = "$BinDir\dvm.exe"
+$DvmExeOldName = "dvm.exe.old"
+$DvmExeOld = "$BinDir\$DvmExeOldName"
 $DvmUri = "https://cdn.jsdelivr.net/gh/justjavac/dvm_releases@main/dvm-x86_64-pc-windows-msvc.zip"
 
 if (!(Test-Path $BinDir)) {
@@ -21,6 +23,11 @@ if (!(Test-Path $BinDir)) {
 }
 
 curl.exe -Lo $DvmZip $DvmUri
+
+# Remove the old dvm.exe.old if it exists
+Remove-Item $DvmExeOld
+# You cant delete a file that is currently running, so rename it
+Rename-Item -Path $DvmExe -NewName $DvmExeOldName
 
 tar.exe xf $DvmZip -C $BinDir
 
