@@ -100,7 +100,7 @@ fn upgrade_self() -> Result<()> {
       cmd.status()?;
     } else {
       let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.sh";
-      let script = tinyget::get(url).send()?.as_Str()?;
+      let script = tinyget::get(url).send()?.as_str()?;
       let tmp = tempfile::tempdir()?;
       let tmp = tmp.path().join("install.sh");
       fs::write(tmp, script)?;
