@@ -35,7 +35,7 @@ pub fn exec(version: Option<String>) -> Result<()> {
 
   let version_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, target_version));
 
-  fs::remove_dir_all(&version_dir).unwrap();
+  fs::remove_dir_all(version_dir).unwrap();
   println!("deno v{} removed.", target_version);
 
   Ok(())
