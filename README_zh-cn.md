@@ -1,8 +1,6 @@
-# Deno 版本管理工具
+![dvm](https://socialify.git.ci/justjavac/dvm/image?description=1&font=Bitter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fdeno.land%2Fimages%2Fartwork%2Fogdeno.png&name=1&owner=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Light)
 
 [English](https://github.com/qiuquanwu/dvm/) | 简体中文
-
-简单管理多个活动 deno 版本的方式。
 
 ## 安装
 
