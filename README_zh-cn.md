@@ -1,8 +1,6 @@
-# Deno 版本管理工具
+![dvm](https://socialify.git.ci/justjavac/dvm/image?description=1&font=Bitter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fdeno.land%2Fimages%2Fartwork%2Fogdeno.png&name=1&owner=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Light)
 
 [English](https://github.com/qiuquanwu/dvm/) | 简体中文
-
-简单管理多个活动 deno 版本的方式。
 
 ## 安装
 
@@ -76,7 +74,8 @@ dvm -V
 
 ### 初始化
 
-使用 `dvm` 将创建 `~/.dvm/` 文件夹，并且所有已安装的 deno 版本都将放入中 `~/.dvm`文件夹之中。
+使用 `dvm` 将创建 `~/.dvm/` 文件夹，并且所有已安装的 deno 版本都将放入中
+`~/.dvm`文件夹之中。
 
 ```
 ➜  ~  dvm
@@ -85,7 +84,8 @@ Creating /Users/justjavac/.dvm
 
 ### .dvmrc
 
-你可以让 dvm 在当前目录生成配置文件，之后`dvm use`和`dvm install`如果没指定版本号就会优先采用当前目录下的配置文件
+你可以让 dvm
+在当前目录生成配置文件，之后`dvm use`和`dvm install`如果没指定版本号就会优先采用当前目录下的配置文件
 
 举个栗子：我们先设置 1.17.0 为默认版本
 
@@ -93,7 +93,8 @@ Creating /Users/justjavac/.dvm
 dvm use --local 1.17.0
 ```
 
-然后假设另一个人拿到了你这个项目并且根目录里有你生成的 dvm 配置文件，并运行`dvm use`
+然后假设另一个人拿到了你这个项目并且根目录里有你生成的 dvm
+配置文件，并运行`dvm use`
 
 ```plain
 $ dvm use
@@ -156,8 +157,10 @@ Error: unzip is required to install dvm (see: https://github.com/justjavac/dvm#u
 
 ### Windows 平台 需要使用 Powershell 来运行 dvm
 
-目前我们因为一些原因使用的是 Powershell profile 来设置环境变量, 所以 Powershell 是必需的.
+目前我们因为一些原因使用的是 Powershell profile 来设置环境变量, 所以 Powershell
+是必需的.
 
 ## 开源协议
 
-Deno 版本管理器 （dvm） 遵循 MIT 开源协议。有关详细信息，请参阅 [LICENSE](./LICENSE)。
+Deno 版本管理器 （dvm） 遵循 MIT 开源协议。有关详细信息，请参阅
+[LICENSE](./LICENSE)。

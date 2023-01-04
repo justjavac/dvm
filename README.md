@@ -1,8 +1,6 @@
-# Deno Version Manager
+![dvm](https://socialify.git.ci/justjavac/dvm/image?description=1&font=Bitter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fdeno.land%2Fimages%2Fartwork%2Fogdeno.png&name=1&owner=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Light)
 
 English | [简体中文](./README_zh-cn.md)
-
-Easy way to manage multiple active deno versions.
 
 ## Installation
 
