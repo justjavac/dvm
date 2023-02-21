@@ -25,7 +25,7 @@ if (!(Test-Path $BinDir)) {
 curl.exe -Lo $DvmZip $DvmUri
 
 # Remove the old dvm.exe.old if it exists
-Remove-Item $DvmExeOld
+Remove-Item $DvmExeOld -ErrorAction SilentlyContinue
 # You cant delete a file that is currently running, so rename it
 Rename-Item -Path $DvmExe -NewName $DvmExeOldName
 
