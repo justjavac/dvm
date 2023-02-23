@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.152.0/http/server.ts";
 serve(async (req: Request) => {
   const userAgent = req.headers.get("User-Agent") || "";
 
-  if (userAgent.includes("WindowsPowerShell")) {
+  if (userAgent.includes("PowerShell")) {
     return new Response(await Deno.readFile("./install.ps1"));
   }
 
