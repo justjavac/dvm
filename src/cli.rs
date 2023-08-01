@@ -91,7 +91,7 @@ pub enum Commands {
   #[clap(visible_aliases = & ["un", "unlink", "rm", "remove"])]
   #[clap(disable_version_flag = true)]
   Uninstall {
-    #[clap(help = "The version to install")]
+    #[clap(help = "The version to uninstall")]
     version: Option<String>,
   },
 
