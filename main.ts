@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.152.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.205.0/http/server.ts";
 
 serve(async (req: Request) => {
   const userAgent = req.headers.get("User-Agent") || "";
