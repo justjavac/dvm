@@ -18,23 +18,22 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> R
   let v = version.clone();
 
   let Some(version) = is_exact_version(&version).then_some(version).or_else(|| {
-        meta.has_alias(&v).then(|| {
-          let version_req = meta.resolve_version_req(&v);
-          match version_req {
-            VersionArg::Exact(v) => v.to_string(),
-            VersionArg::Range(r) => {
-              let best = best_version(versions.iter().map(AsRef::as_ref), r.clone());
-              if let Some(best) = best {
-                best.to_string()
-              } else {
-                eprintln!("No version found for {} in {:?}", r, versions);
-                std::process::exit(1);
-              }
-            }
+    meta.has_alias(&v).then(|| {
+      let version_req = meta.resolve_version_req(&v);
+      match version_req {
+        VersionArg::Exact(v) => v.to_string(),
+        VersionArg::Range(r) => {
+          let best = best_version(versions.iter().map(AsRef::as_ref), r.clone());
+          if let Some(best) = best {
+            best.to_string()
+          } else {
+            eprintln!("No version found for {} in {:?}", r, versions);
+            std::process::exit(1);
           }
-        })
-    }
-  ) else {
+        }
+      }
+    })
+  }) else {
     eprintln!("{}", "No such alias or version found.".red());
     std::process::exit(1);
   };
