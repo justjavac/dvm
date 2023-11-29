@@ -1,6 +1,6 @@
 pub const REGISTRY_OFFICIAL: &str = "https://dl.deno.land/";
 pub const REGISTRY_CN: &str = "https://dl.deno.js.cn/";
-pub const REGISTRY_LIST_OFFICIAL: &str = "https://raw.githubusercontent.com/denoland/dotland/main/versions.json";
+pub const REGISTRY_LIST_OFFICIAL: &str = "https://releases.deno.dev";
 pub const REGISTRY_LIST_CN: &str = "https://dl.deno.js.cn/versions.json";
 
 pub const REGISTRY_LATEST_RELEASE_PATH: &str = "release-latest.txt";
