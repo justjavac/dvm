@@ -1,4 +1,4 @@
-use crate::configrc::rc_get;
+use crate::configrc::rc_get_with_fix;
 use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_DENO_VERSION};
 use crate::version::VersionArg;
 use anyhow::Result;
@@ -97,7 +97,7 @@ where
 /// Find and load the dvmrc
 /// local -> user -> default
 pub fn load_dvmrc() -> VersionArg {
-  rc_get(DVM_CONFIGRC_KEY_DENO_VERSION)
+  rc_get_with_fix(DVM_CONFIGRC_KEY_DENO_VERSION)
     .map(|v| VersionArg::from_str(&v).unwrap())
     .unwrap_or_else(|_| VersionArg::from_str("*").unwrap())
 }

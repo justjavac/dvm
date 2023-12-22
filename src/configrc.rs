@@ -73,6 +73,16 @@ pub fn rc_get(key: &str) -> io::Result<String> {
     .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "key not found"))
 }
 
+/// get value by key from configuration with a possible fix
+/// first try to get from current folder
+/// if not found, try to get from home folder
+/// if not found, try to the fix the missing properties.
+/// and then try to get this key's value again without the fix
+pub fn rc_get_with_fix(key: &str) -> io::Result<String> {
+  // always return the error which is from `rc_get` fn
+  rc_get(key).or_else(|err| rc_fix().and_then(|_| rc_get(key)).map_err(|_| err))
+}
+
 /// update the config file key with the new value
 /// create the file if it doesn't exist
 /// create key value pair if it doesn't exist

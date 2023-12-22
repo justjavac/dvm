@@ -1,7 +1,7 @@
 // Copyright 2018-2020 the Deno authors. All rights reserved. MIT license.
 // Copyright 2020-2022 justjavac. All rights reserved. MIT license.
 use super::use_version;
-use crate::configrc::rc_get;
+use crate::configrc::rc_get_with_fix;
 use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_VERSION_CANARY,
   DVM_VERSION_LATEST, REGISTRY_OFFICIAL,
@@ -30,7 +30,8 @@ cfg_if! {
 }
 
 pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
-  let binary_registry_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+  let binary_registry_url =
+    rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
 
   if let Some(version) = version.clone() {
     if version == *DVM_VERSION_CANARY {

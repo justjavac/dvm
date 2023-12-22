@@ -1,5 +1,5 @@
 // Copyright 2022 justjavac. All rights reserved. MIT license.
-use crate::configrc::rc_get;
+use crate::configrc::rc_get_with_fix;
 use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LATEST_CANARY_PATH,
   REGISTRY_LATEST_RELEASE_PATH,
@@ -99,7 +99,7 @@ pub fn cache_remote_versions() -> Result<()> {
     |_| {
       let cached_remote_versions_location = cached_remote_versions_location();
 
-      let remote_versions_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
+      let remote_versions_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
       let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
       std::fs::write(cached_remote_versions_location, remote_versions).map_err(|e| anyhow::anyhow!(e))
     },

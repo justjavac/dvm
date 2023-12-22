@@ -1,5 +1,5 @@
 use crate::commands::install;
-use crate::configrc::{rc_get, rc_update};
+use crate::configrc::{rc_get_with_fix, rc_update};
 use crate::consts::{
   DVM_CONFIGRC_KEY_DENO_VERSION, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_VERSION_CANARY, DVM_VERSION_LATEST,
   DVM_VERSION_SYSTEM, REGISTRY_OFFICIAL,
@@ -18,7 +18,8 @@ use std::process::Command;
 
 /// using a tag or a specific version
 pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> Result<()> {
-  let rc_binary_url = rc_get(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+  let rc_binary_url =
+    rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
 
   let version_req: VersionArg;
   if let Some(ref version) = version {
