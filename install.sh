@@ -53,8 +53,9 @@ case $SHELL in
 esac
 
 if [ ! $DVM_DIR ];then
-    command echo "export DVM_DIR=\"$dvm_dir\"" >> "$HOME/$shell_profile"
-    command echo "export PATH=\"\$DVM_DIR/bin:\$PATH\"" >> "$HOME/$shell_profile"
+	EXPORT_DVM_DIR="export DVM_DIR=\"$dvm_dir\""
+	EXPORT_PATH="export PATH=\"\$DVM_DIR/bin:\$PATH\""
+	command printf "\\n$EXPORT_DVM_DIR\\n$EXPORT_PATH\\n" >> "$HOME/$shell_profile"
 fi
 
 echo "Dvm was installed successfully to $exe"
