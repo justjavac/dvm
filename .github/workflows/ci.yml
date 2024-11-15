@@ -67,14 +67,21 @@ jobs:
       - name: Build release
         run: cargo build --release --locked
 
+      - name: Run cargo test
+        run: cargo test --locked
+
       - name: Build release(aarch64-apple-darwin)
         if: startsWith(matrix.os, 'macOS')
         run: |
           rustup target add aarch64-apple-darwin
           cargo build --release --target aarch64-apple-darwin --locked
 
-      - name: Run cargo test
-        run: cargo test --locked
+      - name: Build release(aarch64-unknown-linux-gnu)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update && sudo apt-get install -y crossbuild-essential-arm64
+          rustup target add aarch64-unknown-linux-gnu
+          cargo build --release --target aarch64-unknown-linux-gnu --locked
 
       - name: Test install from local file (bash)
         if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macOS')
@@ -85,12 +92,17 @@ jobs:
         run: zip -r dvm-x86_64-unknown-linux-gnu.zip dvm
         working-directory: target/release
 
+      - name: Pre-release (linux-aarch64)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: zip -r dvm-aarch64-unknown-linux-gnu.zip dvm
+        working-directory: target/aarch64-unknown-linux-gnu/release
+
       - name: Pre-release (mac)
         if: startsWith(matrix.os, 'macOS')
         run: zip -r dvm-x86_64-apple-darwin.zip dvm
         working-directory: target/release
 
-      - name: Pre-release (mac-aarch64)
+      - name: Pre-release (aarch64-apple-darwin)
         if: startsWith(matrix.os, 'macOS')
         run: zip -r dvm-aarch64-apple-darwin.zip dvm
         working-directory: target/aarch64-apple-darwin/release
@@ -113,6 +125,7 @@ jobs:
             target/release/dvm-x86_64-unknown-linux-gnu.zip
             target/release/dvm-x86_64-apple-darwin.zip
             target/aarch64-apple-darwin/release/dvm-aarch64-apple-darwin.zip
+            target/aarch64-unknown-linux-gnu/release/dvm-aarch64-unknown-linux-gnu.zip
           draft: true
 
       - name: Release DVM
@@ -128,7 +141,7 @@ jobs:
             target/release/dvm-x86_64-unknown-linux-gnu.zip
             target/release/dvm-x86_64-apple-darwin.zip
 
-      - name: Release DVM(aarch64)
+      - name: Release DVM(aarch64-apple-darwin)
         uses: justjavac/action-dvm-release@v1
         if: |
           startsWith(github.repository, 'justjavac') &&
@@ -138,6 +151,17 @@ jobs:
         with:
           files: |
             target/aarch64-apple-darwin/release/dvm-aarch64-apple-darwin.zip
+
+      - name: Release DVM(aarch64-unknown-linux-gnu)
+        uses: justjavac/action-dvm-release@v1
+        if: |
+          startsWith(github.repository, 'justjavac') &&
+          startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          files: |
+            target/aarch64-unknown-linux-gnu/release/dvm-aarch64-unknown-linux-gnu.zip
 
       - name: Publish
         if: |

@@ -17,6 +17,7 @@ else
 	"Darwin x86_64") target="x86_64-apple-darwin" ;;
 	"Darwin arm64") target="aarch64-apple-darwin" ;;
 	"Linux x86_64") target="x86_64-unknown-linux-gnu" ;;
+	"Linux aarch64") target="aarch64-unknown-linux-gnu.zip" ;;
 	*) echo "Unsupported OS + CPU combination: $(uname -sm)"; exit 1 ;;
 	esac
 fi
