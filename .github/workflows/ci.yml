@@ -79,7 +79,7 @@ jobs:
       - name: Build release(aarch64-unknown-linux-gnu)
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          apt install -y crossbuild-essential-arm64 gcc-multilib
+          sudo apt install -y crossbuild-essential-arm64 gcc-multilib
           rustup target add aarch64-unknown-linux-gnu
           cargo build --release --target aarch64-unknown-linux-gnu --locked
 
