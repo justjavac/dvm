@@ -18,10 +18,7 @@ pub fn exec_remote() -> Result<()> {
 }
 
 fn print_versions(mut versions: Vec<String>) {
-  let current_version = match current_version() {
-    Some(v) => v,
-    _ => String::from(""),
-  };
+  let current_version = current_version().unwrap_or_default();
 
   versions.sort_by(|a, b| sort_semver_version(b, a).reverse());
 

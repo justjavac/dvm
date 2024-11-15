@@ -13,6 +13,7 @@ pub const DEFAULT_ALIAS: phf::Map<&'static str, &'static str> = phf::phf_map! {
 };
 
 pub trait ToVersionReq {
+  #[allow(dead_code)]
   fn to_version_req(&self) -> VersionReq;
   fn try_to_version_req(&self) -> anyhow::Result<VersionReq>;
 }
@@ -334,6 +335,7 @@ mod tests {
     assert_eq!(parsed.versions.len(), 2);
     assert_eq!(parsed.alias[0].name, "latest");
     assert_eq!(parsed.alias[0].required, "*");
+    assert_eq!(parsed.alias[0].to_version_req(), VersionReq::parse("*").unwrap());
     assert!(parsed.alias[0].try_to_version_req().is_ok());
     assert_eq!(parsed.alias[1].name, "stable");
     assert_eq!(parsed.alias[1].required, "^1.0.0");
