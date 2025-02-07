@@ -49,7 +49,7 @@ pub fn prompt_request(prompt: &str) -> bool {
     .and_then(|it| it.ok())
     .map(char::from)
     .unwrap_or_else(|| 'y');
-  confirm == '\n' || confirm == '\r' || confirm.to_ascii_lowercase() == 'y'
+  confirm == '\n' || confirm == '\r' || confirm.eq_ignore_ascii_case(&'y')
 }
 
 pub fn check_is_deactivated() -> bool {
