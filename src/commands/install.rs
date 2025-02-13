@@ -225,7 +225,7 @@ fn test_compose_url_to_exec() {
       asserts_eq_one_of!(
         url.as_str(),
         "https://dl.deno.land/release/v1.7.0/deno-x86_64-apple-darwin.zip",
-        "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-apple-darwin.zip",
+        "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-apple-darwin.zip"
       );
     } else if #[cfg(all(target_os = "macos", target_arch = "aarch64"))] {
       asserts_eq_one_of!(
