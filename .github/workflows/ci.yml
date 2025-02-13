@@ -8,7 +8,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, ubuntu-latest, windows-latest]
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macOS-13  # Intel
+          - macOS-latest  # Apple Silicon
+          - windows-latest
 
     env:
       CARGO_INCREMENTAL: 0
@@ -70,19 +75,6 @@ jobs:
       - name: Run cargo test
         run: cargo test --locked
 
-      - name: Build release(aarch64-apple-darwin)
-        if: startsWith(matrix.os, 'macOS')
-        run: |
-          rustup target add aarch64-apple-darwin
-          cargo build --release --target aarch64-apple-darwin --locked
-
-      - name: Build release(aarch64-unknown-linux-gnu)
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          sudo apt-get update && sudo apt-get install -y crossbuild-essential-arm64
-          rustup target add aarch64-unknown-linux-gnu
-          cargo build --release --target aarch64-unknown-linux-gnu --locked
-
       - name: Test install from local file (bash)
         if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macOS')
         run: ./install.sh ./target/release/dvm
@@ -95,17 +87,17 @@ jobs:
       - name: Pre-release (linux-aarch64)
         if: startsWith(matrix.os, 'ubuntu')
         run: zip -r dvm-aarch64-unknown-linux-gnu.zip dvm
-        working-directory: target/aarch64-unknown-linux-gnu/release
+        working-directory: target/release
 
       - name: Pre-release (mac)
-        if: startsWith(matrix.os, 'macOS')
+        if: matrix.os == 'macOS-13'
         run: zip -r dvm-x86_64-apple-darwin.zip dvm
         working-directory: target/release
 
       - name: Pre-release (aarch64-apple-darwin)
-        if: startsWith(matrix.os, 'macOS')
+        if: matrix.os == 'macOS-latest'
         run: zip -r dvm-aarch64-apple-darwin.zip dvm
-        working-directory: target/aarch64-apple-darwin/release
+        working-directory: target/release
 
       - name: Pre-release (windows)
         if: startsWith(matrix.os, 'windows')
@@ -124,8 +116,8 @@ jobs:
             target/release/dvm-x86_64-pc-windows-msvc.zip
             target/release/dvm-x86_64-unknown-linux-gnu.zip
             target/release/dvm-x86_64-apple-darwin.zip
-            target/aarch64-apple-darwin/release/dvm-aarch64-apple-darwin.zip
-            target/aarch64-unknown-linux-gnu/release/dvm-aarch64-unknown-linux-gnu.zip
+            target/release/dvm-aarch64-apple-darwin.zip
+            target/release/dvm-aarch64-unknown-linux-gnu.zip
           draft: true
 
       - name: Release DVM
@@ -140,28 +132,8 @@ jobs:
             target/release/dvm-x86_64-pc-windows-msvc.zip
             target/release/dvm-x86_64-unknown-linux-gnu.zip
             target/release/dvm-x86_64-apple-darwin.zip
-
-      - name: Release DVM(aarch64-apple-darwin)
-        uses: justjavac/action-dvm-release@v1
-        if: |
-          startsWith(github.repository, 'justjavac') &&
-          startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
-        with:
-          files: |
-            target/aarch64-apple-darwin/release/dvm-aarch64-apple-darwin.zip
-
-      - name: Release DVM(aarch64-unknown-linux-gnu)
-        uses: justjavac/action-dvm-release@v1
-        if: |
-          startsWith(github.repository, 'justjavac') &&
-          startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
-        with:
-          files: |
-            target/aarch64-unknown-linux-gnu/release/dvm-aarch64-unknown-linux-gnu.zip
+            target/release/dvm-aarch64-apple-darwin.zip
+            target/release/dvm-aarch64-unknown-linux-gnu.zip
 
       - name: Publish
         if: |

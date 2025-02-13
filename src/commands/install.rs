@@ -221,19 +221,29 @@ fn test_compose_url_to_exec() {
         "https://dl.deno.land/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip",
         "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-pc-windows-msvc.zip"
       );
-    } else if #[cfg(target_os = "macos")] {
+    } else if #[cfg(all(target_os = "macos", target_arch = "x86_64"))] {
       asserts_eq_one_of!(
         url.as_str(),
         "https://dl.deno.land/release/v1.7.0/deno-x86_64-apple-darwin.zip",
-        "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-apple-darwin.zip",
+        "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-apple-darwin.zip"
+      );
+    } else if #[cfg(all(target_os = "macos", target_arch = "aarch64"))] {
+      asserts_eq_one_of!(
+        url.as_str(),
         "https://dl.deno.land/release/v1.7.0/deno-aarch64-apple-darwin.zip",
         "https://dl.deno.js.cn/release/v1.7.0/deno-aarch64-apple-darwin.zip"
       );
-    } else if #[cfg(target_os = "linux")] {
+    } else if #[cfg(all(target_os = "linux", target_arch = "x86_64"))] {
       asserts_eq_one_of!(
         url.as_str(),
         "https://dl.deno.land/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip",
         "https://dl.deno.js.cn/release/v1.7.0/deno-x86_64-unknown-linux-gnu.zip"
+      );
+    } else if #[cfg(all(target_os = "linux", target_arch = "aarch64"))] {
+      asserts_eq_one_of!(
+        url.as_str(),
+        "https://dl.deno.land/release/v1.7.0/deno-aarch64-unknown-linux-gnu.zip",
+        "https://dl.deno.js.cn/release/v1.7.0/deno-aarch64-unknown-linux-gnu.zip"
       );
     }
   }
