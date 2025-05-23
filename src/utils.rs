@@ -6,7 +6,7 @@ use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
 use std::fs::write;
-use std::io::{stdin, Read, Write};
+use std::io::{stdin, stdout, BufReader, Read, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time;
@@ -42,12 +42,12 @@ pub fn run_with_spinner(
 pub fn prompt_request(prompt: &str) -> bool {
   print!("{} (Y/n)", prompt);
 
-  std::io::stdout().flush().unwrap();
-  let confirm = stdin()
-    .bytes()
-    .next()
-    .and_then(|it| it.ok())
-    .map(char::from)
+  stdout().flush().unwrap();
+  let mut buffer = [0; 1];
+  let confirm = BufReader::new(stdin())
+    .read(&mut buffer)
+    .ok()
+    .map(|_| buffer[0] as char)
     .unwrap_or_else(|| 'y');
   confirm == '\n' || confirm == '\r' || confirm.eq_ignore_ascii_case(&'y')
 }
@@ -107,9 +107,8 @@ pub fn dvm_root() -> PathBuf {
     // Note: on Windows, the $HOME environment variable may be set by users or by
     // third party software, but it is non-standard and should not be relied upon.
     home_dir()
-      .map(PathBuf::from)
       .map(|it| it.join(".dvm"))
-      .unwrap_or_else(|| TempDir::new().unwrap().into_path().join(".dvm"))
+      .unwrap_or_else(|| TempDir::new().unwrap().keep().join(".dvm"))
   })
 }
 
