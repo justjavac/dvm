@@ -160,7 +160,7 @@ fn rc_content(is_local: bool) -> (std::path::PathBuf, io::Result<String>) {
 }
 
 fn rc_content_cascade() -> io::Result<String> {
-  rc_content(false).1.or_else(|_| rc_content(true).1)
+  rc_content(true).1.or_else(|_| rc_content(false).1)
 }
 
 /// remove all key value pair that ain't supported by dvm from config file
