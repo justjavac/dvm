@@ -21,6 +21,7 @@ pub const DVM_CONFIGRC_KEY_REGISTRY_BINARY: &str = "registry_binary";
 pub const DVM_VERSION_SELF: &str = "self";
 pub const DVM_VERSION_CANARY: &str = "canary";
 pub const DVM_VERSION_LATEST: &str = "latest";
+pub const DVM_VERSION_LTS: &str = "lts";
 pub const DVM_VERSION_SYSTEM: &str = "system";
 pub const DVM_VERSION_INVALID: &str = "N/A";
 
@@ -35,8 +36,10 @@ cfg_if::cfg_if! {
 pub const AFTER_HELP: &str = "\x1b[33mEXAMPLE:\x1b[39m
   dvm install 1.3.2     Install v1.3.2 release
   dvm install           Install the latest available version
+  dvm install lts       Install the latest LTS version
   dvm use 1.0.0         Use v1.0.0 release
   dvm use latest        Use the latest alias that comes with dvm, equivalent to *
+  dvm use lts           Use the latest LTS version
   dvm use canary        Use the canary version of the Deno
 
 \x1b[33mNOTE:\x1b[39m

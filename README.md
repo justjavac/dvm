@@ -53,8 +53,10 @@ Options:
 EXAMPLE:
   dvm install 1.3.2     Install v1.3.2 release
   dvm install           Install the latest available version
+  dvm install lts       Install the latest LTS version
   dvm use 1.0.0         Use v1.0.0 release
   dvm use latest        Use the latest alias that comes with dvm, equivalent to *
+  dvm use lts           Use the latest LTS version
   dvm use canary        Use the canary version of the Deno
 
 NOTE:

@@ -1,8 +1,8 @@
 // Copyright 2022 justjavac. All rights reserved. MIT license.
 use crate::configrc::rc_get_with_fix;
 use crate::consts::{
-  DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LATEST_CANARY_PATH,
-  REGISTRY_LATEST_RELEASE_PATH,
+  DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_LTS,
+  REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH,
 };
 use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
@@ -19,6 +19,7 @@ use std::str::FromStr;
 use std::string::String;
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
+const DENO_RELEASES_LTS_SEARCH: &str = "https://github.com/denoland/deno/releases?q=LTS";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Cached {
@@ -30,6 +31,7 @@ pub struct Cached {
 pub enum VersionArg {
   Exact(Version),
   Range(VersionReq),
+  Lts,
 }
 
 impl std::fmt::Display for VersionArg {
@@ -37,6 +39,7 @@ impl std::fmt::Display for VersionArg {
     match self {
       VersionArg::Exact(version) => f.write_str(version.to_string().as_str()),
       VersionArg::Range(version) => f.write_str(version.to_string().as_str()),
+      VersionArg::Lts => f.write_str(DVM_VERSION_LTS),
     }
   }
 }
@@ -45,7 +48,9 @@ impl FromStr for VersionArg {
   type Err = ();
 
   fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-    if is_exact_version(s) {
+    if s == DVM_VERSION_LTS {
+      Ok(VersionArg::Lts)
+    } else if is_exact_version(s) {
       Version::parse(s).map(VersionArg::Exact).map_err(|_| ())
     } else {
       VersionReq::parse(s)
@@ -167,6 +172,24 @@ pub fn get_latest_version(registry: &str) -> Result<Version> {
   Ok(Version::parse(&v).unwrap())
 }
 
+pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
+  let response = tinyget::get(registry).send()?;
+  if response.status_code >= 400 {
+    anyhow::bail!("Failed to fetch Deno versions: {}", response.status_code);
+  }
+  latest_version_from_versions_json(response.as_str()?)
+}
+
+pub fn get_latest_lts_version() -> Result<Version> {
+  let response = tinyget::get(DENO_RELEASES_LTS_SEARCH)
+    .with_header("User-Agent", "dvm")
+    .send()?;
+  if response.status_code >= 400 {
+    anyhow::bail!("Failed to fetch Deno LTS releases: {}", response.status_code);
+  }
+  latest_lts_version_from_releases_html(response.as_str()?)
+}
+
 pub fn get_latest_canary(registry: &str) -> Result<String> {
   let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_CANARY_PATH)).send()?;
 
@@ -191,4 +214,76 @@ where
       .filter(|s| version_req.matches(s))
       .max(),
   )
+}
+
+fn latest_version_from_versions_json(content: &str) -> Result<Version> {
+  let versions = cli_versions_from_versions_json(content)?;
+  versions
+    .iter()
+    .filter_map(|s| Version::parse(s).ok())
+    .filter(|version| version.pre.is_empty())
+    .max()
+    .ok_or_else(|| anyhow::anyhow!("No stable Deno versions found"))
+}
+
+fn cli_versions_from_versions_json(content: &str) -> Result<Vec<String>> {
+  let json: serde_json::Value = serde_json::from_str(content)?;
+  let Some(cli_versions) = json.get("cli").and_then(|value| value.as_array()) else {
+    anyhow::bail!("The remote version list is missing cli versions");
+  };
+
+  Ok(
+    cli_versions
+      .iter()
+      .filter_map(|value| value.as_str())
+      .map(|version| version.trim_start_matches('v').to_string())
+      .collect(),
+  )
+}
+
+fn latest_lts_version_from_releases_html(content: &str) -> Result<Version> {
+  content
+    .match_indices("/denoland/deno/releases/tag/v")
+    .filter_map(|(index, _)| {
+      let version_start = index + "/denoland/deno/releases/tag/v".len();
+      let version = content[version_start..]
+        .chars()
+        .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '.' || *ch == '-')
+        .collect::<String>();
+      Version::parse(&version).ok()
+    })
+    .filter(|version| version.pre.is_empty())
+    .max()
+    .ok_or_else(|| anyhow::anyhow!("No Deno LTS release found"))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn latest_remote_version_uses_highest_stable_cli_version() {
+    let content = r#"{
+      "cli": ["v2.1.11", "v2.2.8", "v3.0.0-rc.1", "v2.2.7"]
+    }"#;
+
+    assert_eq!(
+      latest_version_from_versions_json(content).unwrap(),
+      Version::parse("2.2.8").unwrap()
+    );
+  }
+
+  #[test]
+  fn latest_lts_version_uses_highest_release_search_result() {
+    let content = r#"
+      <a href="/denoland/deno/releases/tag/v2.2.13">v2.2.13</a>
+      <a href="/denoland/deno/releases/tag/v2.2.15">v2.2.15</a>
+      <a href="/denoland/deno/releases/tag/v2.0.0-rc.1">v2.0.0-rc.1</a>
+    "#;
+
+    assert_eq!(
+      latest_lts_version_from_releases_html(content).unwrap(),
+      Version::parse("2.2.15").unwrap()
+    );
+  }
 }
