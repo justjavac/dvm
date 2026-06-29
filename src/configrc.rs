@@ -138,8 +138,8 @@ fn rc_parse(content: &str) -> Vec<(&str, &str)> {
     .filter(|it| it.contains('='))
     .map(|line| {
       let mut parts = line.splitn(2, '=');
-      let k = parts.next().unwrap();
-      let v = parts.next().unwrap_or("");
+      let k = parts.next().unwrap().trim();
+      let v = parts.next().unwrap_or("").trim();
       (k, v)
     })
     .collect::<Vec<_>>();
@@ -206,5 +206,20 @@ pub fn rc_unlink(is_local: bool) -> io::Result<()> {
     let home_dir = dirs::home_dir().ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
     let rc_file = home_dir.join(DVM_CONFIGRC_FILENAME);
     fs::remove_file(rc_file)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn rc_parse_trims_keys_and_values() {
+    let config = rc_parse(" deno_version = 1.2.3 \nregistry_binary = https://example.com/ \n");
+
+    assert_eq!(
+      config,
+      vec![("deno_version", "1.2.3"), ("registry_binary", "https://example.com/")]
+    );
   }
 }
