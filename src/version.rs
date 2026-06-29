@@ -48,6 +48,7 @@ impl FromStr for VersionArg {
   type Err = ();
 
   fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    let s = s.trim();
     if s == DVM_VERSION_LTS {
       Ok(VersionArg::Lts)
     } else if is_exact_version(s) {
@@ -285,5 +286,14 @@ mod tests {
       latest_lts_version_from_releases_html(content).unwrap(),
       Version::parse("2.2.15").unwrap()
     );
+  }
+
+  #[test]
+  fn version_arg_trims_input() {
+    assert_eq!(
+      VersionArg::from_str(" 1.2.3 \n").unwrap(),
+      VersionArg::Exact(Version::parse("1.2.3").unwrap())
+    );
+    assert_eq!(VersionArg::from_str(" lts \n").unwrap(), VersionArg::Lts);
   }
 }
