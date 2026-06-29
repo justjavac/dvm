@@ -48,9 +48,16 @@ fi
 cd "$dvm_bin_dir"
 chmod +x "$exe"
 
-case $SHELL in
-/bin/zsh) shell_profile=".zshrc" ;;
-*) shell_profile=".bash_profile" ;;
+case $(basename "$SHELL") in
+zsh) shell_profile=".zshrc" ;;
+bash)
+	if [ "$(uname -s)" = "Darwin" ]; then
+		shell_profile=".bash_profile"
+	else
+		shell_profile=".bashrc"
+	fi
+	;;
+*) shell_profile=".profile" ;;
 esac
 
 if [ ! $DVM_DIR ];then
