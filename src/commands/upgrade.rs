@@ -103,15 +103,21 @@ fn upgrade_self() -> Result<()> {
       fs::write(&tmp, script)?;
       let mut cmd = std::process::Command::new("powershell");
       cmd.arg("-ExecutionPolicy").arg("Bypass").arg("-File").arg(tmp);
-      cmd.status()?;
+      let status = cmd.status()?;
+      if !status.success() {
+        anyhow::bail!("Failed to upgrade dvm");
+      }
     } else {
       let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.sh";
       let script = tinyget::get(url).send()?;
       let script = script.as_str()?;
       let tmp = tempfile::tempdir()?;
       let tmp = tmp.path().join("install.sh");
-      fs::write(tmp, script)?;
-      std::process::Command::new("bash").arg(script).status()?;
+      fs::write(&tmp, script)?;
+      let status = std::process::Command::new("bash").arg(&tmp).status()?;
+      if !status.success() {
+        anyhow::bail!("Failed to upgrade dvm");
+      }
     }
   }
 
