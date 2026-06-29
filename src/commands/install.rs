@@ -82,11 +82,10 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   if exe_path.exists() {
     println!("Version v{} is already installed", install_version);
   } else {
-    let archive_data = download_package(
+    download_and_unpack_package(
       &compose_url_to_exec(&binary_registry_url, &install_version),
       &install_version,
     )?;
-    unpack(archive_data, &install_version)?;
   }
 
   if !no_use {
@@ -130,6 +129,35 @@ fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
 
 fn compose_url_to_exec(registry: &str, version: &Version) -> String {
   format!("{}release/v{}/{}", registry, version, ARCHIVE_NAME)
+}
+
+fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
+  let archive_data = download_package(url, version)?;
+  if let Err(err) = unpack(archive_data, version) {
+    eprintln!("Failed to unpack Deno v{}: {}", version, err);
+    eprintln!("Removing the corrupted archive and retrying download");
+    remove_version_dir(version)?;
+
+    let archive_data = download_package(url, version)?;
+    if let Err(retry_err) = unpack(archive_data, version) {
+      remove_version_dir(version)?;
+      return Err(anyhow::anyhow!(
+        "Failed to unpack Deno v{} after retry: {}",
+        version,
+        retry_err
+      ));
+    }
+  }
+
+  Ok(())
+}
+
+fn remove_version_dir(version: &Version) -> Result<()> {
+  let version_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
+  if version_dir.exists() {
+    fs::remove_dir_all(version_dir)?;
+  }
+  Ok(())
 }
 
 fn unpack(archive_data: Vec<u8>, version: &Version) -> Result<PathBuf> {
@@ -193,10 +221,14 @@ fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Re
         .spawn()?
         .wait()?
     }
-    ext => panic!("Unsupported archive type: '{}'", ext),
+    ext => anyhow::bail!("Unsupported archive type: '{}'", ext),
   };
-  assert!(unpack_status.success());
-  assert!(path.exists());
+  if !unpack_status.success() {
+    anyhow::bail!("Failed to unpack archive");
+  }
+  if !path.exists() {
+    anyhow::bail!("Unpacked archive did not contain {}", path.display());
+  }
   Ok(version_dir)
 }
 
