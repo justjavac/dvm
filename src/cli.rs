@@ -180,6 +180,26 @@ pub enum RegistryCommands {
   #[clap(about = "Show current binary registry and version registry")]
   Show,
 
+  #[clap(name = "official", about = "Set registry to official registry")]
+  Official {
+    #[clap(
+      long = "write-local",
+      short = 'L',
+      help = "Write to current directory .dvmrc file instead of global(user-wide) config"
+    )]
+    write_local: bool,
+  },
+
+  #[clap(name = "cn", about = "Set registry to cn registry")]
+  Cn {
+    #[clap(
+      long = "write-local",
+      short = 'L',
+      help = "Write to current directory .dvmrc file instead of global(user-wide) config"
+    )]
+    write_local: bool,
+  },
+
   #[clap(about = "Set registry to one of predefined registries")]
   Set {
     predefined: RegistryPredefined,
@@ -281,5 +301,29 @@ impl RegistryPredefined {
       RegistryPredefined::CN => REGISTRY_CN,
     }
     .to_string()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parses_registry_predefined_shortcuts() {
+    let cli = Cli::try_parse_from(["dvm", "registry", "cn"]).unwrap();
+    match cli.command {
+      Commands::Registry {
+        command: RegistryCommands::Cn { write_local },
+      } => assert!(!write_local),
+      _ => panic!("expected registry cn shortcut"),
+    }
+
+    let cli = Cli::try_parse_from(["dvm", "registry", "official", "--write-local"]).unwrap();
+    match cli.command {
+      Commands::Registry {
+        command: RegistryCommands::Official { write_local },
+      } => assert!(write_local),
+      _ => panic!("expected registry official shortcut"),
+    }
   }
 }

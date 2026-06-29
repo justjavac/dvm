@@ -35,6 +35,14 @@ pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
       println!("  binary_registry\t{}", rc_binary_registry);
       println!("  version_registry\t{}", rc_version_registry);
     }
+    RegistryCommands::Official { write_local } => {
+      rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_BINARY, REGISTRY_OFFICIAL)?;
+      rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LIST_OFFICIAL)?;
+    }
+    RegistryCommands::Cn { write_local } => {
+      rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_BINARY, REGISTRY_CN)?;
+      rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_LIST_CN)?;
+    }
     RegistryCommands::Set {
       predefined,
       write_local,
