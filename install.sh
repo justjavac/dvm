@@ -22,7 +22,7 @@ else
 	esac
 fi
 
-dvm_uri="https://cdn.jsdelivr.net/gh/justjavac/dvm_releases@main/dvm-${target}.zip"
+dvm_uri="https://github.com/justjavac/dvm/releases/latest/download/dvm-${target}.zip"
 
 dvm_dir="${DVM_DIR:-$HOME/.dvm}"
 dvm_bin_dir="$dvm_dir/bin"
