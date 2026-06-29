@@ -16,7 +16,7 @@ $DvmZip = "$BinDir\dvm.zip"
 $DvmExe = "$BinDir\dvm.exe"
 $DvmExeOldName = "dvm.exe.old"
 $DvmExeOld = "$BinDir\$DvmExeOldName"
-$DvmUri = "https://cdn.jsdelivr.net/gh/justjavac/dvm_releases@main/dvm-x86_64-pc-windows-msvc.zip"
+$DvmUri = "https://github.com/justjavac/dvm/releases/latest/download/dvm-x86_64-pc-windows-msvc.zip"
 
 if (!(Test-Path $BinDir)) {
   New-Item $BinDir -ItemType Directory | Out-Null
