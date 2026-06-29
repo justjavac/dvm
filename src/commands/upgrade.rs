@@ -2,7 +2,7 @@ use crate::{
   commands::install,
   consts::{DVM_VERSION_CANARY, DVM_VERSION_INVALID, DVM_VERSION_SELF},
   utils::best_version,
-  version::{remote_versions, VersionArg},
+  version::{get_latest_lts_version, remote_versions, VersionArg},
   DvmMeta,
 };
 use anyhow::{Ok, Result};
@@ -46,6 +46,11 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
           install::exec(meta, true, Some(v.to_string())).expect("Install failed");
         }
       }
+      VersionArg::Lts => {
+        let version = get_latest_lts_version()?;
+        install::exec(meta, true, Some(version.to_string())).expect("Install failed");
+        meta.set_version_mapping(alias, version.to_string());
+      }
       VersionArg::Range(r) => {
         let version = best_version(versions.iter().map(AsRef::as_ref), r).unwrap();
         install::exec(meta, true, Some(version.to_string())).expect("Install failed");
@@ -60,6 +65,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
 
       let latest = match VersionArg::from_str(alias.required.clone().as_str()).unwrap() {
         VersionArg::Exact(v) => v.to_string(),
+        VersionArg::Lts => get_latest_lts_version()?.to_string(),
         VersionArg::Range(v) => best_version(versions.iter().map(AsRef::as_ref), v).unwrap().to_string(),
       };
 

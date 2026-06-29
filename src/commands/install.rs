@@ -3,12 +3,12 @@
 use super::use_version;
 use crate::configrc::rc_get_with_fix;
 use crate::consts::{
-  DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_VERSION_CANARY,
-  DVM_VERSION_LATEST, REGISTRY_OFFICIAL,
+  DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_CONFIGRC_KEY_REGISTRY_VERSION,
+  DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_LTS, REGISTRY_LIST_OFFICIAL, REGISTRY_OFFICIAL,
 };
 use crate::meta::DvmMeta;
 use crate::utils::{deno_canary_path, deno_version_path, dvm_root};
-use crate::version::get_latest_canary;
+use crate::version::{get_latest_canary, get_latest_lts_version, get_latest_remote_version};
 use anyhow::Result;
 use cfg_if::cfg_if;
 use semver::Version;
@@ -34,6 +34,8 @@ cfg_if! {
 pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   let binary_registry_url =
     rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+  let version_registry_url =
+    rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
 
   if let Some(version) = version.clone() {
     if version == *DVM_VERSION_CANARY {
@@ -52,10 +54,27 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   }
 
   let install_version = match version {
+    Some(ref passed_version) if passed_version == DVM_VERSION_LATEST => {
+      println!("Checking for latest version");
+      let version = get_latest_remote_version(&version_registry_url)?;
+      println!("The latest version is v{}", version);
+      version
+    }
+    Some(ref passed_version) if passed_version == DVM_VERSION_LTS => {
+      println!("Checking for latest LTS version");
+      let version = get_latest_lts_version()?;
+      println!("The latest LTS version is v{}", version);
+      version
+    }
     Some(ref passed_version) => {
       Version::parse(passed_version).map_err(|_| anyhow::format_err!("Invalid semver {}", passed_version))?
     }
-    None => get_latest_version(&binary_registry_url)?,
+    None => {
+      println!("Checking for latest version");
+      let version = get_latest_remote_version(&version_registry_url)?;
+      println!("The latest version is v{}", version);
+      version
+    }
   };
 
   let exe_path = deno_version_path(&install_version);
@@ -80,17 +99,6 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   }
 
   Ok(())
-}
-
-fn get_latest_version(registry: &str) -> Result<Version> {
-  println!("Checking for latest version");
-
-  let response = tinyget::get(format!("{}release-latest.txt", registry)).send()?;
-
-  let body = response.as_str()?;
-  let v = body.trim().replace('v', "");
-  println!("The latest version is v{}", &v);
-  Ok(Version::parse(&v).unwrap())
 }
 
 fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {

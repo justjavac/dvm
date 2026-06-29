@@ -1,10 +1,10 @@
 use std::process::Stdio;
 
 use crate::{
-  consts::DVM_VERSION_LATEST,
+  consts::{DVM_VERSION_LATEST, DVM_VERSION_LTS},
   meta::DvmMeta,
   utils::{best_version, deno_version_path, is_exact_version, prompt_request},
-  version::{remote_versions, VersionArg},
+  version::{get_latest_lts_version, remote_versions, VersionArg},
 };
 use anyhow::Result;
 use colored::Colorize;
@@ -17,23 +17,34 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> R
   let version = version.unwrap_or_else(|| DVM_VERSION_LATEST.to_string());
   let v = version.clone();
 
-  let Some(version) = is_exact_version(&version).then_some(version).or_else(|| {
-    meta.has_alias(&v).then(|| {
-      let version_req = meta.resolve_version_req(&v);
-      match version_req {
-        VersionArg::Exact(v) => v.to_string(),
-        VersionArg::Range(r) => {
-          let best = best_version(versions.iter().map(AsRef::as_ref), r.clone());
-          if let Some(best) = best {
-            best.to_string()
-          } else {
-            eprintln!("No version found for {} in {:?}", r, versions);
-            std::process::exit(1);
-          }
+  let version = if is_exact_version(&version) {
+    version
+  } else if version == DVM_VERSION_LTS {
+    println!("Checking for latest LTS version");
+    let version = get_latest_lts_version()?;
+    println!("The latest LTS version is v{}", version);
+    version.to_string()
+  } else if meta.has_alias(&v) {
+    let version_req = meta.resolve_version_req(&v);
+    match version_req {
+      VersionArg::Exact(v) => v.to_string(),
+      VersionArg::Lts => {
+        println!("Checking for latest LTS version");
+        let version = get_latest_lts_version()?;
+        println!("The latest LTS version is v{}", version);
+        version.to_string()
+      }
+      VersionArg::Range(r) => {
+        let best = best_version(versions.iter().map(AsRef::as_ref), r.clone());
+        if let Some(best) = best {
+          best.to_string()
+        } else {
+          eprintln!("No version found for {} in {:?}", r, versions);
+          std::process::exit(1);
         }
       }
-    })
-  }) else {
+    }
+  } else {
     eprintln!("{}", "No such alias or version found.".red());
     std::process::exit(1);
   };

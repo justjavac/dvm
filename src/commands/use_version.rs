@@ -1,28 +1,27 @@
 use crate::commands::install;
 use crate::configrc::{rc_get_with_fix, rc_update};
 use crate::consts::{
-  DVM_CONFIGRC_KEY_DENO_VERSION, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_VERSION_CANARY, DVM_VERSION_LATEST,
-  DVM_VERSION_SYSTEM, REGISTRY_OFFICIAL,
+  DVM_CONFIGRC_KEY_DENO_VERSION, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_CANARY, DVM_VERSION_LATEST,
+  DVM_VERSION_LTS, DVM_VERSION_SYSTEM, REGISTRY_LIST_OFFICIAL,
 };
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
 use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, run_with_spinner, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc};
 use crate::version::remote_versions;
-use crate::version::{get_latest_version, VersionArg};
+use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};
 use anyhow::Result;
-use semver::Version;
+use semver::{Version, VersionReq};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 /// using a tag or a specific version
 pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> Result<()> {
-  let rc_binary_url =
-    rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+  let rc_version_url =
+    rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
 
-  let version_req: VersionArg;
-  if let Some(ref version) = version {
+  let version_req = if let Some(ref version) = version {
     if version == &DVM_VERSION_CANARY.to_string() {
       let canary_path = deno_canary_path();
       if !canary_path.exists() {
@@ -40,12 +39,14 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
       std::fs::remove_file(deno_bin_path()).unwrap();
       println!("Deno that was previously installed on your system will be activated now.");
       return Ok(());
-    }
-
-    if is_exact_version(version) {
-      version_req = VersionArg::Exact(Version::parse(version).unwrap());
+    } else if version == DVM_VERSION_LTS {
+      VersionArg::Lts
+    } else if version == DVM_VERSION_LATEST {
+      VersionArg::Range(VersionReq::parse("*").unwrap())
+    } else if is_exact_version(version) {
+      VersionArg::Exact(Version::parse(version).unwrap())
     } else if meta.has_alias(version) {
-      version_req = meta.resolve_version_req(version);
+      meta.resolve_version_req(version)
     } else {
       // dvm will reject for using semver range directly now.
       eprintln!(
@@ -56,23 +57,29 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     }
   } else {
     println!("No version input detect, try to use version in .dvmrc file");
-    version_req = load_dvmrc();
+    let version_req = load_dvmrc();
     println!("Using semver range: {}", version_req);
-  }
+    version_req
+  };
 
-  let used_version = if version_req.to_string() == "*" {
-    println!("Checking for latest version");
-    let version = get_latest_version(&rc_binary_url).expect("Get latest version failed");
-    println!("The latest version is v{}", version);
-    version
-  } else {
-    match version_req {
-      VersionArg::Exact(ref v) => v.clone(),
-      VersionArg::Range(ref r) => {
-        println!("Fetching version list");
-        let versions = remote_versions().expect("Fetching version list failed.");
-        best_version(versions.iter().map(AsRef::as_ref), r.clone()).unwrap()
-      }
+  let used_version = match &version_req {
+    VersionArg::Lts => {
+      println!("Checking for latest LTS version");
+      let version = get_latest_lts_version()?;
+      println!("The latest LTS version is v{}", version);
+      version
+    }
+    VersionArg::Range(r) if r.to_string() == "*" => {
+      println!("Checking for latest version");
+      let version = get_latest_remote_version(&rc_version_url)?;
+      println!("The latest version is v{}", version);
+      version
+    }
+    VersionArg::Exact(v) => v.clone(),
+    VersionArg::Range(r) => {
+      println!("Fetching version list");
+      let versions = remote_versions().expect("Fetching version list failed.");
+      best_version(versions.iter().map(AsRef::as_ref), r.clone()).unwrap()
     }
   };
 
