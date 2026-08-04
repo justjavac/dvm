@@ -11,7 +11,7 @@ jobs:
         os:
           - ubuntu-latest
           - ubuntu-24.04-arm
-          - macOS-13  # Intel
+          - macOS-15-intel  # Intel
           - macOS-latest  # Apple Silicon
           - windows-latest
 
@@ -90,7 +90,7 @@ jobs:
         working-directory: target/release
 
       - name: Pre-release (mac)
-        if: matrix.os == 'macOS-13'
+        if: matrix.os == 'macOS-15-intel'
         run: zip -r dvm-x86_64-apple-darwin.zip dvm
         working-directory: target/release
 
