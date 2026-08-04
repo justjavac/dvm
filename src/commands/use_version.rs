@@ -7,10 +7,11 @@ use crate::consts::{
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
 use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, run_with_spinner, update_stub};
-use crate::utils::{is_exact_version, load_dvmrc};
+use crate::utils::{is_exact_version, load_dvmrc, DenoResolution};
 use crate::version::remote_versions;
 use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};
 use anyhow::Result;
+use colored::Colorize;
 use semver::{Version, VersionReq};
 use std::fs;
 use std::path::Path;
@@ -129,7 +130,9 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
 
     Ok(())
-  })
+  })?;
+  warn_if_deno_shadowed();
+  Ok(())
 }
 
 pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String, local: bool) -> Result<()> {
@@ -147,7 +150,41 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;
     Ok(())
-  })
+  })?;
+  warn_if_deno_shadowed();
+  Ok(())
+}
+
+/// `dvm use` only rewrites the hard link inside dvm's bin directory. When
+/// another deno sits earlier on `PATH` (winget, scoop, the official
+/// installer, ...), `deno` keeps resolving to that other installation and the
+/// switch silently does nothing — see
+/// <https://github.com/justjavac/dvm/issues/244>. Warn loudly in that case.
+fn warn_if_deno_shadowed() {
+  let bin_dir = crate::utils::dvm_bin_dir();
+  match crate::utils::deno_resolution() {
+    DenoResolution::Dvm => {}
+    DenoResolution::Shadowed(path) => eprintln!(
+      "{}",
+      format!(
+        "Warning: `deno` resolves to `{}` instead of `{}`.\n\
+         The selected version will not be used. Run `dvm doctor` and restart your shell, \
+         or move dvm's bin directory earlier in your PATH.",
+        path.display(),
+        bin_dir.display()
+      )
+      .yellow()
+    ),
+    DenoResolution::NotOnPath => eprintln!(
+      "{}",
+      format!(
+        "Warning: `deno` was not found on your PATH.\n\
+         Add `{}` to your PATH (or run `dvm doctor`), then restart your shell.",
+        bin_dir.display()
+      )
+      .yellow()
+    ),
+  }
 }
 
 fn check_exe(exe_path: &Path, expected_version: &Version) -> Result<()> {
