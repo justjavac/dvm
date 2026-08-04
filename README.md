@@ -10,13 +10,13 @@ the [releases page](https://github.com/justjavac/dvm/releases).
 **With Shell:**
 
 ```sh
-curl -fsSL https://dvm.deno.dev | sh
+curl -fsSL https://raw.githubusercontent.com/justjavac/dvm/main/install.sh | sh
 ```
 
 **With PowerShell:**
 
 ```powershell
-irm https://dvm.deno.dev | iex
+irm https://raw.githubusercontent.com/justjavac/dvm/main/install.ps1 | iex
 ```
 
 ## Usage
@@ -145,7 +145,7 @@ The program [`unzip`](https://linux.die.net/man/1/unzip) is a requirement for
 the Shell installer.
 
 ```sh
-$ curl -fsSL https://deno.land/x/dvm/install.sh | sh
+$ curl -fsSL https://raw.githubusercontent.com/justjavac/dvm/main/install.sh | sh
 Error: unzip is required to install dvm (see: https://github.com/justjavac/dvm#unzip-is-required).
 ```
 

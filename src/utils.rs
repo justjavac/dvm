@@ -152,7 +152,7 @@ mod tests {
 
   #[test]
   fn test_best_version() {
-    let versions = vec![
+    let versions = [
       "0.8.5",
       "0.8.0",
       "0.9.0",
