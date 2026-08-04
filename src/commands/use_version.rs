@@ -133,7 +133,7 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
 }
 
 pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String, local: bool) -> Result<()> {
-  run_with_spinner("Processing".to_string(), format!("Now using deno {}", &version), |_| {
+  run_with_spinner("Processing".to_string(), format!("Now using deno {}", version), |_| {
     check_exe(exe_path, version)?;
 
     let bin_path = deno_bin_path();

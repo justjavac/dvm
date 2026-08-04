@@ -101,12 +101,12 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
 }
 
 fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
-  println!("downloading {}", &url);
+  println!("downloading {}", url);
 
   let response = match tinyget::get(url).send() {
     Ok(response) => response,
     Err(error) => {
-      println!("Network error {}", &error);
+      println!("Network error {}", error);
       std::process::exit(1)
     }
   };
@@ -117,12 +117,12 @@ fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
   }
 
   if response.status_code >= 400 && response.status_code <= 599 {
-    println!("Download '{}' failed: {}", &url, response.status_code);
+    println!("Download '{}' failed: {}", url, response.status_code);
     std::process::exit(1)
   }
 
   println!("Version has been found");
-  println!("Deno v{} has been downloaded", &version);
+  println!("Deno v{} has been downloaded", version);
 
   Ok(response.into_bytes())
 }
@@ -206,9 +206,9 @@ fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Re
           }",
         )
         .arg("-Path")
-        .arg(format!("'{}'", &archive_path.to_str().unwrap()))
+        .arg(format!("'{}'", archive_path.to_str().unwrap()))
         .arg("-DestinationPath")
-        .arg(format!("'{}'", &version_dir.to_str().unwrap()))
+        .arg(format!("'{}'", version_dir.to_str().unwrap()))
         .spawn()?
         .wait()?
     }

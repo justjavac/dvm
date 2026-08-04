@@ -68,7 +68,7 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
           println!(
             "{} -> {} ( -> {})",
             apply_alias_color(&alias.name, "norm"),
-            &alias.required,
+            alias.required,
             apply_alias_color(upgrade_version.to_string().as_str(), "highlightdark")
           );
           continue;
