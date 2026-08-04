@@ -7,6 +7,7 @@ use semver::{Version, VersionReq};
 use std::env;
 use std::fs::write;
 use std::io::{stdin, stdout, BufReader, Read, Write};
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time;
@@ -130,6 +131,60 @@ pub fn deno_bin_path() -> PathBuf {
   dvm_bin_dir.join(DENO_EXE)
 }
 
+/// dvm's bin directory, i.e. the directory that must come first on `PATH`
+/// for the version selected by `dvm use` to win.
+pub fn dvm_bin_dir() -> PathBuf {
+  deno_bin_path().parent().unwrap().to_path_buf()
+}
+
+/// Where the `deno` command found on `PATH` actually points, relative to
+/// dvm's bin directory.
+#[derive(Debug, PartialEq, Eq)]
+pub enum DenoResolution {
+  /// `deno` resolves into dvm's bin directory — version switching works.
+  Dvm,
+  /// `deno` resolves to another installation that shadows dvm's hard link,
+  /// e.g. a deno installed by winget/scoop that sits earlier on `PATH`.
+  Shadowed(PathBuf),
+  /// No `deno` on `PATH` at all.
+  NotOnPath,
+}
+
+/// Resolve `deno` on the current `PATH` and classify it against dvm's bin
+/// directory. See <https://github.com/justjavac/dvm/issues/244>.
+pub fn deno_resolution() -> DenoResolution {
+  classify_deno_resolution(which::which("deno").ok().as_deref(), &dvm_bin_dir())
+}
+
+fn classify_deno_resolution(resolved: Option<&Path>, bin_dir: &Path) -> DenoResolution {
+  match resolved {
+    None => DenoResolution::NotOnPath,
+    Some(path) if path_contains_dir(path, bin_dir) => DenoResolution::Dvm,
+    Some(path) => DenoResolution::Shadowed(path.to_path_buf()),
+  }
+}
+
+/// Is `path` inside directory `dir`? Component-aware, so `/a/bin2/x` does not
+/// count as inside `/a/bin`. Case-insensitive on Windows.
+#[cfg(not(windows))]
+fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  path.starts_with(dir)
+}
+
+/// Is `path` inside directory `dir`? Component-aware, so `/a/bin2/x` does not
+/// count as inside `/a/bin`. Case-insensitive on Windows.
+#[cfg(windows)]
+fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  fn normalize(p: &Path) -> String {
+    p.to_string_lossy().replace('/', "\\").to_lowercase()
+  }
+  let mut dir = normalize(dir);
+  if !dir.ends_with('\\') {
+    dir.push('\\');
+  }
+  normalize(path).starts_with(&dir)
+}
+
 pub fn deno_version_path(version: &Version) -> PathBuf {
   let dvm_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
   dvm_dir.join(DENO_EXE)
@@ -174,5 +229,41 @@ mod tests {
       best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("~0.8").unwrap()),
       Some(Version::parse("0.8.5").unwrap())
     );
+  }
+
+  #[test]
+  fn deno_resolution_classification() {
+    let bin_dir = Path::new("/home/u/.dvm/bin");
+
+    assert_eq!(classify_deno_resolution(None, bin_dir), DenoResolution::NotOnPath);
+    assert_eq!(
+      classify_deno_resolution(Some(Path::new("/home/u/.dvm/bin/deno")), bin_dir),
+      DenoResolution::Dvm
+    );
+    assert_eq!(
+      classify_deno_resolution(Some(Path::new("/usr/local/bin/deno")), bin_dir),
+      DenoResolution::Shadowed(PathBuf::from("/usr/local/bin/deno"))
+    );
+  }
+
+  #[test]
+  fn path_contains_dir_is_component_aware() {
+    let bin_dir = Path::new("/home/u/.dvm/bin");
+
+    assert!(path_contains_dir(Path::new("/home/u/.dvm/bin/deno"), bin_dir));
+    // `bin2` merely shares a string prefix with `bin` — must not match.
+    assert!(!path_contains_dir(Path::new("/home/u/.dvm/bin2/deno"), bin_dir));
+    // A path shorter than the bin dir cannot be inside it.
+    assert!(!path_contains_dir(Path::new("/home/u/.dvm"), bin_dir));
+  }
+
+  #[cfg(windows)]
+  #[test]
+  fn path_contains_dir_is_case_insensitive_on_windows() {
+    let bin_dir = Path::new("C:\\Users\\me\\.dvm\\bin");
+
+    assert!(path_contains_dir(Path::new("c:\\users\\me\\.dvm\\bin\\deno.exe"), bin_dir));
+    assert!(path_contains_dir(Path::new("C:/Users/me/.dvm/bin/deno.exe"), bin_dir));
+    assert!(!path_contains_dir(Path::new("C:\\Users\\me\\.dvm\\bin2\\deno.exe"), bin_dir));
   }
 }
