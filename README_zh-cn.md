@@ -9,13 +9,13 @@
 **Shell 安装：**
 
 ```sh
-curl -fsSL https://deno.land/x/dvm/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/justjavac/dvm/main/install.sh | sh
 ```
 
 **PowerShell 安装：**
 
 ```powershell
-irm https://deno.land/x/dvm/install.ps1 | iex
+irm https://raw.githubusercontent.com/justjavac/dvm/main/install.ps1 | iex
 ```
 
 **设置中文镜像：`dvm registry cn`**。
@@ -143,7 +143,7 @@ deno v1.2.0 is not installed. Use `dvm install 1.2.0` to install it first.
 此项目需要依赖 [`unzip`](https://linux.die.net/man/1/unzip) 进行 Shell 安装。
 
 ```sh
-$ curl -fsSL https://deno.land/x/dvm/install.sh | sh
+$ curl -fsSL https://raw.githubusercontent.com/justjavac/dvm/main/install.sh | sh
 Error: unzip is required to install dvm (see: https://github.com/justjavac/dvm#unzip-is-required).
 ```
 

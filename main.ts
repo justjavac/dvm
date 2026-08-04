@@ -14,10 +14,10 @@ Deno.serve(async (req: Request) => {
 
   Install With Shell:
 
-    curl -fsSL https://dvm.deno.dev | sh
+    curl -fsSL https://raw.githubusercontent.com/justjavac/dvm/main/install.sh | sh
   
   Install With PowerShell:
 
-    irm https://dvm.deno.dev | iex
+    irm https://raw.githubusercontent.com/justjavac/dvm/main/install.ps1 | iex
   `);
 });
