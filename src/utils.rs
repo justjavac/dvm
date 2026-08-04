@@ -262,8 +262,14 @@ mod tests {
   fn path_contains_dir_is_case_insensitive_on_windows() {
     let bin_dir = Path::new("C:\\Users\\me\\.dvm\\bin");
 
-    assert!(path_contains_dir(Path::new("c:\\users\\me\\.dvm\\bin\\deno.exe"), bin_dir));
+    assert!(path_contains_dir(
+      Path::new("c:\\users\\me\\.dvm\\bin\\deno.exe"),
+      bin_dir
+    ));
     assert!(path_contains_dir(Path::new("C:/Users/me/.dvm/bin/deno.exe"), bin_dir));
-    assert!(!path_contains_dir(Path::new("C:\\Users\\me\\.dvm\\bin2\\deno.exe"), bin_dir));
+    assert!(!path_contains_dir(
+      Path::new("C:\\Users\\me\\.dvm\\bin2\\deno.exe"),
+      bin_dir
+    ));
   }
 }
