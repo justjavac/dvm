@@ -137,7 +137,7 @@ jobs:
 
       - name: Publish
         if: |
-          startsWith(matrix.os, 'ubuntu') &&
+          matrix.os == 'ubuntu-latest' &&
           startsWith(github.repository, 'justjavac') &&
           startsWith(github.ref, 'refs/tags/')
         env:
