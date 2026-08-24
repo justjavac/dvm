@@ -11,7 +11,6 @@ use std::fs;
 use std::str::FromStr;
 
 pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
-  let versions = remote_versions().expect("Fetching version list failed.");
   if let Some(alias) = alias {
     if alias == DVM_VERSION_SELF {
       upgrade_self()?;
@@ -20,7 +19,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
 
     if alias == DVM_VERSION_CANARY {
       println!("Upgrading {}", alias.bright_black());
-      install::exec(meta, true, Some(alias)).unwrap();
+      install::exec(meta, true, Some(alias))?;
       println!("All aliases have been upgraded");
       return Ok(());
     }
@@ -43,21 +42,26 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
           println!("{} is already the latest version", alias);
           std::process::exit(0);
         } else {
-          install::exec(meta, true, Some(v.to_string())).expect("Install failed");
+          install::exec(meta, true, Some(v.to_string()))?;
         }
       }
       VersionArg::Lts => {
         let version = get_latest_lts_version()?;
-        install::exec(meta, true, Some(version.to_string())).expect("Install failed");
+        install::exec(meta, true, Some(version.to_string()))?;
         meta.set_version_mapping(alias, version.to_string());
       }
       VersionArg::Range(r) => {
-        let version = best_version(versions.iter().map(AsRef::as_ref), r).unwrap();
-        install::exec(meta, true, Some(version.to_string())).expect("Install failed");
+        // Only a semver range needs the full list, so it is fetched here rather
+        // than up front: `dvm upgrade self` and `dvm upgrade canary` would
+        // otherwise prompt for a version-cache update they never read.
+        let versions = remote_versions()?;
+        let version = match_version(&versions, &r)?;
+        install::exec(meta, true, Some(version.to_string()))?;
         meta.set_version_mapping(alias, version.to_string());
       }
     }
   } else {
+    let versions = remote_versions()?;
     for alias in meta.list_alias() {
       let current = meta
         .get_version_mapping(alias.name.as_str())
@@ -66,7 +70,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
       let latest = match VersionArg::from_str(alias.required.clone().as_str()).unwrap() {
         VersionArg::Exact(v) => v.to_string(),
         VersionArg::Lts => get_latest_lts_version()?.to_string(),
-        VersionArg::Range(v) => best_version(versions.iter().map(AsRef::as_ref), v).unwrap().to_string(),
+        VersionArg::Range(v) => match_version(&versions, &v)?.to_string(),
       };
 
       if current == latest {
@@ -97,6 +101,13 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
   }
 
   Ok(())
+}
+
+/// Highest installed-or-available version satisfying `req`, erroring instead of
+/// panicking when the registry lists nothing that matches.
+fn match_version(versions: &[String], req: &semver::VersionReq) -> Result<semver::Version> {
+  best_version(versions.iter().map(AsRef::as_ref), req.clone())
+    .ok_or_else(|| anyhow::anyhow!("No released Deno version matches `{}`", req))
 }
 
 fn upgrade_self() -> Result<()> {
