@@ -1,7 +1,7 @@
 use crate::{
   commands::install,
   consts::{DVM_VERSION_CANARY, DVM_VERSION_INVALID, DVM_VERSION_SELF},
-  utils::best_version,
+  utils::{best_version, deno_canary_path},
   version::{get_latest_lts_version, remote_versions, VersionArg},
   DvmMeta,
 };
@@ -81,9 +81,16 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
       );
       install::exec(meta, true, Some(latest.clone()))?;
       meta.set_version_mapping(alias.name, latest);
+    }
 
+    // canary is not an alias, so it lives outside the loop: upgrading it in the
+    // loop body re-downloaded it once per upgraded alias, and skipped it
+    // entirely when every alias was already current. Only refresh a canary the
+    // user actually installed — otherwise `dvm upgrade` would pull a canary
+    // build for someone who never asked for one.
+    if deno_canary_path().exists() {
       println!("Upgrading {}", DVM_VERSION_CANARY.bright_black());
-      install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string())).unwrap();
+      install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
     }
 
     println!("All aliases have been upgraded");
