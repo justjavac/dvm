@@ -128,7 +128,7 @@ impl DvmMeta {
             let last_used = std::fs::read_to_string(&stub)
               .ok()
               .and_then(|content| content.trim().parse::<u128>().ok());
-            if last_used.is_some_and(|it| it > now() - DVM_CACHE_INVALID_TIMEOUT) {
+            if last_used.is_some_and(|it| it > now().saturating_sub(DVM_CACHE_INVALID_TIMEOUT)) {
               continue;
             }
           }
