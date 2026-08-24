@@ -61,16 +61,14 @@ impl FromStr for VersionArg {
 }
 
 pub fn current_version() -> Option<String> {
-  match Command::new("deno").arg("-V").stderr(Stdio::inherit()).output() {
-    Ok(output) => {
-      assert!(output.status.success());
-      match String::from_utf8(output.stdout) {
-        Ok(stdout) => Some(stdout.trim()[5..].to_string()),
-        Err(_) => None,
-      }
-    }
-    Err(_) => None,
+  let output = Command::new("deno").arg("-V").stderr(Stdio::inherit()).output().ok()?;
+  if !output.status.success() {
+    return None;
   }
+  let stdout = String::from_utf8(output.stdout).ok()?;
+  // `deno -V` prints `deno x.y.z`; return the version, or None if the format
+  // is not what we expect rather than slicing into the middle of a char.
+  stdout.trim().strip_prefix("deno ").map(|version| version.to_string())
 }
 
 pub fn local_versions() -> Vec<String> {

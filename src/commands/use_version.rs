@@ -184,8 +184,20 @@ fn check_exe(exe_path: &Path, expected_version: &Version) -> Result<()> {
     .arg("-V")
     .stderr(std::process::Stdio::inherit())
     .output()?;
+  if !output.status.success() {
+    anyhow::bail!("{} exited with {}", exe_path.display(), output.status);
+  }
   let stdout = String::from_utf8(output.stdout)?;
-  assert!(output.status.success());
-  assert_eq!(stdout.trim(), format!("deno {}", expected_version));
+  let reported = stdout.trim();
+  let expected = format!("deno {}", expected_version);
+  if reported != expected {
+    anyhow::bail!(
+      "{} reports `{}`, expected `{}`. Try reinstalling with `dvm install {}`.",
+      exe_path.display(),
+      reported,
+      expected,
+      expected_version
+    );
+  }
   Ok(())
 }
