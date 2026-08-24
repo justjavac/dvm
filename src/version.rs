@@ -175,15 +175,15 @@ pub fn get_latest_canary(registry: &str) -> Result<String> {
   Ok(body.trim().trim_start_matches('v').to_string())
 }
 
-pub fn version_req_parse(version: &str) -> VersionReq {
-  VersionReq::parse(version).unwrap_or_else(|_| panic!("version is invalid: {}", version))
+pub fn version_req_parse(version: &str) -> Result<VersionReq> {
+  VersionReq::parse(version).map_err(|err| anyhow::anyhow!("`{}` is not a valid semver range: {}", version, err))
 }
 
 pub fn find_max_matching_version<'a, I>(version_req_str: &str, iterable: I) -> Result<Option<Version>>
 where
   I: IntoIterator<Item = &'a str>,
 {
-  let version_req = version_req_parse(version_req_str);
+  let version_req = version_req_parse(version_req_str)?;
   Ok(
     iterable
       .into_iter()

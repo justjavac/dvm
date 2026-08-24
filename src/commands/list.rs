@@ -11,7 +11,7 @@ pub fn exec() -> Result<()> {
 }
 
 pub fn exec_remote() -> Result<()> {
-  let versions = remote_versions().unwrap();
+  let versions = remote_versions()?;
 
   print_versions(versions);
   Ok(())

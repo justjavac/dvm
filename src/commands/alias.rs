@@ -25,7 +25,9 @@ fn apply_alias_color(a: &str, c: &str) -> ColoredString {
 pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
   match command {
     AliasCommands::Set { name, content } => {
-      version_req_parse(content.as_str());
+      // Reject a range dvm cannot resolve later rather than storing it and
+      // failing on every subsequent `dvm alias list` / `dvm use <name>`.
+      version_req_parse(content.as_str())?;
       meta.set_alias(name, content);
       Ok(())
     }
@@ -34,15 +36,15 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
       Ok(())
     }
     AliasCommands::List => {
-      let remote_versions = remote_versions().unwrap();
+      let remote_versions = remote_versions()?;
       let local_versions = local_versions();
+      // An alias whose stored range no longer parses is shown without an
+      // upgrade hint instead of taking down the whole listing.
       let get_upgrade_version = |version_str: &str| {
-        let max_remote_version =
-          find_max_matching_version(version_str, remote_versions.iter().map(AsRef::as_ref)).unwrap();
+        let max_remote = find_max_matching_version(version_str, remote_versions.iter().map(AsRef::as_ref)).ok()?;
+        let max_local = find_max_matching_version(version_str, local_versions.iter().map(AsRef::as_ref)).ok()?;
 
-        let max_local_version =
-          find_max_matching_version(version_str, local_versions.iter().map(AsRef::as_ref)).unwrap();
-        if let (Some(max_remote), Some(max_local)) = (max_remote_version, max_local_version) {
+        if let (Some(max_remote), Some(max_local)) = (max_remote, max_local) {
           if max_remote > max_local {
             return Some(max_remote);
           }
