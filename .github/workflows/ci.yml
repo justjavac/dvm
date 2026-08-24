@@ -22,23 +22,12 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
           components: rustfmt, clippy
-
-      - name: Install rust
-        uses: hecrj/setup-rust-action@v1
-
-      - name: Install clippy and rustfmt
-        run: |
-          rustup component add clippy
-          rustup component add rustfmt
 
       - name: Log versions
         run: |
@@ -46,7 +35,7 @@ jobs:
           cargo --version
 
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |-
             ~/.cargo/registry/index/
@@ -105,7 +94,7 @@ jobs:
           Compress-Archive -CompressionLevel Optimal -Force -Path target/release/dvm.exe -DestinationPath target/release/dvm-x86_64-pc-windows-msvc.zip
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: |
           startsWith(github.repository, 'justjavac') &&
           startsWith(github.ref, 'refs/tags/')
