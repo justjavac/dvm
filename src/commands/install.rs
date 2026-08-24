@@ -39,14 +39,11 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
 
   if let Some(version) = version.clone() {
     if version == *DVM_VERSION_CANARY {
-      let canary_path = deno_canary_path();
-      std::fs::create_dir_all(canary_path.parent().unwrap())?;
-      let hash = get_latest_canary(&binary_registry_url).expect("Failed to get latest canary");
-      let data = download_canary(&binary_registry_url, &hash)?;
-      unpack_canary(data)?;
+      let hash = get_latest_canary(&binary_registry_url)?;
+      download_and_unpack_canary(&binary_registry_url, &hash)?;
 
       if !no_use {
-        use_version::use_canary_bin_path(false).unwrap();
+        use_version::use_canary_bin_path(false)?;
       }
 
       return Ok(());
@@ -100,31 +97,34 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   Ok(())
 }
 
-fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
+/// Fetch `url`, rejecting error responses so a 404 page never reaches the
+/// unpacker as if it were an archive.
+fn download_archive(url: &str) -> Result<Vec<u8>> {
   println!("downloading {}", url);
 
   let response = match tinyget::get(url).send() {
     Ok(response) => response,
-    Err(error) => {
-      println!("Network error {}", error);
-      std::process::exit(1)
-    }
+    Err(error) => anyhow::bail!("Network error {}", error),
   };
 
   if response.status_code == 404 {
-    println!("Version has not been found, aborting");
-    std::process::exit(1)
+    anyhow::bail!("'{}' has not been found", url);
   }
 
-  if response.status_code >= 400 && response.status_code <= 599 {
-    println!("Download '{}' failed: {}", url, response.status_code);
-    std::process::exit(1)
+  if response.status_code >= 400 {
+    anyhow::bail!("Download '{}' failed: {}", url, response.status_code);
   }
+
+  Ok(response.into_bytes())
+}
+
+fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
+  let archive_data = download_archive(url)?;
 
   println!("Version has been found");
   println!("Deno v{} has been downloaded", version);
 
-  Ok(response.into_bytes())
+  Ok(archive_data)
 }
 
 fn compose_url_to_exec(registry: &str, version: &Version) -> String {
@@ -232,7 +232,7 @@ fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Re
   Ok(version_dir)
 }
 
-fn download_canary(registry: &str, hash: &str) -> Result<Vec<u8>> {
+fn compose_url_to_canary(registry: &str, hash: &str) -> String {
   // TODO: remove this when deno canary support m1 chip,
   let archive_name = if ARCHIVE_NAME == "deno-aarch64-apple-darwin.zip" {
     "deno-x86_64-apple-darwin.zip"
@@ -240,10 +240,41 @@ fn download_canary(registry: &str, hash: &str) -> Result<Vec<u8>> {
     ARCHIVE_NAME
   };
 
-  let url = format!("{}canary/{}/{}", registry, hash, archive_name);
+  format!("{}canary/{}/{}", registry, hash, archive_name)
+}
 
-  let resp = tinyget::get(url).send()?;
-  Ok(resp.into_bytes())
+/// Same retry as `download_and_unpack_package`: a truncated download would
+/// otherwise leave a permanently broken canary behind (see
+/// <https://github.com/justjavac/dvm/issues/242>).
+fn download_and_unpack_canary(registry: &str, hash: &str) -> Result<()> {
+  let url = compose_url_to_canary(registry, hash);
+
+  let archive_data = download_archive(&url)?;
+  if let Err(err) = unpack_canary(archive_data) {
+    eprintln!("Failed to unpack Deno canary {}: {}", hash, err);
+    eprintln!("Removing the corrupted archive and retrying download");
+    remove_canary_dir()?;
+
+    let archive_data = download_archive(&url)?;
+    if let Err(retry_err) = unpack_canary(archive_data) {
+      remove_canary_dir()?;
+      return Err(anyhow::anyhow!(
+        "Failed to unpack Deno canary {} after retry: {}",
+        hash,
+        retry_err
+      ));
+    }
+  }
+
+  Ok(())
+}
+
+fn remove_canary_dir() -> Result<()> {
+  let canary_dir = dvm_root().join(DVM_CANARY_PATH_PREFIX);
+  if canary_dir.exists() {
+    fs::remove_dir_all(canary_dir)?;
+  }
+  Ok(())
 }
 
 #[test]

@@ -175,10 +175,12 @@ pub fn get_latest_lts_version() -> Result<Version> {
 
 pub fn get_latest_canary(registry: &str) -> Result<String> {
   let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_CANARY_PATH)).send()?;
+  if response.status_code >= 400 {
+    anyhow::bail!("Failed to fetch the latest canary hash: {}", response.status_code);
+  }
 
   let body = response.as_str()?;
-  let v = body.trim().replace('v', "");
-  Ok(v)
+  Ok(body.trim().trim_start_matches('v').to_string())
 }
 
 pub fn version_req_parse(version: &str) -> VersionReq {
