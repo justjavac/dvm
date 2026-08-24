@@ -60,14 +60,15 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> R
     }
   }
 
-  let mut cmd = std::process::Command::new(executable_path)
+  let status = std::process::Command::new(executable_path)
     .args(args)
     .stderr(Stdio::inherit())
     .stdout(Stdio::inherit())
     .stdin(Stdio::inherit())
-    .spawn()
-    .unwrap();
+    .spawn()?
+    .wait()?;
 
-  cmd.wait().unwrap();
-  Ok(())
+  // `dvm exec` is a transparent wrapper around deno, so scripts and CI have to
+  // see deno's own exit code. A process killed by a signal reports no code.
+  std::process::exit(status.code().unwrap_or(1))
 }
