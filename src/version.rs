@@ -7,7 +7,6 @@ use crate::consts::{
 use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
 use colored::Colorize;
-use json_minimal::Json;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
@@ -131,33 +130,18 @@ pub fn remote_versions() -> Result<Vec<String>> {
   let cached_remote_versions_location = cached_remote_versions_location();
   let cached_content = std::fs::read_to_string(cached_remote_versions_location)?;
 
-  let json = match Json::parse(cached_content.as_bytes()) {
-    Ok(json) => json,
-    Err(e) => {
-      eprintln!("Failed to parse remote versions cache. location: {}", e.0);
-      eprintln!("Error: {}", e.1.red());
+  let versions = match cli_versions_from_versions_json(&cached_content) {
+    Ok(versions) => versions,
+    Err(err) => {
+      eprintln!("Failed to parse remote versions cache: {}", err.to_string().red());
       eprintln!("The remote version cache is corrupted, please run `dvm update` to update the remote version cache.");
       std::process::exit(1);
     }
   };
 
-  let mut result: Vec<String> = Vec::new();
-
-  let Some(cli_versions) = json.get("cli") else {
-    eprintln!("The remote version cache is corrupted(missing cli property), please run `dvm update` to update the remote version cache.");
-    std::process::exit(1);
-  };
-
-  if let Json::OBJECT { name: _, value } = cli_versions {
-    if let Json::ARRAY(list) = value.unbox() {
-      for item in list {
-        if let Json::STRING(val) = item.unbox() {
-          result.push(val.replace('v', "").to_string());
-        }
-      }
-    }
-  }
-  Ok(result)
+  // Callers sort and match these as semver, so drop anything the registry lists
+  // that is not a version instead of panicking further down the line.
+  Ok(versions.into_iter().filter(|version| is_semver(version)).collect())
 }
 
 pub fn is_versions_cache_exists() -> bool {
@@ -285,6 +269,17 @@ mod tests {
     assert_eq!(
       latest_lts_version_from_releases_html(content).unwrap(),
       Version::parse("2.2.15").unwrap()
+    );
+  }
+
+  #[test]
+  fn cli_versions_strip_only_the_leading_v() {
+    // A bare `replace('v', "")` used to corrupt versions whose pre-release
+    // contained a `v`, e.g. `preview`.
+    let content = r#"{ "cli": ["v2.1.0", "1.0.0-preview.1"] }"#;
+    assert_eq!(
+      cli_versions_from_versions_json(content).unwrap(),
+      vec!["2.1.0".to_string(), "1.0.0-preview.1".to_string()]
     );
   }
 

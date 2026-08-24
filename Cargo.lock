@@ -249,7 +249,6 @@ dependencies = [
  "ctor",
  "dirs 5.0.1",
  "indicatif",
- "json_minimal",
  "native-tls",
  "output_vt100",
  "phf",
@@ -378,12 +377,6 @@ dependencies = [
  "once_cell",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "json_minimal"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f23a154c7bbe06d65d084a909a7ba16981b514768c5b79ccf423dda1e4b4d8e"
 
 [[package]]
 name = "lazy_static"
