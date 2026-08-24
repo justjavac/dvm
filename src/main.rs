@@ -86,7 +86,7 @@ pub fn main() {
       )
     }
 
-    Commands::Registry { command } => commands::registry::exec(&mut meta, command),
+    Commands::Registry { command } => commands::registry::exec(command),
     Commands::Update => run_with_spinner("Updating cache...".to_string(), "Update success".to_string(), |fail| {
       match commands::update::exec(&mut meta) {
         Ok(ok) => Ok(ok),
