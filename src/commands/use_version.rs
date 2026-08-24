@@ -7,7 +7,7 @@ use crate::consts::{
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
 use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, run_with_spinner, update_stub};
-use crate::utils::{is_exact_version, load_dvmrc, DenoResolution};
+use crate::utils::{is_exact_version, load_dvmrc, remove_deno_bin_link, DenoResolution};
 use crate::version::remote_versions;
 use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};
 use anyhow::Result;
@@ -37,7 +37,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
       use_canary_bin_path(write_local).unwrap();
       return Ok(());
     } else if version == &DVM_VERSION_SYSTEM.to_string() {
-      std::fs::remove_file(deno_bin_path()).unwrap();
+      remove_deno_bin_link()?;
       println!("Deno that was previously installed on your system will be activated now.");
       return Ok(());
     } else if version == DVM_VERSION_LTS {
@@ -119,12 +119,8 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
     }
 
     let bin_path = deno_bin_path();
-    if !bin_path.parent().unwrap().exists() {
-      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
-    }
-    if bin_path.exists() {
-      fs::remove_file(&bin_path)?;
-    }
+    fs::create_dir_all(bin_path.parent().unwrap())?;
+    remove_deno_bin_link()?;
     fs::hard_link(&canary_dir, &bin_path)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
@@ -140,12 +136,8 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
     check_exe(exe_path, version)?;
 
     let bin_path = deno_bin_path();
-    if !bin_path.parent().unwrap().exists() {
-      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
-    }
-    if bin_path.exists() {
-      fs::remove_file(&bin_path)?;
-    }
+    fs::create_dir_all(bin_path.parent().unwrap())?;
+    remove_deno_bin_link()?;
     fs::hard_link(exe_path, &bin_path)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;

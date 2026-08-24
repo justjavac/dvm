@@ -185,6 +185,17 @@ fn path_contains_dir(path: &Path, dir: &Path) -> bool {
   normalize(path).starts_with(&dir)
 }
 
+/// Remove dvm's `deno` hard link so the system-wide deno takes over again.
+/// A missing link is not an error: `dvm use system` and `dvm deactivate` are
+/// both expected to be idempotent, and neither has a link to remove before the
+/// first `dvm use`.
+pub fn remove_deno_bin_link() -> std::io::Result<()> {
+  match std::fs::remove_file(deno_bin_path()) {
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+    result => result,
+  }
+}
+
 pub fn deno_version_path(version: &Version) -> PathBuf {
   let dvm_dir = dvm_root().join(format!("{}/{}", DVM_CACHE_PATH_PREFIX, version));
   dvm_dir.join(DENO_EXE)
