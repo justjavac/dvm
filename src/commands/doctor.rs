@@ -41,25 +41,25 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
     fs::remove_file(cache_folder.clone())?;
     fs::create_dir_all(cache_folder)?;
   }
-  let list = fs::read_dir(home_path).unwrap();
-  for entry in list {
-    let entry = entry.unwrap();
-    let path = entry.path();
+  for entry in fs::read_dir(&home_path)? {
+    let path = entry?.path();
     if path.is_dir() {
-      let name = path.file_name().unwrap().to_str().unwrap();
+      let Some(name) = path.file_name().and_then(|it| it.to_str()) else {
+        continue;
+      };
       if is_exact_version(name) {
         // move to `versions` subdir
         println!(
           "Found old dvm cache of version `{}`, migrating to new dvm cache location...",
           name
         );
-        fs::rename(path.clone(), path.parent().unwrap().join("versions").join(name)).unwrap();
+        fs::rename(&path, home_path.join(DVM_CACHE_PATH_PREFIX).join(name))?;
       }
     }
   }
 
   if dvm_root().exists() {
-    super::use_version::exec(meta, None, false).unwrap();
+    super::use_version::exec(meta, None, false)?;
   }
 
   // clean user-wide rc file

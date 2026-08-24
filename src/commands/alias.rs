@@ -5,6 +5,7 @@ use crate::{DvmMeta, DEFAULT_ALIAS};
 use anyhow::Result;
 use colored::{ColoredString, Colorize};
 use phf::phf_map;
+use semver::Version;
 
 const ALIAS_COLORS: phf::Map<&str, (u8, u8, u8)> = phf_map! {
     "lighter" => (0xD1, 0xFA, 0xFF),        // unused
@@ -40,7 +41,7 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
       let local_versions = local_versions();
       // An alias whose stored range no longer parses is shown without an
       // upgrade hint instead of taking down the whole listing.
-      let get_upgrade_version = |version_str: &str| {
+      let get_upgrade_version = |version_str: &str| -> Option<Version> {
         let max_remote = find_max_matching_version(version_str, remote_versions.iter().map(AsRef::as_ref)).ok()?;
         let max_local = find_max_matching_version(version_str, local_versions.iter().map(AsRef::as_ref)).ok()?;
 
