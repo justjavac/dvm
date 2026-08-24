@@ -3,7 +3,6 @@ pub const REGISTRY_CN: &str = "https://dl.deno.js.cn/";
 pub const REGISTRY_LIST_OFFICIAL: &str = "https://deno.com/versions.json";
 pub const REGISTRY_LIST_CN: &str = "https://dl.deno.js.cn/versions.json";
 
-pub const REGISTRY_LATEST_RELEASE_PATH: &str = "release-latest.txt";
 pub const REGISTRY_LATEST_CANARY_PATH: &str = "canary-latest.txt";
 pub const REGISTRY_NAME_CN: &str = "cn";
 pub const REGISTRY_NAME_OFFICIAL: &str = "official";

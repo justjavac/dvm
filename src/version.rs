@@ -2,7 +2,7 @@
 use crate::configrc::rc_get_with_fix;
 use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_LTS,
-  REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH,
+  REGISTRY_LATEST_CANARY_PATH,
 };
 use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
@@ -145,14 +145,6 @@ pub fn remote_versions() -> Result<Vec<String>> {
 pub fn is_versions_cache_exists() -> bool {
   let remote_versions_location = cached_remote_versions_location();
   remote_versions_location.exists()
-}
-
-pub fn get_latest_version(registry: &str) -> Result<Version> {
-  let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_RELEASE_PATH)).send()?;
-
-  let body = response.as_str()?;
-  let v = body.trim().replace('v', "");
-  Ok(Version::parse(&v).unwrap())
 }
 
 pub fn get_latest_remote_version(registry: &str) -> Result<Version> {

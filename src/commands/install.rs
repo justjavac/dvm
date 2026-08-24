@@ -28,6 +28,8 @@ cfg_if! {
     const ARCHIVE_NAME: &str = "deno-x86_64-unknown-linux-gnu.zip";
   } else if #[cfg(all(target_os = "linux", target_arch = "aarch64"))] {
     const ARCHIVE_NAME: &str = "deno-aarch64-unknown-linux-gnu.zip";
+  } else {
+    compile_error!("dvm does not know which Deno archive to download for this target");
   }
 }
 
