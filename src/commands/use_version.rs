@@ -23,20 +23,17 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
 
   let version_req = if let Some(ref version) = version {
-    if version == &DVM_VERSION_CANARY.to_string() {
-      let canary_path = deno_canary_path();
-      if !canary_path.exists() {
-        if prompt_request("deno canary is not installed. do you want to install it?") {
-          install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string())).unwrap();
-          use_canary_bin_path(write_local).unwrap();
-        } else {
+    if version == DVM_VERSION_CANARY {
+      if !deno_canary_path().exists() {
+        if !prompt_request("deno canary is not installed. do you want to install it?") {
           std::process::exit(1);
         }
+        install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
       }
 
-      use_canary_bin_path(write_local).unwrap();
+      use_canary_bin_path(write_local)?;
       return Ok(());
-    } else if version == &DVM_VERSION_SYSTEM.to_string() {
+    } else if version == DVM_VERSION_SYSTEM {
       remove_deno_bin_link()?;
       println!("Deno that was previously installed on your system will be activated now.");
       return Ok(());
@@ -79,8 +76,9 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     VersionArg::Exact(v) => v.clone(),
     VersionArg::Range(r) => {
       println!("Fetching version list");
-      let versions = remote_versions().expect("Fetching version list failed.");
-      best_version(versions.iter().map(AsRef::as_ref), r.clone()).unwrap()
+      let versions = remote_versions()?;
+      best_version(versions.iter().map(AsRef::as_ref), r.clone())
+        .ok_or_else(|| anyhow::anyhow!("No released Deno version matches `{}`", r))?
     }
   };
 
@@ -88,7 +86,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
 
   if !new_exe_path.exists() {
     if prompt_request(format!("deno v{} is not installed. do you want to install it?", used_version).as_str()) {
-      install::exec(meta, true, Some(used_version.to_string())).unwrap();
+      install::exec(meta, true, Some(used_version.to_string()))?;
       let temp = version_req.to_string();
       let version = version.as_ref().unwrap_or(&temp);
       if !is_exact_version(version) {
