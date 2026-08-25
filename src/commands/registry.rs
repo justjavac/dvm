@@ -5,18 +5,17 @@ use crate::consts::REGISTRY_NAME_OFFICIAL;
 use crate::consts::REGISTRY_OFFICIAL;
 use crate::consts::{DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_CONFIGRC_KEY_REGISTRY_VERSION, REGISTRY_NAME_CN};
 use crate::consts::{REGISTRY_CN, REGISTRY_LIST_CN, REGISTRY_LIST_OFFICIAL};
-use crate::DvmMeta;
 
 use crate::configrc::{rc_get_with_fix, rc_update};
 use crate::utils::is_http_like_url;
 use anyhow::Result;
 use colored::Colorize;
 
-pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
+pub fn exec(registry: RegistryCommands) -> Result<()> {
   let rc_binary_registry =
     rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_BINARY).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
   let rc_version_registry =
-    rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_OFFICIAL.to_string());
+    rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
 
   match registry {
     RegistryCommands::List => {
@@ -95,6 +94,5 @@ pub fn exec(meta: &mut DvmMeta, registry: RegistryCommands) -> Result<()> {
     },
   };
 
-  meta.save();
   Ok(())
 }

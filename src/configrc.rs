@@ -45,14 +45,7 @@ pub fn rc_has(key: &str) -> bool {
     return false;
   };
 
-  content
-    .lines()
-    .filter(|it| it.contains('='))
-    .map(|it| {
-      let mut it = it.split('=');
-      (it.next().unwrap().trim(), it.next().unwrap().trim())
-    })
-    .any(|(k, _)| k == key)
+  rc_parse(content.as_str()).iter().any(|(k, _)| *k == key)
 }
 
 /// get value by key from configrc
@@ -87,7 +80,7 @@ pub fn rc_get_with_fix(key: &str) -> io::Result<String> {
 /// create the file if it doesn't exist
 /// create key value pair if it doesn't exist
 pub fn rc_update(is_local: bool, key: &str, value: &str) -> io::Result<()> {
-  let (config_path, content) = rc_content(is_local);
+  let (config_path, content) = rc_content(is_local)?;
 
   let _content;
   let mut config = if let Ok(c) = content {
@@ -115,7 +108,7 @@ pub fn rc_update(is_local: bool, key: &str, value: &str) -> io::Result<()> {
 /// remove key value pair from config file
 #[allow(dead_code)]
 pub fn rc_remove(is_local: bool, key: &str) -> io::Result<()> {
-  let (config_path, content) = rc_content(is_local);
+  let (config_path, content) = rc_content(is_local)?;
   let Ok(content) = content else {
     // no need to remove
     return Ok(());
@@ -146,21 +139,31 @@ fn rc_parse(content: &str) -> Vec<(&str, &str)> {
   config
 }
 
-fn rc_content(is_local: bool) -> (std::path::PathBuf, io::Result<String>) {
-  let config_path = if is_local {
-    std::path::PathBuf::from(DVM_CONFIGRC_FILENAME)
-  } else {
-    dirs::home_dir()
-      .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))
-      .unwrap()
-      .join(DVM_CONFIGRC_FILENAME)
-  };
+/// Path of the local (current directory) or user-wide rc file.
+fn rc_path(is_local: bool) -> io::Result<std::path::PathBuf> {
+  if is_local {
+    return Ok(std::path::PathBuf::from(DVM_CONFIGRC_FILENAME));
+  }
 
-  (config_path.clone(), fs::read_to_string(config_path))
+  dirs::home_dir()
+    .map(|home| home.join(DVM_CONFIGRC_FILENAME))
+    .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "could not determine the home directory"))
+}
+
+fn rc_content(is_local: bool) -> io::Result<(std::path::PathBuf, io::Result<String>)> {
+  let config_path = rc_path(is_local)?;
+  let content = fs::read_to_string(&config_path);
+
+  Ok((config_path, content))
+}
+
+/// Read the local or user-wide rc file.
+fn rc_read(is_local: bool) -> io::Result<String> {
+  fs::read_to_string(rc_path(is_local)?)
 }
 
 fn rc_content_cascade() -> io::Result<String> {
-  rc_content(true).1.or_else(|_| rc_content(false).1)
+  rc_read(true).or_else(|_| rc_read(false))
 }
 
 /// remove all key value pair that ain't supported by dvm from config file
@@ -169,7 +172,7 @@ pub fn rc_clean(is_local: bool) -> io::Result<()> {
     rc_init()?;
   }
 
-  let (config_path, content) = rc_content(is_local);
+  let (config_path, content) = rc_content(is_local)?;
   let content = if let Ok(content) = content {
     content
   } else {

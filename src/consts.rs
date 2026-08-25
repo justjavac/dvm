@@ -3,7 +3,6 @@ pub const REGISTRY_CN: &str = "https://dl.deno.js.cn/";
 pub const REGISTRY_LIST_OFFICIAL: &str = "https://deno.com/versions.json";
 pub const REGISTRY_LIST_CN: &str = "https://dl.deno.js.cn/versions.json";
 
-pub const REGISTRY_LATEST_RELEASE_PATH: &str = "release-latest.txt";
 pub const REGISTRY_LATEST_CANARY_PATH: &str = "canary-latest.txt";
 pub const REGISTRY_NAME_CN: &str = "cn";
 pub const REGISTRY_NAME_OFFICIAL: &str = "official";
@@ -11,7 +10,9 @@ pub const REGISTRY_NAME_OFFICIAL: &str = "official";
 pub const DVM_CACHE_PATH_PREFIX: &str = "versions";
 pub const DVM_CACHE_REMOTE_PATH: &str = "cached-remote-versions.json";
 pub const DVM_CANARY_PATH_PREFIX: &str = "canary";
-pub const DVM_CACHE_INVALID_TIMEOUT: u128 = 60 * 60 * 24 * 7;
+/// How long `dvm clean` keeps an unused deno version around, in milliseconds —
+/// the unit `utils::now` stamps into the `.dvmstub` files it is compared with.
+pub const DVM_CACHE_INVALID_TIMEOUT: u128 = 7 * 24 * 60 * 60 * 1000;
 
 pub const DVM_CONFIGRC_FILENAME: &str = ".dvmrc";
 pub const DVM_CONFIGRC_KEY_DENO_VERSION: &str = "deno_version";

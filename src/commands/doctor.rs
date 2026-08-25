@@ -5,7 +5,7 @@ use colored::Colorize;
 use std::fs;
 
 use crate::meta::DvmMeta;
-use crate::utils::{deno_bin_path, dvm_root, is_exact_version};
+use crate::utils::{deno_resolution, dvm_bin_dir, dvm_root, is_exact_version, DenoResolution};
 
 pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   // Init enviroments if need
@@ -13,19 +13,24 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   let home_path = dvm_root();
   check_or_set_env("DVM_DIR", home_path.to_str().unwrap())?;
   let path = get_env("PATH")?;
-  let looking_for = deno_bin_path().parent().unwrap().to_str().unwrap().to_string();
-  let current = which::which("deno");
+  let looking_for = dvm_bin_dir().to_str().unwrap().to_string();
 
-  if let Ok(current) = current {
-    if current.to_str().unwrap().starts_with(&looking_for) {
-      println!("{}", "DVM deno bin is already set correctly.".green());
-    } else {
+  // Share the resolution with `dvm use` so both agree on what "dvm's deno wins
+  // on PATH" means: a plain string prefix would also accept a sibling directory
+  // such as `.dvm/bin2`, and it ignores Windows' case-insensitive paths.
+  match deno_resolution() {
+    DenoResolution::Dvm => println!("{}", "DVM deno bin is already set correctly.".green()),
+    DenoResolution::Shadowed(shadowing) => {
+      println!("`deno` currently resolves to {}", shadowing.display());
       prepend_env_path(looking_for.as_str())?;
       println!("{}", "Please restart your shell of choice to take effects.".red());
     }
-  } else if !env_path_contains(&path, looking_for.as_str()) {
-    prepend_env_path(looking_for.as_str())?;
-    println!("{}", "Please restart your shell of choice to take effects.".red());
+    DenoResolution::NotOnPath => {
+      if !env_path_contains(&path, looking_for.as_str()) {
+        prepend_env_path(looking_for.as_str())?;
+        println!("{}", "Please restart your shell of choice to take effects.".red());
+      }
+    }
   }
 
   // migrating from old dvm cache.
@@ -36,25 +41,25 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
     fs::remove_file(cache_folder.clone())?;
     fs::create_dir_all(cache_folder)?;
   }
-  let list = fs::read_dir(home_path).unwrap();
-  for entry in list {
-    let entry = entry.unwrap();
-    let path = entry.path();
+  for entry in fs::read_dir(&home_path)? {
+    let path = entry?.path();
     if path.is_dir() {
-      let name = path.file_name().unwrap().to_str().unwrap();
+      let Some(name) = path.file_name().and_then(|it| it.to_str()) else {
+        continue;
+      };
       if is_exact_version(name) {
         // move to `versions` subdir
         println!(
           "Found old dvm cache of version `{}`, migrating to new dvm cache location...",
           name
         );
-        fs::rename(path.clone(), path.parent().unwrap().join("versions").join(name)).unwrap();
+        fs::rename(&path, home_path.join(DVM_CACHE_PATH_PREFIX).join(name))?;
       }
     }
   }
 
   if dvm_root().exists() {
-    super::use_version::exec(meta, None, false).unwrap();
+    super::use_version::exec(meta, None, false)?;
   }
 
   // clean user-wide rc file
@@ -62,7 +67,8 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   rc_clean(false).expect("clean user-wide rc file failed");
   rc_fix().expect("fix rc file failed");
 
-  println!("{}", "All fixes applied, DVM is ready to use.".green());
+  // The success line is the spinner's finish message in `main`, printing it
+  // here too showed it twice.
   Ok(())
 }
 

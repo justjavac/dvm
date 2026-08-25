@@ -11,7 +11,7 @@ pub fn exec() -> Result<()> {
 }
 
 pub fn exec_remote() -> Result<()> {
-  let versions = remote_versions().unwrap();
+  let versions = remote_versions()?;
 
   print_versions(versions);
   Ok(())
@@ -20,7 +20,7 @@ pub fn exec_remote() -> Result<()> {
 fn print_versions(mut versions: Vec<String>) {
   let current_version = current_version().unwrap_or_default();
 
-  versions.sort_by(|a, b| sort_semver_version(b, a).reverse());
+  versions.sort_by(|a, b| sort_semver_version(a, b));
 
   for v in &versions {
     if *v == current_version {
@@ -32,11 +32,13 @@ fn print_versions(mut versions: Vec<String>) {
   }
 }
 
+/// Compare two versions as semver, falling back to a lexicographic compare for
+/// anything that does not parse — sorting a list must not abort the process.
 fn sort_semver_version(s1: &str, s2: &str) -> Ordering {
-  let v1 = Version::parse(s1).unwrap();
-  let v2 = Version::parse(s2).unwrap();
-
-  v1.cmp(&v2)
+  match (Version::parse(s1), Version::parse(s2)) {
+    (Ok(v1), Ok(v2)) => v1.cmp(&v2),
+    _ => s1.cmp(s2),
+  }
 }
 
 #[cfg(test)]
@@ -58,5 +60,11 @@ mod tests {
     assert_eq!(sort_semver_version(&v4, &v3), Ordering::Greater);
     assert_eq!(sort_semver_version(&v5, &v4), Ordering::Less);
     assert_eq!(sort_semver_version(&v7, &v6), Ordering::Greater);
+  }
+
+  #[test]
+  fn sort_falls_back_for_unparseable_versions() {
+    assert_eq!(sort_semver_version("not-a-version", "1.0.0"), Ordering::Greater);
+    assert_eq!(sort_semver_version("1.0.0", "not-a-version"), Ordering::Less);
   }
 }

@@ -88,14 +88,14 @@ impl DvmMeta {
       if let Ok(content) = content {
         let config = serde_json::from_str::<DvmMeta>(content.as_str());
         if let Ok(mut config) = config {
-          let mut i = 0;
-          while i < config.versions.len() {
-            if !deno_version_path(&Version::parse(&config.versions[i].current).unwrap()).exists() {
-              config.versions.remove(i);
-            } else {
-              i += 1;
-            }
-          }
+          // Drop mappings that no longer point at an installed deno. An
+          // unparseable `current` counts as gone rather than as a panic:
+          // `DvmMeta::new` runs before every command, so panicking here would
+          // also take down the `dvm doctor` / `dvm clean` meant to repair the
+          // metadata.
+          config
+            .versions
+            .retain(|mapping| Version::parse(&mapping.current).is_ok_and(|it| deno_version_path(&it).exists()));
           return config;
         }
       }
@@ -112,25 +112,31 @@ impl DvmMeta {
       for entry in dir.flatten() {
         let path = entry.path();
         if path.is_dir() {
-          let name = path.file_name().unwrap().to_str().unwrap();
+          let Some(name) = path.file_name().and_then(|it| it.to_str()) else {
+            continue;
+          };
 
           // it's been pointed by dvm versions
           if self.versions.iter().any(|it| it.current == name) {
             continue;
           }
 
-          // it's not been outdated
+          // it's not been outdated. An unreadable or garbled stub counts as
+          // "no timestamp", i.e. outdated, instead of aborting the whole clean.
           let stub = path.join(".dvmstub");
-          if stub.exists() && stub.is_file() {
-            let content = std::fs::read_to_string(stub).expect("read stub file failed");
-            let content: u128 = content.parse().expect("parse stub file failed");
-            if content > now() - DVM_CACHE_INVALID_TIMEOUT {
+          if stub.is_file() {
+            let last_used = std::fs::read_to_string(&stub)
+              .ok()
+              .and_then(|content| content.trim().parse::<u128>().ok());
+            if last_used.is_some_and(|it| it > now().saturating_sub(DVM_CACHE_INVALID_TIMEOUT)) {
               continue;
             }
           }
 
           println!("Cleaning version {}", name.bright_black());
-          std::fs::remove_dir_all(path).unwrap();
+          if let Err(err) = std::fs::remove_dir_all(&path) {
+            eprintln!("Failed to clean version {}: {}", name, err);
+          }
         }
       }
     }

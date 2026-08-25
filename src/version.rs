@@ -2,12 +2,11 @@
 use crate::configrc::rc_get_with_fix;
 use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_LTS,
-  REGISTRY_LATEST_CANARY_PATH, REGISTRY_LATEST_RELEASE_PATH,
+  REGISTRY_LATEST_CANARY_PATH,
 };
 use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
 use colored::Colorize;
-use json_minimal::Json;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
@@ -62,16 +61,14 @@ impl FromStr for VersionArg {
 }
 
 pub fn current_version() -> Option<String> {
-  match Command::new("deno").arg("-V").stderr(Stdio::inherit()).output() {
-    Ok(output) => {
-      assert!(output.status.success());
-      match String::from_utf8(output.stdout) {
-        Ok(stdout) => Some(stdout.trim()[5..].to_string()),
-        Err(_) => None,
-      }
-    }
-    Err(_) => None,
+  let output = Command::new("deno").arg("-V").stderr(Stdio::inherit()).output().ok()?;
+  if !output.status.success() {
+    return None;
   }
+  let stdout = String::from_utf8(output.stdout).ok()?;
+  // `deno -V` prints `deno x.y.z`; return the version, or None if the format
+  // is not what we expect rather than slicing into the middle of a char.
+  stdout.trim().strip_prefix("deno ").map(|version| version.to_string())
 }
 
 pub fn local_versions() -> Vec<String> {
@@ -131,46 +128,23 @@ pub fn remote_versions() -> Result<Vec<String>> {
   let cached_remote_versions_location = cached_remote_versions_location();
   let cached_content = std::fs::read_to_string(cached_remote_versions_location)?;
 
-  let json = match Json::parse(cached_content.as_bytes()) {
-    Ok(json) => json,
-    Err(e) => {
-      eprintln!("Failed to parse remote versions cache. location: {}", e.0);
-      eprintln!("Error: {}", e.1.red());
+  let versions = match cli_versions_from_versions_json(&cached_content) {
+    Ok(versions) => versions,
+    Err(err) => {
+      eprintln!("Failed to parse remote versions cache: {}", err.to_string().red());
       eprintln!("The remote version cache is corrupted, please run `dvm update` to update the remote version cache.");
       std::process::exit(1);
     }
   };
 
-  let mut result: Vec<String> = Vec::new();
-
-  let Some(cli_versions) = json.get("cli") else {
-    eprintln!("The remote version cache is corrupted(missing cli property), please run `dvm update` to update the remote version cache.");
-    std::process::exit(1);
-  };
-
-  if let Json::OBJECT { name: _, value } = cli_versions {
-    if let Json::ARRAY(list) = value.unbox() {
-      for item in list {
-        if let Json::STRING(val) = item.unbox() {
-          result.push(val.replace('v', "").to_string());
-        }
-      }
-    }
-  }
-  Ok(result)
+  // Callers sort and match these as semver, so drop anything the registry lists
+  // that is not a version instead of panicking further down the line.
+  Ok(versions.into_iter().filter(|version| is_semver(version)).collect())
 }
 
 pub fn is_versions_cache_exists() -> bool {
   let remote_versions_location = cached_remote_versions_location();
   remote_versions_location.exists()
-}
-
-pub fn get_latest_version(registry: &str) -> Result<Version> {
-  let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_RELEASE_PATH)).send()?;
-
-  let body = response.as_str()?;
-  let v = body.trim().replace('v', "");
-  Ok(Version::parse(&v).unwrap())
 }
 
 pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
@@ -193,21 +167,23 @@ pub fn get_latest_lts_version() -> Result<Version> {
 
 pub fn get_latest_canary(registry: &str) -> Result<String> {
   let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_CANARY_PATH)).send()?;
+  if response.status_code >= 400 {
+    anyhow::bail!("Failed to fetch the latest canary hash: {}", response.status_code);
+  }
 
   let body = response.as_str()?;
-  let v = body.trim().replace('v', "");
-  Ok(v)
+  Ok(body.trim().trim_start_matches('v').to_string())
 }
 
-pub fn version_req_parse(version: &str) -> VersionReq {
-  VersionReq::parse(version).unwrap_or_else(|_| panic!("version is invalid: {}", version))
+pub fn version_req_parse(version: &str) -> Result<VersionReq> {
+  VersionReq::parse(version).map_err(|err| anyhow::anyhow!("`{}` is not a valid semver range: {}", version, err))
 }
 
 pub fn find_max_matching_version<'a, I>(version_req_str: &str, iterable: I) -> Result<Option<Version>>
 where
   I: IntoIterator<Item = &'a str>,
 {
-  let version_req = version_req_parse(version_req_str);
+  let version_req = version_req_parse(version_req_str)?;
   Ok(
     iterable
       .into_iter()
@@ -285,6 +261,17 @@ mod tests {
     assert_eq!(
       latest_lts_version_from_releases_html(content).unwrap(),
       Version::parse("2.2.15").unwrap()
+    );
+  }
+
+  #[test]
+  fn cli_versions_strip_only_the_leading_v() {
+    // A bare `replace('v', "")` used to corrupt versions whose pre-release
+    // contained a `v`, e.g. `preview`.
+    let content = r#"{ "cli": ["v2.1.0", "1.0.0-preview.1"] }"#;
+    assert_eq!(
+      cli_versions_from_versions_json(content).unwrap(),
+      vec!["2.1.0".to_string(), "1.0.0-preview.1".to_string()]
     );
   }
 

@@ -34,7 +34,7 @@ fi
 
 if [ "$1" = "" ]; then
 	cd "$dvm_bin_dir"
-	curl --fail --location --progress-bar -k --output "$exe.zip" "$dvm_uri"
+	curl --fail --location --progress-bar --output "$exe.zip" "$dvm_uri"
 	unzip -o "$exe.zip"
 	rm "$exe.zip"
 else
@@ -60,10 +60,10 @@ bash)
 *) shell_profile=".profile" ;;
 esac
 
-if [ ! $DVM_DIR ];then
+if [ -z "$DVM_DIR" ] && ! grep -q "DVM_DIR" "$HOME/$shell_profile" 2>/dev/null; then
 	EXPORT_DVM_DIR="export DVM_DIR=\"$dvm_dir\""
 	EXPORT_PATH="export PATH=\"\$DVM_DIR/bin:\$PATH\""
-	command printf "\\n$EXPORT_DVM_DIR\\n$EXPORT_PATH\\n" >> "$HOME/$shell_profile"
+	printf '\n%s\n%s\n' "$EXPORT_DVM_DIR" "$EXPORT_PATH" >> "$HOME/$shell_profile"
 fi
 
 echo "Dvm was installed successfully to $exe"

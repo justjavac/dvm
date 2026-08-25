@@ -7,7 +7,7 @@ use crate::consts::{
 use crate::deno_bin_path;
 use crate::meta::DvmMeta;
 use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, run_with_spinner, update_stub};
-use crate::utils::{is_exact_version, load_dvmrc, DenoResolution};
+use crate::utils::{is_exact_version, load_dvmrc, remove_deno_bin_link, DenoResolution};
 use crate::version::remote_versions;
 use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};
 use anyhow::Result;
@@ -23,21 +23,18 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
 
   let version_req = if let Some(ref version) = version {
-    if version == &DVM_VERSION_CANARY.to_string() {
-      let canary_path = deno_canary_path();
-      if !canary_path.exists() {
-        if prompt_request("deno canary is not installed. do you want to install it?") {
-          install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string())).unwrap();
-          use_canary_bin_path(write_local).unwrap();
-        } else {
+    if version == DVM_VERSION_CANARY {
+      if !deno_canary_path().exists() {
+        if !prompt_request("deno canary is not installed. do you want to install it?") {
           std::process::exit(1);
         }
+        install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
       }
 
-      use_canary_bin_path(write_local).unwrap();
+      use_canary_bin_path(write_local)?;
       return Ok(());
-    } else if version == &DVM_VERSION_SYSTEM.to_string() {
-      std::fs::remove_file(deno_bin_path()).unwrap();
+    } else if version == DVM_VERSION_SYSTEM {
+      remove_deno_bin_link()?;
       println!("Deno that was previously installed on your system will be activated now.");
       return Ok(());
     } else if version == DVM_VERSION_LTS {
@@ -79,8 +76,9 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     VersionArg::Exact(v) => v.clone(),
     VersionArg::Range(r) => {
       println!("Fetching version list");
-      let versions = remote_versions().expect("Fetching version list failed.");
-      best_version(versions.iter().map(AsRef::as_ref), r.clone()).unwrap()
+      let versions = remote_versions()?;
+      best_version(versions.iter().map(AsRef::as_ref), r.clone())
+        .ok_or_else(|| anyhow::anyhow!("No released Deno version matches `{}`", r))?
     }
   };
 
@@ -88,7 +86,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
 
   if !new_exe_path.exists() {
     if prompt_request(format!("deno v{} is not installed. do you want to install it?", used_version).as_str()) {
-      install::exec(meta, true, Some(used_version.to_string())).unwrap();
+      install::exec(meta, true, Some(used_version.to_string()))?;
       let temp = version_req.to_string();
       let version = version.as_ref().unwrap_or(&temp);
       if !is_exact_version(version) {
@@ -119,12 +117,8 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
     }
 
     let bin_path = deno_bin_path();
-    if !bin_path.parent().unwrap().exists() {
-      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
-    }
-    if bin_path.exists() {
-      fs::remove_file(&bin_path)?;
-    }
+    fs::create_dir_all(bin_path.parent().unwrap())?;
+    remove_deno_bin_link()?;
     fs::hard_link(&canary_dir, &bin_path)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
@@ -140,12 +134,8 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
     check_exe(exe_path, version)?;
 
     let bin_path = deno_bin_path();
-    if !bin_path.parent().unwrap().exists() {
-      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
-    }
-    if bin_path.exists() {
-      fs::remove_file(&bin_path)?;
-    }
+    fs::create_dir_all(bin_path.parent().unwrap())?;
+    remove_deno_bin_link()?;
     fs::hard_link(exe_path, &bin_path)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;
@@ -192,8 +182,20 @@ fn check_exe(exe_path: &Path, expected_version: &Version) -> Result<()> {
     .arg("-V")
     .stderr(std::process::Stdio::inherit())
     .output()?;
+  if !output.status.success() {
+    anyhow::bail!("{} exited with {}", exe_path.display(), output.status);
+  }
   let stdout = String::from_utf8(output.stdout)?;
-  assert!(output.status.success());
-  assert_eq!(stdout.trim(), format!("deno {}", expected_version));
+  let reported = stdout.trim();
+  let expected = format!("deno {}", expected_version);
+  if reported != expected {
+    anyhow::bail!(
+      "{} reports `{}`, expected `{}`. Try reinstalling with `dvm install {}`.",
+      exe_path.display(),
+      reported,
+      expected,
+      expected_version
+    );
+  }
   Ok(())
 }
