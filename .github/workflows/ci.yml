@@ -11,8 +11,8 @@ jobs:
         os:
           - ubuntu-latest
           - ubuntu-24.04-arm
-          - macOS-15-intel  # Intel
-          - macOS-latest  # Apple Silicon
+          - macOS-15-intel # Intel
+          - macOS-latest # Apple Silicon
           - windows-latest
 
     env:
