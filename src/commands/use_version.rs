@@ -120,6 +120,11 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
       anyhow::bail!("Canary dir not found, will not be used");
     }
 
+    let bin_path = deno_bin_path();
+    let parent = bin_path
+      .parent()
+      .ok_or_else(|| anyhow::anyhow!("dvm bin path has no parent directory"))?;
+    fs::create_dir_all(parent)?;
     remove_deno_bin_link()?;
     link_deno_bin(&canary_dir)?;
 
@@ -135,6 +140,11 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
   run_with_spinner("Processing".to_string(), format!("Now using deno {}", version), || {
     check_exe(exe_path, version)?;
 
+    let bin_path = deno_bin_path();
+    let parent = bin_path
+      .parent()
+      .ok_or_else(|| anyhow::anyhow!("dvm bin path has no parent directory"))?;
+    fs::create_dir_all(parent)?;
     remove_deno_bin_link()?;
     link_deno_bin(exe_path)?;
 

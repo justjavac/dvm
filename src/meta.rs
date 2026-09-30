@@ -150,10 +150,10 @@ impl DvmMeta {
       }
     }
 
-    let config = DvmMeta::default();
+    let mut config = DvmMeta::default();
     // Best-effort: the in-memory default is valid even if the disk write fails
     // (e.g. read-only home on a first run).
-    let _ = config.save();
+    let _ = config.save_and_reload();
     config
   }
 
@@ -230,19 +230,7 @@ impl DvmMeta {
     } else {
       self.versions.push(VersionMapping { required, current });
     }
-    self.save()
-  }
-
-  /// Remove all version mappings whose `current` field matches the given version.
-  /// Returns the number of mappings removed.
-  pub fn remove_mappings_for_version(&mut self, version: &str) -> anyhow::Result<usize> {
-    let before = self.versions.len();
-    self.versions.retain(|it| it.current != version);
-    let removed = before - self.versions.len();
-    if removed > 0 {
-      self.save()?;
-    }
-    Ok(removed)
+    self.save_and_reload()
   }
 
   ///
@@ -264,7 +252,7 @@ impl DvmMeta {
     if let Some(index) = self.versions.iter().position(|it| it.required == required) {
       self.versions.remove(index);
     }
-    self.save()
+    self.save_and_reload()
   }
 
   ///
@@ -297,7 +285,7 @@ impl DvmMeta {
     } else {
       self.alias.push(Alias { name, required });
     }
-    self.save()
+    self.save_and_reload()
   }
 
   pub fn has_alias(&self, name: &str) -> bool {
@@ -322,7 +310,7 @@ impl DvmMeta {
     if let Some(index) = self.alias.iter().position(|it| it.name == name) {
       self.alias.remove(index);
     }
-    self.save()
+    self.save_and_reload()
   }
 
   pub fn resolve_version_req(&self, required: &str) -> anyhow::Result<VersionArg> {
@@ -332,11 +320,29 @@ impl DvmMeta {
       .ok_or_else(|| anyhow::anyhow!("`{}` is not a valid semver version or alias", required))
   }
 
-  /// write to disk (atomic)
+  /// reload from disk
+  pub fn reload(&mut self) {
+    let new = DvmMeta::new();
+    self.versions = new.versions;
+    self.alias = new.alias;
+  }
+
+  /// write to disk
   pub fn save(&self) -> anyhow::Result<()> {
     let file_path = DvmMeta::path();
+    if let Some(dir_path) = file_path.parent() {
+      if !dir_path.exists() {
+        create_dir_all(dir_path)?;
+      }
+    }
     let json = serde_json::to_string_pretty(self)?;
-    crate::utils::atomic_write(file_path, json.as_bytes())?;
+    write(file_path, json)?;
+    Ok(())
+  }
+
+  pub fn save_and_reload(&mut self) -> anyhow::Result<()> {
+    self.save()?;
+    self.reload();
     Ok(())
   }
 }

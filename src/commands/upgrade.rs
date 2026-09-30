@@ -106,11 +106,8 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
         current.bright_red(),
         latest.clone().bright_green()
       );
-
-      if !dry_run {
-        install::exec(meta, true, Some(latest.clone()))?;
-        meta.set_version_mapping(alias.name, latest)?;
-      }
+      install::exec(meta, true, Some(latest.clone()))?;
+      meta.set_version_mapping(alias.name, latest)?;
     }
 
     // canary is not an alias, so it lives outside the loop: upgrading it in the
