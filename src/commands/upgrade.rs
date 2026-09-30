@@ -25,11 +25,10 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
     }
 
     if !meta.has_alias(&alias) {
-      eprintln!(
-        "{} is not a valid semver version or tag and will not be upgraded",
+      anyhow::bail!(
+        "`{}` is not a valid semver version or tag and will not be upgraded",
         alias.bright_black()
       );
-      std::process::exit(1);
     }
     println!("Upgrading alias {}", alias.bright_black());
     let current = meta
@@ -40,7 +39,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
       VersionArg::Exact(v) => {
         if current == v.to_string() {
           println!("{} is already the latest version", alias);
-          std::process::exit(0);
+          return Ok(());
         } else {
           install::exec(meta, true, Some(v.to_string()))?;
         }

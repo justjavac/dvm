@@ -26,7 +26,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     if version == DVM_VERSION_CANARY {
       if !deno_canary_path().exists() {
         if !prompt_request("deno canary is not installed. do you want to install it?") {
-          std::process::exit(1);
+          anyhow::bail!("cancelled");
         }
         install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
       }
@@ -46,12 +46,10 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     } else if meta.has_alias(version) {
       meta.resolve_version_req(version)?
     } else {
-      // dvm will reject for using semver range directly now.
-      eprintln!(
+      anyhow::bail!(
         "`{}` is not a valid semver version or tag and will not be used\ntype `dvm help` for more info",
         version
       );
-      std::process::exit(1);
     }
   } else {
     println!("No version input detect, try to use version in .dvmrc file");
@@ -93,7 +91,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
         meta.set_version_mapping(version.clone(), used_version.to_string())?;
       }
     } else {
-      std::process::exit(1);
+      anyhow::bail!("cancelled");
     }
   }
 
@@ -110,12 +108,11 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
 }
 
 pub fn use_canary_bin_path(local: bool) -> Result<()> {
-  run_with_spinner("Processing".to_string(), "Now using deno canary".to_string(), |_| {
+  run_with_spinner("Processing".to_string(), "Now using deno canary".to_string(), || {
     let canary_dir = deno_canary_path();
 
     if !canary_dir.exists() {
-      eprintln!("Canary dir not found, will not be used");
-      std::process::exit(1);
+      anyhow::bail!("Canary dir not found, will not be used");
     }
 
     let bin_path = deno_bin_path();
@@ -135,7 +132,7 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
 }
 
 pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String, local: bool) -> Result<()> {
-  run_with_spinner("Processing".to_string(), format!("Now using deno {}", version), |_| {
+  run_with_spinner("Processing".to_string(), format!("Now using deno {}", version), || {
     check_exe(exe_path, version)?;
 
     let bin_path = deno_bin_path();

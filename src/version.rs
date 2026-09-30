@@ -6,7 +6,6 @@ use crate::consts::{
 };
 use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
-use colored::Colorize;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
@@ -101,7 +100,7 @@ pub fn cache_remote_versions() -> Result<()> {
   run_with_spinner(
     "fetching remote versions...".to_string(),
     "updated remote versions".to_string(),
-    |_| {
+    || {
       let cached_remote_versions_location = cached_remote_versions_location();
 
       let remote_versions_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
@@ -122,22 +121,19 @@ pub fn remote_versions() -> Result<Vec<String>> {
     if input.trim().to_lowercase() == "y" || input.trim().is_empty() {
       cache_remote_versions()?;
     } else {
-      println!("Please run `dvm update` to update the remote version cache.");
-      std::process::exit(1);
+      anyhow::bail!("Please run `dvm update` to update the remote version cache.");
     }
   }
 
   let cached_remote_versions_location = cached_remote_versions_location();
   let cached_content = std::fs::read_to_string(cached_remote_versions_location)?;
 
-  let versions = match cli_versions_from_versions_json(&cached_content) {
-    Ok(versions) => versions,
-    Err(err) => {
-      eprintln!("Failed to parse remote versions cache: {}", err.to_string().red());
-      eprintln!("The remote version cache is corrupted, please run `dvm update` to update the remote version cache.");
-      std::process::exit(1);
-    }
-  };
+  let versions = cli_versions_from_versions_json(&cached_content).map_err(|err| {
+    anyhow::anyhow!(
+      "Failed to parse remote versions cache: {}\nThe remote version cache is corrupted, please run `dvm update` to update the remote version cache.",
+      err
+    )
+  })?;
 
   // Callers sort and match these as semver, so drop anything the registry lists
   // that is not a version instead of panicking further down the line.

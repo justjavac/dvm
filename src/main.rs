@@ -42,10 +42,8 @@ pub fn main() {
     Commands::Install { no_use, version } => run_with_spinner(
       format!("Installing {}", version.clone().unwrap_or_else(|| "latest".to_string())),
       "Installed".to_string(),
-      |stop_with_error| match commands::install::exec(&meta, no_use, version) {
-        Ok(ok) => Ok(ok),
-        Err(err) => stop_with_error(format!("Failed to install: {}", err)),
-      },
+      || commands::install::exec(&meta, no_use, version)
+        .map_err(|err| anyhow::anyhow!("Failed to install: {}", err)),
     ),
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
@@ -57,18 +55,14 @@ pub fn main() {
     Commands::Doctor => run_with_spinner(
       "Fixing...".to_string(),
       "All fixes applied, DVM is ready to use.".green().to_string(),
-      |fail| match commands::doctor::exec(&mut meta) {
-        Ok(ok) => Ok(ok),
-        Err(err) => fail(format!("Failed to fix: {}", err)),
-      },
+      || commands::doctor::exec(&mut meta)
+        .map_err(|err| anyhow::anyhow!("Failed to fix: {}", err)),
     ),
     Commands::Upgrade { alias } => run_with_spinner(
       "Upgrading...".to_string(),
       "All alias have been upgraded.".to_string(),
-      |fail| match commands::upgrade::exec(&mut meta, alias) {
-        Ok(ok) => Ok(ok),
-        Err(err) => fail(format!("Failed to upgrade: {}", err)),
-      },
+      || commands::upgrade::exec(&mut meta, alias)
+        .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err)),
     ),
 
     Commands::Exec { command: _, version: _ } => {
@@ -79,19 +73,15 @@ pub fn main() {
       run_with_spinner(
         "Cleaning...".to_string(),
         "clean finished".to_string(),
-        |fail| match commands::clean::exec(&mut meta) {
-          Ok(ok) => Ok(ok),
-          Err(err) => fail(format!("Failed to clean: {}", err)),
-        },
+        || commands::clean::exec(&mut meta)
+          .map_err(|err| anyhow::anyhow!("Failed to clean: {}", err)),
       )
     }
 
     Commands::Registry { command } => commands::registry::exec(command),
-    Commands::Update => run_with_spinner("Updating cache...".to_string(), "Update success".to_string(), |fail| {
-      match commands::update::exec(&mut meta) {
-        Ok(ok) => Ok(ok),
-        Err(err) => fail(format!("Failed to update: {}", err)),
-      }
+    Commands::Update => run_with_spinner("Updating cache...".to_string(), "Update success".to_string(), || {
+      commands::update::exec(&mut meta)
+        .map_err(|err| anyhow::anyhow!("Failed to update: {}", err))
     }),
   };
 

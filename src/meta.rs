@@ -13,8 +13,6 @@ pub const DEFAULT_ALIAS: phf::Map<&'static str, &'static str> = phf::phf_map! {
 };
 
 pub trait ToVersionReq {
-  #[allow(dead_code)]
-  fn to_version_req(&self) -> VersionReq;
   fn try_to_version_req(&self) -> anyhow::Result<VersionReq>;
 }
 
@@ -37,10 +35,6 @@ impl VersionMapping {
 }
 
 impl ToVersionReq for VersionMapping {
-  fn to_version_req(&self) -> VersionReq {
-    VersionReq::from_str(&self.required).expect("VersionMapping::required is not a valid VersionReq")
-  }
-
   fn try_to_version_req(&self) -> anyhow::Result<VersionReq> {
     VersionReq::from_str(&self.required).map_err(|err| anyhow::anyhow!(err))
   }
@@ -53,10 +47,6 @@ pub struct Alias {
 }
 
 impl ToVersionReq for Alias {
-  fn to_version_req(&self) -> VersionReq {
-    VersionReq::from_str(&self.required).expect("Alias::required is not a valid VersionReq")
-  }
-
   fn try_to_version_req(&self) -> anyhow::Result<VersionReq> {
     VersionReq::from_str(&self.required).map_err(|err| anyhow::anyhow!(err))
   }
@@ -333,7 +323,7 @@ mod tests {
     assert_eq!(parsed.versions.len(), 2);
     assert_eq!(parsed.alias[0].name, "latest");
     assert_eq!(parsed.alias[0].required, "*");
-    assert_eq!(parsed.alias[0].to_version_req(), VersionReq::parse("*").unwrap());
+    assert_eq!(parsed.alias[0].try_to_version_req().unwrap(), VersionReq::parse("*").unwrap());
     assert!(parsed.alias[0].try_to_version_req().is_ok());
     assert_eq!(parsed.alias[1].name, "stable");
     assert_eq!(parsed.alias[1].required, "^1.0.0");

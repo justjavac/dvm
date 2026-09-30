@@ -24,7 +24,7 @@ pub fn print_error(err: &dyn std::fmt::Display) {
 pub fn run_with_spinner(
   message: String,
   finish_message: String,
-  f: impl FnOnce(Box<dyn FnOnce(String) -> Result<()>>) -> Result<()>,
+  f: impl FnOnce() -> Result<()>,
 ) -> Result<()> {
   let spinner = indicatif::ProgressBar::new_spinner().with_message(message);
   spinner.set_style(
@@ -34,16 +34,15 @@ pub fn run_with_spinner(
       .unwrap(),
   );
   spinner.enable_steady_tick(time::Duration::from_millis(100));
-  let result = f(Box::new({
-    let spinner = spinner.clone();
-    move |err| {
-      spinner.finish_and_clear();
-      eprintln!("{}", err);
-      std::process::exit(1);
+  let result = f();
+  match &result {
+    Ok(()) => {
+      spinner.finish_with_message(format!("{} in {:.2}s", finish_message, spinner.elapsed().as_secs_f32()));
     }
-  }));
-  spinner.finish_with_message(format!("{} in {:.2}s", finish_message, spinner.elapsed().as_secs_f32()));
-
+    Err(_) => {
+      spinner.finish_and_clear();
+    }
+  }
   result
 }
 

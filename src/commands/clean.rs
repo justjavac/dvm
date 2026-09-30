@@ -7,7 +7,8 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
 
   let cache_folder = home.join("versions");
   if !cache_folder.exists() {
-    std::process::exit(0);
+    println!("Nothing to clean");
+    return Ok(());
   }
 
   let requires = meta

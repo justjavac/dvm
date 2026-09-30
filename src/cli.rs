@@ -15,7 +15,13 @@ use crate::meta::DvmMeta;
 pub fn cli_parse(meta: &mut DvmMeta) -> Result<Cli, ()> {
   let args: Vec<String> = env::args().collect();
   if args.len() > 1 && args[1] == "exec" {
-    let (version, exec_args) = parse_exec_args(&args);
+    let (version, exec_args) = match parse_exec_args(&args) {
+      Ok(v) => v,
+      Err(err) => {
+        crate::utils::print_error(&err);
+        std::process::exit(1);
+      }
+    };
     if let Err(err) = commands::exec::exec(meta, version, exec_args) {
       crate::utils::print_error(&err);
       std::process::exit(1);
@@ -28,23 +34,20 @@ pub fn cli_parse(meta: &mut DvmMeta) -> Result<Cli, ()> {
 
 /// `dvm exec` forwards every argument after the version to deno verbatim, which
 /// clap cannot express, so the version is picked off by hand.
-fn parse_exec_args(args: &[String]) -> (Option<String>, Vec<String>) {
+fn parse_exec_args(args: &[String]) -> anyhow::Result<(Option<String>, Vec<String>)> {
   let Some(first) = args.get(2) else {
-    return (None, vec![]);
+    return Ok((None, vec![]));
   };
 
   if first == "--version" || first == "-V" {
     match args.get(3) {
-      Some(version) => (Some(version.clone()), args[4..].to_vec()),
-      None => {
-        eprintln!("A version should be followed after {}", first);
-        std::process::exit(1)
-      }
+      Some(version) => Ok((Some(version.clone()), args[4..].to_vec())),
+      None => anyhow::bail!("A version should be followed after {}", first),
     }
   } else if let Some(version) = first.strip_prefix("--version=").or_else(|| first.strip_prefix("-V=")) {
-    (Some(version.to_string()), args[3..].to_vec())
+    Ok((Some(version.to_string()), args[3..].to_vec()))
   } else {
-    (None, args[2..].to_vec())
+    Ok((None, args[2..].to_vec()))
   }
 }
 
@@ -315,28 +318,28 @@ mod tests {
   #[test]
   fn parses_exec_args() {
     assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "-V", "1.2.3", "run", "a.ts"])),
+      parse_exec_args(&owned(&["dvm", "exec", "-V", "1.2.3", "run", "a.ts"])).unwrap(),
       (Some("1.2.3".to_string()), owned(&["run", "a.ts"]))
     );
     assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "--version", "1.2.3", "run"])),
+      parse_exec_args(&owned(&["dvm", "exec", "--version", "1.2.3", "run"])).unwrap(),
       (Some("1.2.3".to_string()), owned(&["run"]))
     );
     assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "--version=1.2.3", "run"])),
+      parse_exec_args(&owned(&["dvm", "exec", "--version=1.2.3", "run"])).unwrap(),
       (Some("1.2.3".to_string()), owned(&["run"]))
     );
     assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "-V=1.2.3"])),
+      parse_exec_args(&owned(&["dvm", "exec", "-V=1.2.3"])).unwrap(),
       (Some("1.2.3".to_string()), vec![])
     );
     // Anything that is not a version flag belongs to deno, `-V` included once
     // it is no longer the first argument.
     assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "run", "-V"])),
+      parse_exec_args(&owned(&["dvm", "exec", "run", "-V"])).unwrap(),
       (None, owned(&["run", "-V"]))
     );
-    assert_eq!(parse_exec_args(&owned(&["dvm", "exec"])), (None, vec![]));
+    assert_eq!(parse_exec_args(&owned(&["dvm", "exec"])).unwrap(), (None, vec![]));
   }
 
   #[test]
