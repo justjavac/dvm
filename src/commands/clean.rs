@@ -12,11 +12,6 @@ pub fn exec(meta: &mut DvmMeta, yes: bool) -> Result<()> {
     return Ok(());
   }
 
-  if !yes && !prompt_confirm("Are you sure you want to clean dvm cache? (y/N)") {
-    println!("Clean cancelled");
-    return Ok(());
-  }
-
   let requires = meta
     .versions
     .iter()
