@@ -228,9 +228,42 @@ fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Re
     .extension()
     .and_then(|ext| ext.to_str())
     .expect("ARCHIVE_NAME always has a UTF-8 extension");
-
-  match archive_ext {
-    "zip" => unpack_zip(&archive_data, &version_dir)?,
+  let unpack_status = match archive_ext {
+    "zip" if cfg!(windows) => {
+      let archive_path = version_dir.join("deno.zip");
+      fs::write(&archive_path, &archive_data)?;
+      Command::new("powershell.exe")
+        .arg("-NoLogo")
+        .arg("-NoProfile")
+        .arg("-NonInteractive")
+        .arg("-Command")
+        .arg(
+          "& {
+            param($Path, $DestinationPath)
+            trap { $host.ui.WriteErrorLine($_.Exception); exit 1 }
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            [System.IO.Compression.ZipFile]::ExtractToDirectory(
+              $Path,
+              $DestinationPath
+            );
+          }",
+        )
+        .arg("-Path")
+        .arg(format!("'{}'", archive_path.to_string_lossy()))
+        .arg("-DestinationPath")
+        .arg(format!("'{}'", version_dir.to_string_lossy()))
+        .spawn()?
+        .wait()?
+    }
+    "zip" => {
+      let archive_path = version_dir.join("deno.zip");
+      fs::write(&archive_path, &archive_data)?;
+      Command::new("unzip")
+        .current_dir(&version_dir)
+        .arg(archive_path)
+        .spawn()?
+        .wait()?
+    }
     ext => anyhow::bail!("Unsupported archive type: '{}'", ext),
   }
 

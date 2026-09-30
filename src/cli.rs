@@ -8,8 +8,40 @@ use crate::consts::{
   REGISTRY_NAME_OFFICIAL, REGISTRY_OFFICIAL,
 };
 
-pub fn cli_parse() -> Cli {
-  Cli::parse()
+pub fn cli_parse(meta: &mut DvmMeta) -> Result<Cli, ()> {
+  let args: Vec<String> = env::args().collect();
+  if args.len() > 1 && args[1] == "exec" {
+    let (version, exec_args) = parse_exec_args(&args);
+    if let Err(err) = commands::exec::exec(meta, version, exec_args) {
+      crate::utils::print_error(&err);
+      std::process::exit(1);
+    }
+    return Err(());
+  }
+
+  Ok(Cli::parse())
+}
+
+/// `dvm exec` forwards every argument after the version to deno verbatim, which
+/// clap cannot express, so the version is picked off by hand.
+fn parse_exec_args(args: &[String]) -> (Option<String>, Vec<String>) {
+  let Some(first) = args.get(2) else {
+    return (None, vec![]);
+  };
+
+  if first == "--version" || first == "-V" {
+    match args.get(3) {
+      Some(version) => (Some(version.clone()), args[4..].to_vec()),
+      None => {
+        eprintln!("A version should be followed after {}", first);
+        std::process::exit(1)
+      }
+    }
+  } else if let Some(version) = first.strip_prefix("--version=").or_else(|| first.strip_prefix("-V=")) {
+    (Some(version.to_string()), args[3..].to_vec())
+  } else {
+    (None, args[2..].to_vec())
+  }
 }
 
 #[derive(Parser)]
