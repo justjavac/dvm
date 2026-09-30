@@ -17,7 +17,7 @@ pub fn cli_parse(meta: &mut DvmMeta) -> Result<Cli, ()> {
   if args.len() > 1 && args[1] == "exec" {
     let (version, exec_args) = parse_exec_args(&args);
     if let Err(err) = commands::exec::exec(meta, version, exec_args) {
-      eprintln!("\x1b[31merror:\x1b[39m: {}", err);
+      crate::utils::print_error(&err);
       std::process::exit(1);
     }
     return Err(());

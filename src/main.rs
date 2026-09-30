@@ -96,7 +96,7 @@ pub fn main() {
   };
 
   if let Err(err) = result {
-    eprintln!("\x1b[31merror:\x1b[39m: {}", err);
+    utils::print_error(&err);
     std::process::exit(1);
   }
 }

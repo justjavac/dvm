@@ -5,7 +5,7 @@ use crate::{
   version::{get_latest_lts_version, remote_versions, VersionArg},
   DvmMeta,
 };
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use colored::Colorize;
 use std::fs;
 use std::str::FromStr;
@@ -35,7 +35,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
     let current = meta
       .get_version_mapping(alias.as_str())
       .unwrap_or_else(|| DVM_VERSION_INVALID.to_string());
-    let version_req = meta.resolve_version_req(&alias);
+    let version_req = meta.resolve_version_req(&alias)?;
     match version_req {
       VersionArg::Exact(v) => {
         if current == v.to_string() {
@@ -48,7 +48,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
       VersionArg::Lts => {
         let version = get_latest_lts_version()?;
         install::exec(meta, true, Some(version.to_string()))?;
-        meta.set_version_mapping(alias, version.to_string());
+        meta.set_version_mapping(alias, version.to_string())?;
       }
       VersionArg::Range(r) => {
         // Only a semver range needs the full list, so it is fetched here rather
@@ -57,7 +57,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         let versions = remote_versions()?;
         let version = match_version(&versions, &r)?;
         install::exec(meta, true, Some(version.to_string()))?;
-        meta.set_version_mapping(alias, version.to_string());
+        meta.set_version_mapping(alias, version.to_string())?;
       }
     }
   } else {
@@ -67,7 +67,9 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         .get_version_mapping(alias.name.as_str())
         .unwrap_or_else(|| DVM_VERSION_INVALID.to_string());
 
-      let latest = match VersionArg::from_str(alias.required.clone().as_str()).unwrap() {
+      let latest = match VersionArg::from_str(alias.required.clone().as_str())
+        .map_err(|_| anyhow::anyhow!("alias `{}` has an invalid version range", alias.name))?
+      {
         VersionArg::Exact(v) => v.to_string(),
         VersionArg::Lts => get_latest_lts_version()?.to_string(),
         VersionArg::Range(v) => match_version(&versions, &v)?.to_string(),
@@ -84,7 +86,7 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         latest.clone().bright_green()
       );
       install::exec(meta, true, Some(latest.clone()))?;
-      meta.set_version_mapping(alias.name, latest);
+      meta.set_version_mapping(alias.name, latest)?;
     }
 
     // canary is not an alias, so it lives outside the loop: upgrading it in the

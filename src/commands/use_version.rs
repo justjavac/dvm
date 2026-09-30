@@ -40,11 +40,11 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     } else if version == DVM_VERSION_LTS {
       VersionArg::Lts
     } else if version == DVM_VERSION_LATEST {
-      VersionArg::Range(VersionReq::parse("*").unwrap())
-    } else if is_exact_version(version) {
-      VersionArg::Exact(Version::parse(version).unwrap())
+      VersionArg::Range(VersionReq::parse("*").expect("\"*\" is a valid VersionReq"))
+    } else if let Ok(v) = Version::parse(version) {
+      VersionArg::Exact(v)
     } else if meta.has_alias(version) {
-      meta.resolve_version_req(version)
+      meta.resolve_version_req(version)?
     } else {
       // dvm will reject for using semver range directly now.
       eprintln!(
@@ -90,7 +90,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
       let temp = version_req.to_string();
       let version = version.as_ref().unwrap_or(&temp);
       if !is_exact_version(version) {
-        meta.set_version_mapping(version.clone(), used_version.to_string());
+        meta.set_version_mapping(version.clone(), used_version.to_string())?;
       }
     } else {
       std::process::exit(1);
@@ -103,7 +103,9 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
     version.unwrap_or_else(|| DVM_VERSION_LATEST.to_string()),
     write_local,
   )?;
-  update_stub(used_version.to_string().as_str());
+  // Best-effort: a failed stub write only means the version may be cleaned
+  // earlier, not worth aborting a successful `dvm use`.
+  let _ = update_stub(&used_version.to_string());
   Ok(())
 }
 
@@ -117,7 +119,10 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
     }
 
     let bin_path = deno_bin_path();
-    fs::create_dir_all(bin_path.parent().unwrap())?;
+    let parent = bin_path
+      .parent()
+      .ok_or_else(|| anyhow::anyhow!("dvm bin path has no parent directory"))?;
+    fs::create_dir_all(parent)?;
     remove_deno_bin_link()?;
     fs::hard_link(&canary_dir, &bin_path)?;
 
@@ -134,7 +139,10 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
     check_exe(exe_path, version)?;
 
     let bin_path = deno_bin_path();
-    fs::create_dir_all(bin_path.parent().unwrap())?;
+    let parent = bin_path
+      .parent()
+      .ok_or_else(|| anyhow::anyhow!("dvm bin path has no parent directory"))?;
+    fs::create_dir_all(parent)?;
     remove_deno_bin_link()?;
     fs::hard_link(exe_path, &bin_path)?;
 

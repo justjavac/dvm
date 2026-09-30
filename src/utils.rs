@@ -2,6 +2,7 @@ use crate::configrc::rc_get_with_fix;
 use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_DENO_VERSION};
 use crate::version::VersionArg;
 use anyhow::Result;
+use colored::Colorize;
 use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
@@ -12,7 +13,13 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tempfile::TempDir;
+
+/// Print an error to stderr in red, in the `error: <message>` style used
+/// throughout dvm's CLI. Centralized here so the prefix stays consistent and
+/// single-colon.
+pub fn print_error(err: &dyn std::fmt::Display) {
+  eprintln!("{} {}", "error:".red(), err);
+}
 
 pub fn run_with_spinner(
   message: String,
@@ -43,7 +50,7 @@ pub fn run_with_spinner(
 pub fn prompt_request(prompt: &str) -> bool {
   print!("{} (Y/n)", prompt);
 
-  stdout().flush().unwrap();
+  let _ = stdout().flush();
   let mut buffer = [0; 1];
   let confirm = BufReader::new(stdin())
     .read(&mut buffer)
@@ -60,25 +67,24 @@ pub fn check_is_deactivated() -> bool {
 }
 
 pub fn now() -> u128 {
-  SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
+  SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map(|it| it.as_millis())
+    .unwrap_or(0)
 }
 
-pub fn update_stub(verison: &str) {
+pub fn update_stub(version: &str) -> std::io::Result<()> {
   let mut home = dvm_versions();
-  home.push(verison);
+  home.push(version);
   if home.is_dir() {
     home.push(".dvmstub");
-    write(home, now().to_string()).unwrap();
+    write(home, now().to_string())?;
   }
+  Ok(())
 }
 
 pub fn is_exact_version(input: &str) -> bool {
   Version::parse(input).is_ok()
-}
-
-#[allow(dead_code)]
-pub fn is_valid_semver_range(input: &str) -> bool {
-  VersionReq::parse(input).is_ok()
 }
 
 pub fn best_version<'a, T>(choices: T, required: VersionReq) -> Option<Version>
@@ -99,8 +105,9 @@ where
 /// local -> user -> default
 pub fn load_dvmrc() -> VersionArg {
   rc_get_with_fix(DVM_CONFIGRC_KEY_DENO_VERSION)
-    .map(|v| VersionArg::from_str(&v).unwrap())
-    .unwrap_or_else(|_| VersionArg::from_str("*").unwrap())
+    .ok()
+    .and_then(|v| VersionArg::from_str(&v).ok())
+    .unwrap_or_else(|| VersionArg::Range(VersionReq::parse("*").expect("\"*\" is a valid VersionReq")))
 }
 
 pub fn dvm_root() -> PathBuf {
@@ -109,7 +116,7 @@ pub fn dvm_root() -> PathBuf {
     // third party software, but it is non-standard and should not be relied upon.
     home_dir()
       .map(|it| it.join(".dvm"))
-      .unwrap_or_else(|| TempDir::new().unwrap().keep().join(".dvm"))
+      .unwrap_or_else(|| std::env::temp_dir().join(".dvm"))
   })
 }
 
@@ -134,7 +141,10 @@ pub fn deno_bin_path() -> PathBuf {
 /// dvm's bin directory, i.e. the directory that must come first on `PATH`
 /// for the version selected by `dvm use` to win.
 pub fn dvm_bin_dir() -> PathBuf {
-  deno_bin_path().parent().unwrap().to_path_buf()
+  deno_bin_path()
+    .parent()
+    .map(Path::to_path_buf)
+    .unwrap_or_else(|| dvm_root().join("bin"))
 }
 
 /// Where the `deno` command found on `PATH` actually points, relative to

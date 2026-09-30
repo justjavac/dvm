@@ -39,17 +39,15 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   let version_registry_url =
     rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
 
-  if let Some(version) = version.clone() {
-    if version == *DVM_VERSION_CANARY {
-      let hash = get_latest_canary(&binary_registry_url)?;
-      download_and_unpack_canary(&binary_registry_url, &hash)?;
+  if version.as_deref() == Some(DVM_VERSION_CANARY) {
+    let hash = get_latest_canary(&binary_registry_url)?;
+    download_and_unpack_canary(&binary_registry_url, &hash)?;
 
-      if !no_use {
-        use_version::use_canary_bin_path(false)?;
-      }
-
-      return Ok(());
+    if !no_use {
+      use_version::use_canary_bin_path(false)?;
     }
+
+    return Ok(());
   }
 
   let install_version = match version {
@@ -176,7 +174,7 @@ fn unpack_canary(archive_data: Vec<u8>) -> Result<PathBuf> {
   let exe_path = deno_canary_path();
 
   if exe_path.exists() {
-    fs::remove_file(exe_path.clone())?;
+    fs::remove_file(&exe_path)?;
   }
 
   unpack_impl(archive_data, canary_dir, exe_path)
@@ -186,7 +184,7 @@ fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Re
   let archive_ext = Path::new(ARCHIVE_NAME)
     .extension()
     .and_then(|ext| ext.to_str())
-    .unwrap();
+    .expect("ARCHIVE_NAME always has a UTF-8 extension");
   let unpack_status = match archive_ext {
     "zip" if cfg!(windows) => {
       let archive_path = version_dir.join("deno.zip");
@@ -208,9 +206,9 @@ fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Re
           }",
         )
         .arg("-Path")
-        .arg(format!("'{}'", archive_path.to_str().unwrap()))
+        .arg(format!("'{}'", archive_path.to_string_lossy()))
         .arg("-DestinationPath")
-        .arg(format!("'{}'", version_dir.to_str().unwrap()))
+        .arg(format!("'{}'", version_dir.to_string_lossy()))
         .spawn()?
         .wait()?
     }

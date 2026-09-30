@@ -24,7 +24,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> R
     println!("The latest LTS version is v{}", version);
     version.to_string()
   } else if meta.has_alias(&v) {
-    let version_req = meta.resolve_version_req(&v);
+    let version_req = meta.resolve_version_req(&v)?;
     match version_req {
       VersionArg::Exact(v) => v.to_string(),
       VersionArg::Lts => {

@@ -11,9 +11,16 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   // Init enviroments if need
   // actually set DVM_DIR env var if not exist.
   let home_path = dvm_root();
-  check_or_set_env("DVM_DIR", home_path.to_str().unwrap())?;
+  let home_str = home_path
+    .to_str()
+    .ok_or_else(|| anyhow::anyhow!("DVM_DIR path contains non-UTF-8 bytes"))?;
+  check_or_set_env("DVM_DIR", home_str)?;
   let path = get_env("PATH")?;
-  let looking_for = dvm_bin_dir().to_str().unwrap().to_string();
+  let bin_dir = dvm_bin_dir();
+  let looking_for = bin_dir
+    .to_str()
+    .ok_or_else(|| anyhow::anyhow!("dvm bin path contains non-UTF-8 bytes"))?
+    .to_string();
 
   // Share the resolution with `dvm use` so both agree on what "dvm's deno wins
   // on PATH" means: a plain string prefix would also accept a sibling directory
@@ -63,9 +70,9 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   }
 
   // clean user-wide rc file
-  rc_clean(true).expect("clean local rc file failed");
-  rc_clean(false).expect("clean user-wide rc file failed");
-  rc_fix().expect("fix rc file failed");
+  rc_clean(true)?;
+  rc_clean(false)?;
+  rc_fix()?;
 
   // The success line is the spinner's finish message in `main`, printing it
   // here too showed it twice.

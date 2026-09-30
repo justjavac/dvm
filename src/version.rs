@@ -78,7 +78,9 @@ pub fn local_versions() -> Vec<String> {
     for entry in entries.flatten() {
       if let Ok(file_type) = entry.file_type() {
         if file_type.is_dir() {
-          let file_name = entry.file_name().into_string().unwrap();
+          let Ok(file_name) = entry.file_name().into_string() else {
+            continue;
+          };
           if is_semver(&file_name) {
             v.push(file_name);
           }
@@ -114,7 +116,7 @@ pub fn remote_versions() -> Result<Vec<String>> {
   if !is_versions_cache_exists() {
     println!("It seems that you have not updated the remote version cache, please run `dvm update` first.");
     print!("Do you want to update the remote version cache now? [Y/n]");
-    std::io::stdout().lock().flush().unwrap();
+    let _ = std::io::stdout().lock().flush();
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
     if input.trim().to_lowercase() == "y" || input.trim().is_empty() {

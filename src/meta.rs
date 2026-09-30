@@ -26,18 +26,12 @@ pub struct VersionMapping {
 
 impl VersionMapping {
   pub fn is_valid_mapping(&self) -> bool {
-    let current = Version::parse(&self.current);
-    if current.is_err() {
+    let Ok(current) = Version::parse(&self.current) else {
       return false;
-    }
-    let current = current.unwrap();
-
-    let req = self.try_to_version_req();
-    if req.is_err() {
+    };
+    let Ok(req) = self.try_to_version_req() else {
       return false;
-    }
-    let req = req.unwrap();
-
+    };
     req.matches(&current)
   }
 }
@@ -102,7 +96,9 @@ impl DvmMeta {
     }
 
     let mut config = DvmMeta::default();
-    config.save_and_reload();
+    // Best-effort: the in-memory default is valid even if the disk write fails
+    // (e.g. read-only home on a first run).
+    let _ = config.save_and_reload();
     config
   }
 
@@ -146,14 +142,13 @@ impl DvmMeta {
   /// set a version mapping
   ///   `required` is either a semver range or a alias to a semver rage
   ///   `current` is the current directory that the deno located in
-  pub fn set_version_mapping(&mut self, required: String, current: String) {
-    let result = self.versions.iter().position(|it| it.required == required);
-    if let Some(index) = result {
-      self.versions[index] = VersionMapping { required, current };
+  pub fn set_version_mapping(&mut self, required: String, current: String) -> anyhow::Result<()> {
+    if let Some(mapping) = self.versions.iter_mut().find(|it| it.required == required) {
+      mapping.current = current;
     } else {
       self.versions.push(VersionMapping { required, current });
     }
-    self.save_and_reload();
+    self.save_and_reload()
   }
 
   ///
@@ -164,20 +159,18 @@ impl DvmMeta {
     self
       .versions
       .iter()
-      .position(|it| it.required == required)
-      .map(|index| self.versions[index].current.clone())
+      .find(|it| it.required == required)
+      .map(|it| it.current.clone())
   }
 
   ///
   /// delete a version mapping
   /// this will also delete actual files.
-  pub fn delete_version_mapping(&mut self, required: String) {
-    let result = self.versions.iter().position(|it| it.required == required);
-    if let Some(index) = result {
+  pub fn delete_version_mapping(&mut self, required: String) -> anyhow::Result<()> {
+    if let Some(index) = self.versions.iter().position(|it| it.required == required) {
       self.versions.remove(index);
     }
-
-    self.save_and_reload();
+    self.save_and_reload()
   }
 
   ///
@@ -201,18 +194,16 @@ impl DvmMeta {
   /// set a alias
   ///   name is alias name
   ///   required is a semver range
-  pub fn set_alias(&mut self, name: String, required: String) {
+  pub fn set_alias(&mut self, name: String, required: String) -> anyhow::Result<()> {
     if DEFAULT_ALIAS.contains_key(name.as_str()) {
-      return;
+      return Ok(());
     }
-    let result = self.alias.iter().position(|it| it.name == name);
-    if let Some(index) = result {
-      self.alias[index] = Alias { name, required };
+    if let Some(alias) = self.alias.iter_mut().find(|it| it.name == name) {
+      alias.required = required;
     } else {
       self.alias.push(Alias { name, required });
     }
-
-    self.save_and_reload();
+    self.save_and_reload()
   }
 
   pub fn has_alias(&self, name: &str) -> bool {
@@ -227,27 +218,24 @@ impl DvmMeta {
       self
         .alias
         .iter()
-        .position(|it| it.name == name)
-        .map(|index| VersionArg::from_str(&self.alias[index].required).unwrap())
+        .find(|it| it.name == name)
+        .and_then(|alias| VersionArg::from_str(&alias.required).ok())
     }
   }
 
   /// delete a alias
-  pub fn delete_alias(&mut self, name: String) {
-    let result = self.alias.iter().position(|it| it.name == name);
-    if let Some(index) = result {
+  pub fn delete_alias(&mut self, name: String) -> anyhow::Result<()> {
+    if let Some(index) = self.alias.iter().position(|it| it.name == name) {
       self.alias.remove(index);
     }
-
-    self.save_and_reload();
+    self.save_and_reload()
   }
 
-  pub fn resolve_version_req(&self, required: &str) -> VersionArg {
-    if self.has_alias(required) {
-      self.get_alias(required).unwrap()
-    } else {
-      VersionArg::from_str(required).unwrap()
-    }
+  pub fn resolve_version_req(&self, required: &str) -> anyhow::Result<VersionArg> {
+    self
+      .get_alias(required)
+      .or_else(|| VersionArg::from_str(required).ok())
+      .ok_or_else(|| anyhow::anyhow!("`{}` is not a valid semver version or alias", required))
   }
 
   /// reload from disk
@@ -258,18 +246,22 @@ impl DvmMeta {
   }
 
   /// write to disk
-  pub fn save(&self) {
+  pub fn save(&self) -> anyhow::Result<()> {
     let file_path = DvmMeta::path();
-    let dir_path = file_path.parent().unwrap();
-    if !dir_path.exists() {
-      create_dir_all(dir_path).unwrap();
+    if let Some(dir_path) = file_path.parent() {
+      if !dir_path.exists() {
+        create_dir_all(dir_path)?;
+      }
     }
-    write(file_path, serde_json::to_string_pretty(self).unwrap()).unwrap();
+    let json = serde_json::to_string_pretty(self)?;
+    write(file_path, json)?;
+    Ok(())
   }
 
-  pub fn save_and_reload(&mut self) {
-    self.save();
+  pub fn save_and_reload(&mut self) -> anyhow::Result<()> {
+    self.save()?;
     self.reload();
+    Ok(())
   }
 }
 
