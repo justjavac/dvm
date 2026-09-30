@@ -48,9 +48,6 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
         if current == v.to_string() {
           println!("{} is already the latest version", alias);
           return Ok(());
-        } else if dry_run {
-          println!("Would upgrade {} from {} to {}", alias, current, v);
-          return Ok(());
         } else {
           install::exec(meta, true, Some(v.to_string()))?;
         }

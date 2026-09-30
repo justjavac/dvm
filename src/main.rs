@@ -76,7 +76,7 @@ pub fn main() {
     Commands::Upgrade { alias, dry_run } => run_with_spinner(
       "Upgrading...".to_string(),
       "All alias have been upgraded.".to_string(),
-      || commands::upgrade::exec(&mut meta, alias, dry_run)
+      || commands::upgrade::exec(&mut meta, alias)
         .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err)),
     ),
     // exec handled above (before the match)
