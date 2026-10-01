@@ -13,12 +13,36 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tempfile::NamedTempFile;
 
 /// Print an error to stderr in red, in the `error: <message>` style used
 /// throughout dvm's CLI. Centralized here so the prefix stays consistent and
 /// single-colon.
 pub fn print_error(err: &dyn std::fmt::Display) {
-  eprintln!("{} {}", "error:".red(), err);
+  eprintln!("{} {}", "error:".red().bold(), err);
+}
+
+/// Atomically write `content` to `path` by writing to a temp file in the same
+/// directory and then renaming it into place.  This guarantees the destination
+/// file is never left in a half-written state if the process crashes mid-write.
+pub fn atomic_write<P: AsRef<Path>>(path: P, content: &[u8]) -> std::io::Result<()> {
+  let path = path.as_ref();
+  let dir = path
+    .parent()
+    .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "path has no parent"))?;
+
+  // Ensure the target directory exists
+  std::fs::create_dir_all(dir)?;
+
+  // Create a temp file in the same directory so rename is atomic
+  let mut tmp = NamedTempFile::new_in(dir)?;
+  tmp.write_all(content)?;
+  tmp.flush()?;
+
+  // Atomically replace the destination
+  tmp.persist(path)?;
+
+  Ok(())
 }
 
 pub fn run_with_spinner(

@@ -15,7 +15,6 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
     .to_str()
     .ok_or_else(|| anyhow::anyhow!("DVM_DIR path contains non-UTF-8 bytes"))?;
   check_or_set_env("DVM_DIR", home_str)?;
-  let path = get_env("PATH")?;
   let bin_dir = dvm_bin_dir();
   let looking_for = bin_dir
     .to_str()
