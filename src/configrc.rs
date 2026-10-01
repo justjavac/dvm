@@ -99,7 +99,7 @@ pub fn rc_update(is_local: bool, key: &str, value: &str) -> io::Result<()> {
     .map(|(k, v)| format!("{}={}", k, v))
     .collect::<Vec<_>>()
     .join("\n");
-  fs::write(config_path, config)
+  crate::utils::atomic_write(config_path, config.as_bytes())
 }
 
 fn rc_parse(content: &str) -> Vec<(&str, &str)> {
@@ -172,7 +172,7 @@ pub fn rc_clean(is_local: bool) -> io::Result<()> {
     .map(|(k, v)| format!("{}={}", k, v))
     .collect::<Vec<_>>()
     .join("\n");
-  fs::write(config_path, config)
+  crate::utils::atomic_write(config_path, config.as_bytes())
 }
 
 #[cfg(test)]

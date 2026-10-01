@@ -4,16 +4,14 @@ use crate::consts::{
   DVM_CONFIGRC_KEY_DENO_VERSION, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_CANARY, DVM_VERSION_LATEST,
   DVM_VERSION_LTS, DVM_VERSION_SYSTEM, REGISTRY_LIST_OFFICIAL,
 };
-use crate::deno_bin_path;
 use crate::meta::DvmMeta;
-use crate::utils::{best_version, deno_canary_path, deno_version_path, prompt_request, run_with_spinner, update_stub};
+use crate::utils::{best_version, deno_canary_path, deno_version_path, link_deno_bin, prompt_request, run_with_spinner, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc, remove_deno_bin_link, DenoResolution};
 use crate::version::remote_versions;
 use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};
 use anyhow::Result;
 use colored::Colorize;
 use semver::{Version, VersionReq};
-use std::fs;
 use std::path::Path;
 use std::process::Command;
 
@@ -115,13 +113,8 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
       anyhow::bail!("Canary dir not found, will not be used");
     }
 
-    let bin_path = deno_bin_path();
-    let parent = bin_path
-      .parent()
-      .ok_or_else(|| anyhow::anyhow!("dvm bin path has no parent directory"))?;
-    fs::create_dir_all(parent)?;
     remove_deno_bin_link()?;
-    fs::hard_link(&canary_dir, &bin_path)?;
+    link_deno_bin(&canary_dir)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
 
@@ -135,13 +128,8 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
   run_with_spinner("Processing".to_string(), format!("Now using deno {}", version), || {
     check_exe(exe_path, version)?;
 
-    let bin_path = deno_bin_path();
-    let parent = bin_path
-      .parent()
-      .ok_or_else(|| anyhow::anyhow!("dvm bin path has no parent directory"))?;
-    fs::create_dir_all(parent)?;
     remove_deno_bin_link()?;
-    fs::hard_link(exe_path, &bin_path)?;
+    link_deno_bin(exe_path)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;
     Ok(())

@@ -17,7 +17,6 @@ use meta::DvmMeta;
 use utils::{dvm_root, run_with_spinner};
 
 use crate::meta::DEFAULT_ALIAS;
-use crate::utils::deno_bin_path;
 
 cfg_if! {
   if #[cfg(windows)] {
@@ -47,7 +46,7 @@ pub fn main() {
     ),
     Commands::List => commands::list::exec(),
     Commands::ListRemote => commands::list::exec_remote(),
-    Commands::Uninstall { version } => commands::uninstall::exec(version),
+    Commands::Uninstall { version } => commands::uninstall::exec(&mut meta, version),
     Commands::Use { version, write_local } => commands::use_version::exec(&mut meta, version, write_local),
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
     Commands::Activate => commands::activate::exec(&mut meta),
@@ -65,10 +64,13 @@ pub fn main() {
         .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err)),
     ),
 
-    Commands::Exec { command: _, version: _ } => {
-      /* unused */
-      Ok(())
-    }
+    // `dvm exec` is handled in `cli_parse` *before* clap parsing,
+    // because every argument after the version must be forwarded to deno
+    // verbatim — something clap cannot express.  The `Exec` variant still
+    // exists in the clap definition so it appears in `--help` output, but
+    // this arm is never reached.
+    Commands::Exec { .. } => unreachable!("exec handled in cli_parse before clap"),
+
     Commands::Clean => {
       run_with_spinner(
         "Cleaning...".to_string(),

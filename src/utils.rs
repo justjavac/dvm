@@ -13,12 +13,36 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tempfile::NamedTempFile;
 
 /// Print an error to stderr in red, in the `error: <message>` style used
 /// throughout dvm's CLI. Centralized here so the prefix stays consistent and
 /// single-colon.
 pub fn print_error(err: &dyn std::fmt::Display) {
-  eprintln!("{} {}", "error:".red(), err);
+  eprintln!("{} {}", "error:".red().bold(), err);
+}
+
+/// Atomically write `content` to `path` by writing to a temp file in the same
+/// directory and then renaming it into place.  This guarantees the destination
+/// file is never left in a half-written state if the process crashes mid-write.
+pub fn atomic_write<P: AsRef<Path>>(path: P, content: &[u8]) -> std::io::Result<()> {
+  let path = path.as_ref();
+  let dir = path
+    .parent()
+    .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "path has no parent"))?;
+
+  // Ensure the target directory exists
+  std::fs::create_dir_all(dir)?;
+
+  // Create a temp file in the same directory so rename is atomic
+  let mut tmp = NamedTempFile::new_in(dir)?;
+  tmp.write_all(content)?;
+  tmp.flush()?;
+
+  // Atomically replace the destination
+  tmp.persist(path)?;
+
+  Ok(())
 }
 
 pub fn run_with_spinner(
@@ -165,6 +189,31 @@ pub fn deno_resolution() -> DenoResolution {
   classify_deno_resolution(which::which("deno").ok().as_deref(), &dvm_bin_dir())
 }
 
+/// Check whether dvm's bin directory is already present in the PATH env var.
+/// Uses proper path-component comparison (not substring matching) and is
+/// case-insensitive on Windows.
+pub fn dvm_bin_on_path() -> bool {
+  let bin_dir = dvm_bin_dir();
+  std::env::var_os("PATH")
+    .iter()
+    .flat_map(|p| std::env::split_paths(p))
+    .any(|entry| paths_equal(&entry, &bin_dir))
+}
+
+/// Compare two paths for equality, case-insensitively on Windows.
+#[cfg(not(windows))]
+fn paths_equal(a: &Path, b: &Path) -> bool {
+  a == b
+}
+
+#[cfg(windows)]
+fn paths_equal(a: &Path, b: &Path) -> bool {
+  fn normalize(p: &Path) -> String {
+    p.to_string_lossy().replace('/', "\\").to_lowercase()
+  }
+  normalize(a) == normalize(b)
+}
+
 fn classify_deno_resolution(resolved: Option<&Path>, bin_dir: &Path) -> DenoResolution {
   match resolved {
     None => DenoResolution::NotOnPath,
@@ -203,6 +252,43 @@ pub fn remove_deno_bin_link() -> std::io::Result<()> {
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
     result => result,
   }
+}
+
+/// Create a link at `deno_bin_path()` pointing to `src`.
+///
+/// Tries, in order: hard link → symlink → copy.  Hard links are the most
+/// efficient (zero-copy) but fail across filesystems.  Symlinks also fail on
+/// some Windows configurations (non-admin users).  Copying always works but
+/// uses extra disk space.
+pub fn link_deno_bin(src: &Path) -> Result<()> {
+  let dst = deno_bin_path();
+
+  if let Some(parent) = dst.parent() {
+    std::fs::create_dir_all(parent)?;
+  }
+
+  // 1. Hard link — fall through to symlink on failure (e.g. cross-filesystem)
+  if std::fs::hard_link(src, &dst).is_ok() {
+    return Ok(());
+  }
+
+  // 2. Symlink — fall through to copy on failure (e.g. Windows without admin)
+  #[cfg(unix)]
+  {
+    if std::os::unix::fs::symlink(src, &dst).is_ok() {
+      return Ok(());
+    }
+  }
+  #[cfg(windows)]
+  {
+    if std::os::windows::fs::symlink_file(src, &dst).is_ok() {
+      return Ok(());
+    }
+  }
+
+  // 3. Copy (last resort)
+  std::fs::copy(src, &dst)?;
+  Ok(())
 }
 
 pub fn deno_version_path(version: &Version) -> PathBuf {

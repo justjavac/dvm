@@ -105,7 +105,8 @@ pub fn cache_remote_versions() -> Result<()> {
 
       let remote_versions_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
       let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
-      std::fs::write(cached_remote_versions_location, remote_versions).map_err(|e| anyhow::anyhow!(e))
+      crate::utils::atomic_write(cached_remote_versions_location, remote_versions.as_bytes())
+        .map_err(|e| anyhow::anyhow!(e))
     },
   )
 }
