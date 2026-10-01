@@ -233,6 +233,18 @@ impl DvmMeta {
     self.save_and_reload()
   }
 
+  /// Remove all version mappings whose `current` field matches the given version.
+  /// Returns the number of mappings removed.
+  pub fn remove_mappings_for_version(&mut self, version: &str) -> anyhow::Result<usize> {
+    let before = self.versions.len();
+    self.versions.retain(|it| it.current != version);
+    let removed = before - self.versions.len();
+    if removed > 0 {
+      self.save_and_reload()?;
+    }
+    Ok(removed)
+  }
+
   ///
   /// get fold name of a given mapping,
   /// None if there haven't a deno version met the required semver range or alias that
@@ -327,16 +339,11 @@ impl DvmMeta {
     self.alias = new.alias;
   }
 
-  /// write to disk
+  /// write to disk (atomic)
   pub fn save(&self) -> anyhow::Result<()> {
     let file_path = DvmMeta::path();
-    if let Some(dir_path) = file_path.parent() {
-      if !dir_path.exists() {
-        create_dir_all(dir_path)?;
-      }
-    }
     let json = serde_json::to_string_pretty(self)?;
-    write(file_path, json)?;
+    crate::utils::atomic_write(file_path, json.as_bytes())?;
     Ok(())
   }
 

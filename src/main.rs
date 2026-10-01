@@ -82,7 +82,14 @@ pub fn main() {
     // exec handled above (before the match)
     Commands::Exec { .. } => unreachable!(),
 
-    Commands::Clean { yes } => {
+    // `dvm exec` is handled in `cli_parse` *before* clap parsing,
+    // because every argument after the version must be forwarded to deno
+    // verbatim — something clap cannot express.  The `Exec` variant still
+    // exists in the clap definition so it appears in `--help` output, but
+    // this arm is never reached.
+    Commands::Exec { .. } => unreachable!("exec handled in cli_parse before clap"),
+
+    Commands::Clean => {
       run_with_spinner(
         "Cleaning...".to_string(),
         "clean finished".to_string(),
