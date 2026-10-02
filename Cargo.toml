@@ -4,11 +4,11 @@ version = "1.10.1"
 license = "MIT"
 authors = ["迷渡 <justjavac@gmail.com>", "CGQAQ <m.jason.liu@outlook.com>"]
 edition = "2021"
+rust-version = "1.75"
 description = "Deno Version Manager - Easy way to manage multiple active deno versions."
 repository = "https://github.com/justjavac/dvm"
-default-run = "dvm"
-keywords = ["deno", "version", "dvm", "utils"]
-categories = ["hardware-support"]
+keywords = ["deno", "version-manager", "dvm", "cli"]
+categories = ["development-tools", "command-line-utilities"]
 documentation = "https://docs.rs/dvm"
 readme = "README.md"
 

@@ -85,10 +85,10 @@ impl DvmMeta {
       }
     }
 
-    let mut config = DvmMeta::default();
+    let config = DvmMeta::default();
     // Best-effort: the in-memory default is valid even if the disk write fails
     // (e.g. read-only home on a first run).
-    let _ = config.save_and_reload();
+    let _ = config.save();
     config
   }
 
@@ -138,7 +138,7 @@ impl DvmMeta {
     } else {
       self.versions.push(VersionMapping { required, current });
     }
-    self.save_and_reload()
+    self.save()
   }
 
   /// Remove all version mappings whose `current` field matches the given version.
@@ -148,7 +148,7 @@ impl DvmMeta {
     self.versions.retain(|it| it.current != version);
     let removed = before - self.versions.len();
     if removed > 0 {
-      self.save_and_reload()?;
+      self.save()?;
     }
     Ok(removed)
   }
@@ -172,7 +172,7 @@ impl DvmMeta {
     if let Some(index) = self.versions.iter().position(|it| it.required == required) {
       self.versions.remove(index);
     }
-    self.save_and_reload()
+    self.save()
   }
 
   ///
@@ -205,7 +205,7 @@ impl DvmMeta {
     } else {
       self.alias.push(Alias { name, required });
     }
-    self.save_and_reload()
+    self.save()
   }
 
   pub fn has_alias(&self, name: &str) -> bool {
@@ -230,7 +230,7 @@ impl DvmMeta {
     if let Some(index) = self.alias.iter().position(|it| it.name == name) {
       self.alias.remove(index);
     }
-    self.save_and_reload()
+    self.save()
   }
 
   pub fn resolve_version_req(&self, required: &str) -> anyhow::Result<VersionArg> {
@@ -240,24 +240,11 @@ impl DvmMeta {
       .ok_or_else(|| anyhow::anyhow!("`{}` is not a valid semver version or alias", required))
   }
 
-  /// reload from disk
-  pub fn reload(&mut self) {
-    let new = DvmMeta::new();
-    self.versions = new.versions;
-    self.alias = new.alias;
-  }
-
   /// write to disk (atomic)
   pub fn save(&self) -> anyhow::Result<()> {
     let file_path = DvmMeta::path();
     let json = serde_json::to_string_pretty(self)?;
     crate::utils::atomic_write(file_path, json.as_bytes())?;
-    Ok(())
-  }
-
-  pub fn save_and_reload(&mut self) -> anyhow::Result<()> {
-    self.save()?;
-    self.reload();
     Ok(())
   }
 }
