@@ -84,7 +84,11 @@ pub enum Commands {
 
   #[clap(about = "List all installed versions")]
   #[clap(visible_aliases = & ["ls", "ll", "la"])]
-  List,
+  List {
+    /// List all released versions (equivalent to `dvm list-remote`)
+    #[clap(long, short = 'r')]
+    remote: bool,
+  },
 
   #[clap(about = "List all released versions")]
   #[clap(visible_aliases = & ["lr", "ls-remote"])]

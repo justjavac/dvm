@@ -1,5 +1,3 @@
-extern crate core;
-
 mod cli;
 mod commands;
 mod configrc;
@@ -44,7 +42,13 @@ pub fn main() {
       || commands::install::exec(&meta, no_use, version)
         .map_err(|err| anyhow::anyhow!("Failed to install: {}", err)),
     ),
-    Commands::List => commands::list::exec(),
+    Commands::List { remote } => {
+      if remote {
+        commands::list::exec_remote()
+      } else {
+        commands::list::exec()
+      }
+    }
     Commands::ListRemote => commands::list::exec_remote(),
     Commands::Uninstall { version } => commands::uninstall::exec(&mut meta, version),
     Commands::Use { version, write_local } => commands::use_version::exec(&mut meta, version, write_local),

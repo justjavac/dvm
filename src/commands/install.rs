@@ -12,6 +12,7 @@ use crate::version::{get_latest_canary, get_latest_lts_version, get_latest_remot
 use anyhow::Result;
 use cfg_if::cfg_if;
 use semver::Version;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -117,6 +118,26 @@ fn download_archive(url: &str) -> Result<Vec<u8>> {
   Ok(response.into_bytes())
 }
 
+/// Download a .sha256 checksum file and return the hex-encoded hash.
+/// Handles the standard `sha256sum` format: `<hash>  <filename>`.
+fn download_sha256(url: &str) -> Result<String> {
+  let content = download_archive(url)?;
+  let text = String::from_utf8(content)?;
+  // sha256sum format: "HASH  FILENAME" or just "HASH"
+  let hash = text
+    .lines()
+    .next()
+    .and_then(|line| line.split_whitespace().next())
+    .ok_or_else(|| anyhow::anyhow!("Empty checksum file"))?
+    .to_string();
+
+  if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+    anyhow::bail!("Invalid SHA256 checksum format");
+  }
+
+  Ok(hash.to_lowercase())
+}
+
 fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
   let archive_data = download_archive(url)?;
 
@@ -132,6 +153,29 @@ fn compose_url_to_exec(registry: &str, version: &Version) -> String {
 
 fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
   let archive_data = download_package(url, version)?;
+
+  // Best-effort checksum verification.  If the checksum file is unavailable
+  // (e.g. on a custom mirror that doesn't publish .sha256 files), we log a
+  // warning and continue rather than hard-failing.
+  let checksum_url = format!("{}.sha256", url);
+  match download_sha256(&checksum_url) {
+    Ok(expected) => {
+      let actual = format!("{:x}", Sha256::digest(&archive_data));
+      if actual != expected {
+        anyhow::bail!(
+          "Checksum mismatch for {}:\n  expected: {}\n  actual:   {}",
+          ARCHIVE_NAME,
+          expected,
+          actual
+        );
+      }
+      println!("Checksum verified OK");
+    }
+    Err(err) => {
+      eprintln!("Warning: could not verify checksum: {}", err);
+    }
+  }
+
   if let Err(err) = unpack(archive_data, version) {
     eprintln!("Failed to unpack Deno v{}: {}", version, err);
     eprintln!("Removing the corrupted archive and retrying download");

@@ -386,6 +386,7 @@ dependencies = [
  "serde",
  "serde_json",
  "set_env",
+ "sha2",
  "tempfile",
  "tinyget",
  "which",
