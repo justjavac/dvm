@@ -10,14 +10,21 @@ use colored::Colorize;
 use std::fs;
 use std::str::FromStr;
 
-pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
+pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<()> {
   if let Some(alias) = alias {
     if alias == DVM_VERSION_SELF {
+      if dry_run {
+        anyhow::bail!("`--dry-run` is not supported for `dvm upgrade self`");
+      }
       upgrade_self()?;
       return Ok(());
     }
 
     if alias == DVM_VERSION_CANARY {
+      if dry_run {
+        println!("Would upgrade canary (latest canary build)");
+        return Ok(());
+      }
       println!("Upgrading {}", alias.bright_black());
       install::exec(meta, true, Some(alias))?;
       println!("All aliases have been upgraded");
@@ -40,12 +47,19 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         if current == v.to_string() {
           println!("{} is already the latest version", alias);
           return Ok(());
+        } else if dry_run {
+          println!("Would upgrade {} from {} to {}", alias, current, v);
+          return Ok(());
         } else {
           install::exec(meta, true, Some(v.to_string()))?;
         }
       }
       VersionArg::Lts => {
         let version = get_latest_lts_version()?;
+        if dry_run {
+          println!("Would upgrade {} from {} to {}", alias, current, version);
+          return Ok(());
+        }
         install::exec(meta, true, Some(version.to_string()))?;
         meta.set_version_mapping(alias, version.to_string())?;
       }
@@ -55,12 +69,17 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         // otherwise prompt for a version-cache update they never read.
         let versions = remote_versions()?;
         let version = match_version(&versions, &r)?;
+        if dry_run {
+          println!("Would upgrade {} from {} to {}", alias, current, version);
+          return Ok(());
+        }
         install::exec(meta, true, Some(version.to_string()))?;
         meta.set_version_mapping(alias, version.to_string())?;
       }
     }
   } else {
     let versions = remote_versions()?;
+    let mut upgraded = 0usize;
     for alias in meta.list_alias() {
       let current = meta
         .get_version_mapping(alias.name.as_str())
@@ -78,14 +97,19 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
         continue;
       }
 
+      upgraded += 1;
       println!(
-        "Upgrading {} from {} to {}",
+        "{} {} from {} to {}",
+        if dry_run { "Would upgrade" } else { "Upgrading" },
         alias.name.bright_black(),
         current.bright_red(),
         latest.clone().bright_green()
       );
-      install::exec(meta, true, Some(latest.clone()))?;
-      meta.set_version_mapping(alias.name, latest)?;
+
+      if !dry_run {
+        install::exec(meta, true, Some(latest.clone()))?;
+        meta.set_version_mapping(alias.name, latest)?;
+      }
     }
 
     // canary is not an alias, so it lives outside the loop: upgrading it in the
@@ -94,11 +118,20 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>) -> Result<()> {
     // user actually installed — otherwise `dvm upgrade` would pull a canary
     // build for someone who never asked for one.
     if deno_canary_path().exists() {
-      println!("Upgrading {}", DVM_VERSION_CANARY.bright_black());
-      install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
+      upgraded += 1;
+      if dry_run {
+        println!("Would upgrade canary (latest canary build)");
+      } else {
+        println!("Upgrading {}", DVM_VERSION_CANARY.bright_black());
+        install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
+      }
     }
 
-    println!("All aliases have been upgraded");
+    if upgraded == 0 {
+      println!("All aliases are already up to date");
+    } else if !dry_run {
+      println!("All aliases have been upgraded");
+    }
   }
 
   Ok(())

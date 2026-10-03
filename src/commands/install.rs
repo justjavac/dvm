@@ -277,14 +277,7 @@ fn unpack_zip(archive_data: &[u8], dest_dir: &Path) -> Result<()> {
 }
 
 fn compose_url_to_canary(registry: &str, hash: &str) -> String {
-  // TODO: remove this when deno canary support m1 chip,
-  let archive_name = if ARCHIVE_NAME == "deno-aarch64-apple-darwin.zip" {
-    "deno-x86_64-apple-darwin.zip"
-  } else {
-    ARCHIVE_NAME
-  };
-
-  format!("{}canary/{}/{}", registry, hash, archive_name)
+  format!("{}canary/{}/{}", registry, hash, ARCHIVE_NAME)
 }
 
 /// Same retry as `download_and_unpack_package`: a truncated download would

@@ -134,6 +134,10 @@ pub enum Commands {
   Upgrade {
     #[clap(help = "The alias to upgrade, use `self` to upgrade `dvm` itself, upgrade all aliases if not present")]
     alias: Option<String>,
+
+    /// Show what would be upgraded without actually installing anything
+    #[clap(long, short = 'n')]
+    dry_run: bool,
   },
 
   #[clap(about = "Execute deno command with a specific deno version")]

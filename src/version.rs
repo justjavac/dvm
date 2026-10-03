@@ -43,18 +43,20 @@ impl std::fmt::Display for VersionArg {
 }
 
 impl FromStr for VersionArg {
-  type Err = ();
+  type Err = anyhow::Error;
 
   fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
     let s = s.trim();
     if s == DVM_VERSION_LTS {
       Ok(VersionArg::Lts)
     } else if is_exact_version(s) {
-      Version::parse(s).map(VersionArg::Exact).map_err(|_| ())
+      Version::parse(s)
+        .map(VersionArg::Exact)
+        .map_err(|e| anyhow::anyhow!("Invalid semver version '{}': {}", s, e))
     } else {
       VersionReq::parse(s)
         .map(VersionArg::Range)
-        .or_else(|_| VersionReq::parse("*").map(VersionArg::Range).map_err(|_| ()))
+        .map_err(|e| anyhow::anyhow!("Invalid semver range '{}': {}", s, e))
     }
   }
 }

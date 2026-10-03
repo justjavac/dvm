@@ -61,10 +61,10 @@ pub fn main() {
       || commands::doctor::exec(&mut meta)
         .map_err(|err| anyhow::anyhow!("Failed to fix: {}", err)),
     ),
-    Commands::Upgrade { alias } => run_with_spinner(
+    Commands::Upgrade { alias, dry_run } => run_with_spinner(
       "Upgrading...".to_string(),
       "All alias have been upgraded.".to_string(),
-      || commands::upgrade::exec(&mut meta, alias)
+      || commands::upgrade::exec(&mut meta, alias, dry_run)
         .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err)),
     ),
 
