@@ -48,6 +48,9 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
         if current == v.to_string() {
           println!("{} is already the latest version", alias);
           return Ok(());
+        } else if dry_run {
+          println!("Would upgrade {} from {} to {}", alias, current, v);
+          return Ok(());
         } else {
           install::exec(meta, true, Some(v.to_string()))?;
         }
@@ -103,8 +106,11 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
         current.bright_red(),
         latest.clone().bright_green()
       );
-      install::exec(meta, true, Some(latest.clone()))?;
-      meta.set_version_mapping(alias.name, latest)?;
+
+      if !dry_run {
+        install::exec(meta, true, Some(latest.clone()))?;
+        meta.set_version_mapping(alias.name, latest)?;
+      }
     }
 
     // canary is not an alias, so it lives outside the loop: upgrading it in the

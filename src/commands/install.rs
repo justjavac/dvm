@@ -277,46 +277,6 @@ fn unpack_zip(archive_data: &[u8], dest_dir: &Path) -> Result<()> {
 }
 
 fn compose_url_to_canary(registry: &str, hash: &str) -> String {
-  // TODO: remove this when deno canary support m1 chip,
-  let archive_name = if ARCHIVE_NAME == "deno-aarch64-apple-darwin.zip" {
-    "deno-x86_64-apple-darwin.zip"
-  } else {
-    ARCHIVE_NAME
-  };
-
-  for i in 0..zip.len() {
-    let mut file = zip.by_index(i)?;
-    let out_path = dest_dir.join(file.name());
-
-    // Sanity check: prevent zip-slip path traversal
-    if !out_path.starts_with(dest_dir) {
-      anyhow::bail!("Invalid zip entry path: {}", file.name());
-    }
-
-    if file.is_dir() {
-      fs::create_dir_all(&out_path)?;
-    } else {
-      if let Some(parent) = out_path.parent() {
-        fs::create_dir_all(parent)?;
-      }
-      let mut out_file = fs::File::create(&out_path)?;
-      io::copy(&mut file, &mut out_file)?;
-
-      // Preserve Unix permissions (executable bit)
-      #[cfg(unix)]
-      {
-        use std::os::unix::fs::PermissionsExt;
-        if let Some(mode) = file.unix_mode() {
-          fs::set_permissions(&out_path, fs::Permissions::from_mode(mode))?;
-        }
-      }
-    }
-  }
-
-  Ok(())
-}
-
-fn compose_url_to_canary(registry: &str, hash: &str) -> String {
   format!("{}canary/{}/{}", registry, hash, ARCHIVE_NAME)
 }
 
