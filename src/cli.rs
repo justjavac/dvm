@@ -1,54 +1,15 @@
-use std::env;
-
 use clap::builder::PossibleValue;
 use clap::{Parser, ValueEnum};
 use clap_complete::Shell;
 use clap_derive::{Parser, Subcommand};
 
-use crate::commands;
 use crate::consts::{
   AFTER_HELP, COMPLETIONS_HELP, REGISTRY_CN, REGISTRY_LIST_CN, REGISTRY_LIST_OFFICIAL, REGISTRY_NAME_CN,
   REGISTRY_NAME_OFFICIAL, REGISTRY_OFFICIAL,
 };
-use crate::meta::DvmMeta;
 
-pub fn cli_parse(meta: &mut DvmMeta) -> Result<Cli, ()> {
-  let args: Vec<String> = env::args().collect();
-  if args.len() > 1 && args[1] == "exec" {
-    let (version, exec_args) = match parse_exec_args(&args) {
-      Ok(v) => v,
-      Err(err) => {
-        crate::utils::print_error(&err);
-        std::process::exit(1);
-      }
-    };
-    if let Err(err) = commands::exec::exec(meta, version, exec_args) {
-      crate::utils::print_error(&err);
-      std::process::exit(1);
-    }
-    return Err(());
-  }
-
-  Ok(Cli::parse())
-}
-
-/// `dvm exec` forwards every argument after the version to deno verbatim, which
-/// clap cannot express, so the version is picked off by hand.
-fn parse_exec_args(args: &[String]) -> anyhow::Result<(Option<String>, Vec<String>)> {
-  let Some(first) = args.get(2) else {
-    return Ok((None, vec![]));
-  };
-
-  if first == "--version" || first == "-V" {
-    match args.get(3) {
-      Some(version) => Ok((Some(version.clone()), args[4..].to_vec())),
-      None => anyhow::bail!("A version should be followed after {}", first),
-    }
-  } else if let Some(version) = first.strip_prefix("--version=").or_else(|| first.strip_prefix("-V=")) {
-    Ok((Some(version.to_string()), args[3..].to_vec()))
-  } else {
-    Ok((None, args[2..].to_vec()))
-  }
+pub fn cli_parse() -> Cli {
+  Cli::parse()
 }
 
 #[derive(Parser)]
@@ -141,13 +102,14 @@ pub enum Commands {
   },
 
   #[clap(about = "Execute deno command with a specific deno version")]
-  #[clap(disable_version_flag = true)]
+  #[clap(disable_version_flag = true, trailing_var_arg = true)]
   Exec {
-    #[clap(help = "The command given to deno")]
-    command: Option<String>,
-
-    #[clap(help = "The version to use", long, short)]
+    #[clap(help = "The version to use", long = "version", short = 'V')]
     version: Option<String>,
+
+    /// Arguments to pass directly to deno
+    #[clap(allow_hyphen_values = true, num_args = 1..)]
+    args: Vec<String>,
   },
 
   #[clap(about = "Clean dvm cache")]
@@ -319,35 +281,47 @@ impl RegistryPredefined {
 mod tests {
   use super::*;
 
-  fn owned(args: &[&str]) -> Vec<String> {
-    args.iter().map(|it| it.to_string()).collect()
-  }
-
   #[test]
-  fn parses_exec_args() {
-    assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "-V", "1.2.3", "run", "a.ts"])).unwrap(),
-      (Some("1.2.3".to_string()), owned(&["run", "a.ts"]))
-    );
-    assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "--version", "1.2.3", "run"])).unwrap(),
-      (Some("1.2.3".to_string()), owned(&["run"]))
-    );
-    assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "--version=1.2.3", "run"])).unwrap(),
-      (Some("1.2.3".to_string()), owned(&["run"]))
-    );
-    assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "-V=1.2.3"])).unwrap(),
-      (Some("1.2.3".to_string()), vec![])
-    );
-    // Anything that is not a version flag belongs to deno, `-V` included once
-    // it is no longer the first argument.
-    assert_eq!(
-      parse_exec_args(&owned(&["dvm", "exec", "run", "-V"])).unwrap(),
-      (None, owned(&["run", "-V"]))
-    );
-    assert_eq!(parse_exec_args(&owned(&["dvm", "exec"])).unwrap(), (None, vec![]));
+  fn exec_passes_through_deno_args() {
+    // version flag followed by deno args
+    let cli = Cli::try_parse_from(["dvm", "exec", "-V", "1.2.3", "run", "a.ts"]).unwrap();
+    match cli.command {
+      Commands::Exec { version, args } => {
+        assert_eq!(version.as_deref(), Some("1.2.3"));
+        assert_eq!(args, vec!["run", "a.ts"]);
+      }
+      _ => panic!("expected Exec"),
+    }
+
+    // long form --version
+    let cli = Cli::try_parse_from(["dvm", "exec", "--version", "1.2.3", "run"]).unwrap();
+    match cli.command {
+      Commands::Exec { version, args } => {
+        assert_eq!(version.as_deref(), Some("1.2.3"));
+        assert_eq!(args, vec!["run"]);
+      }
+      _ => panic!("expected Exec"),
+    }
+
+    // no version — all args belong to deno, even flag-like ones
+    let cli = Cli::try_parse_from(["dvm", "exec", "run", "--allow-net", "app.ts"]).unwrap();
+    match cli.command {
+      Commands::Exec { version, args } => {
+        assert_eq!(version, None);
+        assert_eq!(args, vec!["run", "--allow-net", "app.ts"]);
+      }
+      _ => panic!("expected Exec"),
+    }
+
+    // bare exec with no args
+    let cli = Cli::try_parse_from(["dvm", "exec"]).unwrap();
+    match cli.command {
+      Commands::Exec { version, args } => {
+        assert_eq!(version, None);
+        assert!(args.is_empty());
+      }
+      _ => panic!("expected Exec"),
+    }
   }
 
   #[test]

@@ -17,7 +17,6 @@ use std::str::FromStr;
 use std::string::String;
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
-const DENO_RELEASES_LTS_SEARCH: &str = "https://github.com/denoland/deno/releases?q=LTS";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Cached {
@@ -157,13 +156,17 @@ pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
 }
 
 pub fn get_latest_lts_version() -> Result<Version> {
-  let response = tinyget::get(DENO_RELEASES_LTS_SEARCH)
+  // Use the same versions.json endpoint as the version list — this respects
+  // the user's configured registry mirror and avoids fragile GitHub HTML
+  // scraping.  The latest stable Deno release IS the LTS release.
+  let registry_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
+  let response = tinyget::get(&registry_url)
     .with_header("User-Agent", "dvm")
     .send()?;
   if response.status_code >= 400 {
-    anyhow::bail!("Failed to fetch Deno LTS releases: {}", response.status_code);
+    anyhow::bail!("Failed to fetch Deno versions: {}", response.status_code);
   }
-  latest_lts_version_from_releases_html(response.as_str()?)
+  latest_version_from_versions_json(response.as_str()?)
 }
 
 pub fn get_latest_canary(registry: &str) -> Result<String> {
@@ -219,22 +222,6 @@ fn cli_versions_from_versions_json(content: &str) -> Result<Vec<String>> {
   )
 }
 
-fn latest_lts_version_from_releases_html(content: &str) -> Result<Version> {
-  content
-    .match_indices("/denoland/deno/releases/tag/v")
-    .filter_map(|(index, _)| {
-      let version_start = index + "/denoland/deno/releases/tag/v".len();
-      let version = content[version_start..]
-        .chars()
-        .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '.' || *ch == '-')
-        .collect::<String>();
-      Version::parse(&version).ok()
-    })
-    .filter(|version| version.pre.is_empty())
-    .max()
-    .ok_or_else(|| anyhow::anyhow!("No Deno LTS release found"))
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -248,20 +235,6 @@ mod tests {
     assert_eq!(
       latest_version_from_versions_json(content).unwrap(),
       Version::parse("2.2.8").unwrap()
-    );
-  }
-
-  #[test]
-  fn latest_lts_version_uses_highest_release_search_result() {
-    let content = r#"
-      <a href="/denoland/deno/releases/tag/v2.2.13">v2.2.13</a>
-      <a href="/denoland/deno/releases/tag/v2.2.15">v2.2.15</a>
-      <a href="/denoland/deno/releases/tag/v2.0.0-rc.1">v2.0.0-rc.1</a>
-    "#;
-
-    assert_eq!(
-      latest_lts_version_from_releases_html(content).unwrap(),
-      Version::parse("2.2.15").unwrap()
     );
   }
 

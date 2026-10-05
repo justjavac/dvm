@@ -29,11 +29,23 @@ cfg_if! {
 pub fn main() {
   let mut meta = DvmMeta::new();
 
-  let Ok(cli) = cli::cli_parse(&mut meta) else {
-    return;
-  };
+  let cli = cli::cli_parse();
+  let command = cli.command;
 
-  let result = match cli.command {
+  // `dvm exec` is a transparent wrapper around deno — it must forward
+  // deno's exit code verbatim so scripts and CI see the right status.
+  // Handled before the main match because exec calls process::exit directly
+  // (its return type is effectively `!`, not `Result<()>`).
+  if let Commands::Exec { version, args } = command {
+    commands::exec::exec(&mut meta, version, args).unwrap_or_else(|err| {
+      utils::print_error(&err);
+      std::process::exit(1);
+    });
+    // exec never returns on success (it calls process::exit with deno's code)
+    unreachable!("exec should have exited the process");
+  }
+
+  let result = match command {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
     Commands::Info => commands::info::exec(),
     Commands::Install { no_use, version } => run_with_spinner(
@@ -67,13 +79,8 @@ pub fn main() {
       || commands::upgrade::exec(&mut meta, alias, dry_run)
         .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err)),
     ),
-
-    // `dvm exec` is handled in `cli_parse` *before* clap parsing,
-    // because every argument after the version must be forwarded to deno
-    // verbatim — something clap cannot express.  The `Exec` variant still
-    // exists in the clap definition so it appears in `--help` output, but
-    // this arm is never reached.
-    Commands::Exec { .. } => unreachable!("exec handled in cli_parse before clap"),
+    // exec handled above (before the match)
+    Commands::Exec { .. } => unreachable!(),
 
     Commands::Clean => {
       run_with_spinner(
