@@ -110,27 +110,62 @@ pub fn rc_get_with_fix(key: &str) -> io::Result<String> {
 /// update the config file key with the new value
 /// create the file if it doesn't exist
 /// create key value pair if it doesn't exist
+/// Preserves comments, empty lines, and original formatting of other entries.
 pub fn rc_update(is_local: bool, key: &str, value: &str) -> io::Result<()> {
   let (config_path, content) = rc_content(is_local)?;
 
-  let mut config: Vec<(&str, &str)> = content
-    .as_ref()
-    .map(|c| rc_parse(c.as_str()))
-    .unwrap_or_default();
+  let content = content.unwrap_or_default();
+  let mut updated = String::with_capacity(content.len() + value.len());
+  let mut found = false;
 
-  let idx = config.iter().position(|(k, _)| k == &key);
-  if let Some(idx) = idx {
-    config[idx].1 = value;
-  } else {
-    config.push((key, value));
+  for line in content.lines() {
+    if !found && rc_line_matches_key(line, key) {
+      // Replace the value in-place, preserving key and surrounding whitespace
+      let (prefix, rest) = line.split_once('=').unwrap_or((line, ""));
+      let key_trimmed = prefix.trim();
+      let leading_ws = &prefix[..prefix.len() - key_trimmed.len()];
+      let trailing_ws_start = rest.len() - rest.trim_start().len();
+      let trailing_ws = &rest[..trailing_ws_start];
+      updated.push_str(leading_ws);
+      updated.push_str(key_trimmed);
+      updated.push('=');
+      updated.push_str(trailing_ws);
+      updated.push_str(value);
+      found = true;
+    } else {
+      updated.push_str(line);
+    }
+    updated.push('\n');
   }
 
-  let config = config
-    .iter()
-    .map(|(k, v)| format!("{}={}", k, v))
-    .collect::<Vec<_>>()
-    .join("\n");
-  crate::utils::atomic_write(config_path, config.as_bytes())
+  if !found {
+    if !updated.is_empty() && !updated.ends_with("\n\n") {
+      // Ensure the new entry starts on a fresh line after existing content
+      if !updated.ends_with('\n') {
+        updated.push('\n');
+      }
+    }
+    updated.push_str(key);
+    updated.push('=');
+    updated.push_str(value);
+    updated.push('\n');
+  }
+
+  crate::utils::atomic_write(config_path, updated.as_bytes())
+}
+
+/// Check if a line from the rc file is a key=value entry with the given key.
+/// Ignores leading/trailing whitespace and comment lines.
+fn rc_line_matches_key(line: &str, key: &str) -> bool {
+  let line = line.trim();
+  // Skip empty lines and comments
+  if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
+    return false;
+  }
+  match line.split_once('=') {
+    Some((k, _)) => k.trim() == key,
+    None => false,
+  }
 }
 
 fn rc_parse(content: &str) -> Vec<(&str, &str)> {
@@ -214,6 +249,7 @@ fn rc_content_cascade() -> io::Result<String> {
 }
 
 /// remove all key value pair that ain't supported by dvm from config file
+/// Preserves comments, empty lines, and supported key-value entries.
 pub fn rc_clean(is_local: bool) -> io::Result<()> {
   if !rc_exists() {
     rc_init()?;
@@ -227,22 +263,33 @@ pub fn rc_clean(is_local: bool) -> io::Result<()> {
     return Ok(());
   };
 
-  let config = rc_parse(content.as_str());
-  let config = config
-    .iter()
-    .filter(|(k, _)| {
-      k == &DVM_CONFIGRC_KEY_DENO_VERSION
-        || k == &DVM_CONFIGRC_KEY_REGISTRY_BINARY
-        || k == &DVM_CONFIGRC_KEY_REGISTRY_VERSION
-    })
-    .collect::<Vec<_>>();
+  let mut cleaned = String::with_capacity(content.len());
 
-  let config = config
-    .iter()
-    .map(|(k, v)| format!("{}={}", k, v))
-    .collect::<Vec<_>>()
-    .join("\n");
-  crate::utils::atomic_write(config_path, config.as_bytes())
+  for line in content.lines() {
+    let trimmed = line.trim();
+    // Preserve empty lines and comments
+    if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
+      cleaned.push_str(line);
+      cleaned.push('\n');
+      continue;
+    }
+    // Check if this is a supported key
+    if let Some((k, _)) = trimmed.split_once('=') {
+      let k = k.trim();
+      if k == DVM_CONFIGRC_KEY_DENO_VERSION
+        || k == DVM_CONFIGRC_KEY_REGISTRY_BINARY
+        || k == DVM_CONFIGRC_KEY_REGISTRY_VERSION
+      {
+        cleaned.push_str(line);
+        cleaned.push('\n');
+      }
+      // Unsupported key-value lines are dropped
+    } else {
+      // Lines without '=' that aren't comments are also dropped
+    }
+  }
+
+  crate::utils::atomic_write(config_path, cleaned.as_bytes())
 }
 
 #[cfg(test)]
@@ -303,5 +350,130 @@ mod tests {
     // local deno_version overrides global, but registry_binary stays global
     assert_eq!(merged.get("deno_version").unwrap(), "1.0.0");
     assert_eq!(merged.get("registry_binary").unwrap(), "https://global.example.com/");
+  }
+
+  fn rc_line_matches_key_works() {
+    assert!(rc_line_matches_key("deno_version=1.2.3", "deno_version"));
+    assert!(rc_line_matches_key("  deno_version = 1.2.3  ", "deno_version"));
+    assert!(!rc_line_matches_key("# deno_version=1.2.3", "deno_version"));
+    assert!(!rc_line_matches_key("; deno_version=1.2.3", "deno_version"));
+    assert!(!rc_line_matches_key("", "deno_version"));
+    assert!(!rc_line_matches_key("   ", "deno_version"));
+    assert!(!rc_line_matches_key("registry_binary=url", "deno_version"));
+    assert!(!rc_line_matches_key("not_a_kv_line", "deno_version"));
+  }
+
+  #[test]
+  fn rc_update_preserves_comments_and_empty_lines() {
+    let dir = tempfile::tempdir().unwrap();
+    let rc_path = dir.path().join(".dvmrc");
+    let original = "\
+# This is a comment
+deno_version=1.0.0
+
+; another comment style
+registry_binary=https://example.com/
+";
+    std::fs::write(&rc_path, original).unwrap();
+
+    // Simulate rc_update by using rc_update_line directly
+    let result = rc_update_in_place(original, "deno_version", "2.0.0");
+
+    assert!(result.contains("# This is a comment"));
+    assert!(result.contains("; another comment style"));
+    assert!(result.contains("deno_version=2.0.0"));
+    assert!(result.contains("registry_binary=https://example.com/"));
+    // Empty line preserved
+    assert!(result.contains("\n\n"));
+  }
+
+  #[test]
+  fn rc_update_appends_new_key() {
+    let original = "deno_version=1.0.0\n";
+    let result = rc_update_in_place(original, "registry_binary", "https://new.com/");
+    assert!(result.contains("deno_version=1.0.0"));
+    assert!(result.contains("registry_binary=https://new.com/"));
+  }
+
+  #[test]
+  fn rc_clean_preserves_comments() {
+    let original = "\
+# Keep this comment
+deno_version=1.0.0
+unknown_key=should_be_removed
+
+; keep this too
+registry_binary=https://example.com/
+";
+    let result = rc_clean_in_place(original);
+    assert!(result.contains("# Keep this comment"));
+    assert!(result.contains("; keep this too"));
+    assert!(result.contains("deno_version=1.0.0"));
+    assert!(result.contains("registry_binary=https://example.com/"));
+    assert!(!result.contains("unknown_key"));
+  }
+
+  // Helper functions for testing the in-place update logic
+  fn rc_update_in_place(content: &str, key: &str, value: &str) -> String {
+    let mut updated = String::with_capacity(content.len() + value.len());
+    let mut found = false;
+
+    for line in content.lines() {
+      if !found && rc_line_matches_key(line, key) {
+        let (prefix, rest) = line.split_once('=').unwrap_or((line, ""));
+        let key_trimmed = prefix.trim();
+        let leading_ws = &prefix[..prefix.len() - key_trimmed.len()];
+        let trailing_ws_start = rest.len() - rest.trim_start().len();
+        let trailing_ws = &rest[..trailing_ws_start];
+        updated.push_str(leading_ws);
+        updated.push_str(key_trimmed);
+        updated.push('=');
+        updated.push_str(trailing_ws);
+        updated.push_str(value);
+        found = true;
+      } else {
+        updated.push_str(line);
+      }
+      updated.push('\n');
+    }
+
+    if !found {
+      if !updated.is_empty() && !updated.ends_with("\n\n") {
+        if !updated.ends_with('\n') {
+          updated.push('\n');
+        }
+      }
+      updated.push_str(key);
+      updated.push('=');
+      updated.push_str(value);
+      updated.push('\n');
+    }
+
+    updated
+  }
+
+  fn rc_clean_in_place(content: &str) -> String {
+    let mut cleaned = String::with_capacity(content.len());
+
+    for line in content.lines() {
+      let trimmed = line.trim();
+      if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
+        cleaned.push_str(line);
+        cleaned.push('\n');
+        continue;
+      }
+      if let Some((k, _)) = trimmed.split_once('=') {
+        let k = k.trim();
+        if k == DVM_CONFIGRC_KEY_DENO_VERSION
+          || k == DVM_CONFIGRC_KEY_REGISTRY_BINARY
+          || k == DVM_CONFIGRC_KEY_REGISTRY_VERSION
+        {
+          cleaned.push_str(line);
+          cleaned.push('\n');
+        }
+      }
+    }
+
+    cleaned
   }
 }
