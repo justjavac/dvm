@@ -338,6 +338,41 @@ mod tests {
   }
 
   #[test]
+  fn best_version_single_version() {
+    let versions = ["1.2.3"];
+    assert_eq!(
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("*").unwrap()),
+      Some(Version::parse("1.2.3").unwrap())
+    );
+    assert_eq!(
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("=1.2.3").unwrap()),
+      Some(Version::parse("1.2.3").unwrap())
+    );
+    assert_eq!(
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("^2").unwrap()),
+      None
+    );
+  }
+
+  #[test]
+  fn best_version_empty_list() {
+    let versions: Vec<&str> = vec![];
+    assert_eq!(
+      best_version(versions.into_iter(), VersionReq::parse("*").unwrap()),
+      None
+    );
+  }
+
+  #[test]
+  fn best_version_no_matching() {
+    let versions = ["1.0.0", "2.0.0"];
+    assert_eq!(
+      best_version(versions.iter().map(AsRef::as_ref), VersionReq::parse("^3").unwrap()),
+      None
+    );
+  }
+
+  #[test]
   fn deno_resolution_classification() {
     let bin_dir = Path::new("/home/u/.dvm/bin");
 
@@ -377,5 +412,196 @@ mod tests {
       Path::new("C:\\Users\\me\\.dvm\\bin2\\deno.exe"),
       bin_dir
     ));
+  }
+
+  #[test]
+  fn is_semver_valid() {
+    assert!(is_semver("1.0.0"));
+    assert!(is_semver("0.0.1"));
+    assert!(is_semver("2.3.4"));
+    assert!(is_semver("1.0.0-alpha"));
+    assert!(is_semver("1.0.0-beta.1"));
+    assert!(is_semver("1.0.0+build.123"));
+  }
+
+  #[test]
+  fn is_semver_invalid() {
+    assert!(!is_semver(""));
+    assert!(!is_semver("1.0"));
+    assert!(!is_semver("1"));
+    assert!(!is_semver("v1.0.0"));
+    assert!(!is_semver("latest"));
+    assert!(!is_semver("not-a-version"));
+    assert!(!is_semver("^1.0.0"));
+  }
+
+  #[test]
+  fn is_http_like_url_valid() {
+    assert!(is_http_like_url("http://example.com"));
+    assert!(is_http_like_url("https://example.com"));
+    assert!(is_http_like_url("http://example.com/path"));
+    assert!(is_http_like_url("https://raw.githubusercontent.com/justjavac/dvm/main/install.sh"));
+  }
+
+  #[test]
+  fn is_http_like_url_invalid() {
+    assert!(!is_http_like_url(""));
+    assert!(!is_http_like_url("example.com"));
+    assert!(!is_http_like_url("ftp://example.com"));
+    assert!(!is_http_like_url("file:///path/to/file"));
+    assert!(!is_http_like_url("httpx://example.com"));
+    assert!(!is_http_like_url("/local/path"));
+  }
+
+  #[test]
+  fn deno_version_path_contains_version() {
+    // Set a known DVM_DIR for this test
+    let original = std::env::var_os("DVM_DIR");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    let version = Version::parse("1.2.3").unwrap();
+    let path = deno_version_path(&version);
+    // Restore env var
+    if let Some(val) = original {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+
+    // Verify path structure
+    #[cfg(not(windows))]
+    assert!(path.to_string_lossy().contains("versions/1.2.3/deno"));
+    #[cfg(windows)]
+    assert!(path.to_string_lossy().contains("versions\\1.2.3\\deno.exe"));
+  }
+
+  #[test]
+  fn deno_canary_path_contains_canary() {
+    let original = std::env::var_os("DVM_DIR");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    let path = deno_canary_path();
+    if let Some(val) = original {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+
+    #[cfg(not(windows))]
+    assert!(path.to_string_lossy().contains("canary/deno"));
+    #[cfg(windows)]
+    assert!(path.to_string_lossy().contains("canary\\deno.exe"));
+  }
+
+  #[test]
+  fn dvm_versions_path_contains_versions_prefix() {
+    let original = std::env::var_os("DVM_DIR");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    let path = dvm_versions();
+    if let Some(val) = original {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+
+    #[cfg(not(windows))]
+    assert!(path.to_string_lossy().ends_with("versions"));
+    #[cfg(windows)]
+    assert!(path.to_string_lossy().ends_with("versions"));
+  }
+
+  #[test]
+  fn dvm_bin_dir_ends_with_bin() {
+    let original = std::env::var_os("DVM_DIR");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    let path = dvm_bin_dir();
+    if let Some(val) = original {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+
+    #[cfg(not(windows))]
+    assert!(path.to_string_lossy().ends_with("bin"));
+    #[cfg(windows)]
+    assert!(path.to_string_lossy().ends_with("bin"));
+  }
+
+  #[test]
+  fn dvm_bin_on_path_when_present() {
+    let original_dvm = std::env::var_os("DVM_DIR");
+    let original_path = std::env::var_os("PATH");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    std::env::set_var("PATH", "/usr/bin:/tmp/test_dvm/bin:/usr/local/bin");
+    let result = dvm_bin_on_path();
+    if let Some(val) = original_dvm {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+    if let Some(val) = original_path {
+      std::env::set_var("PATH", val);
+    } else {
+      std::env::remove_var("PATH");
+    }
+    assert!(result);
+  }
+
+  #[test]
+  fn dvm_bin_on_path_when_absent() {
+    let original_dvm = std::env::var_os("DVM_DIR");
+    let original_path = std::env::var_os("PATH");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    std::env::set_var("PATH", "/usr/bin:/usr/local/bin");
+    let result = dvm_bin_on_path();
+    if let Some(val) = original_dvm {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+    if let Some(val) = original_path {
+      std::env::set_var("PATH", val);
+    } else {
+      std::env::remove_var("PATH");
+    }
+    assert!(!result);
+  }
+
+  #[test]
+  fn dvm_bin_on_path_at_start() {
+    let original_dvm = std::env::var_os("DVM_DIR");
+    let original_path = std::env::var_os("PATH");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    std::env::set_var("PATH", "/tmp/test_dvm/bin:/usr/bin");
+    let result = dvm_bin_on_path();
+    if let Some(val) = original_dvm {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+    if let Some(val) = original_path {
+      std::env::set_var("PATH", val);
+    } else {
+      std::env::remove_var("PATH");
+    }
+    assert!(result);
+  }
+
+  #[test]
+  fn dvm_bin_on_path_empty_path() {
+    let original_dvm = std::env::var_os("DVM_DIR");
+    let original_path = std::env::var_os("PATH");
+    std::env::set_var("DVM_DIR", "/tmp/test_dvm");
+    std::env::set_var("PATH", "");
+    let result = dvm_bin_on_path();
+    if let Some(val) = original_dvm {
+      std::env::set_var("DVM_DIR", val);
+    } else {
+      std::env::remove_var("DVM_DIR");
+    }
+    if let Some(val) = original_path {
+      std::env::set_var("PATH", val);
+    } else {
+      std::env::remove_var("PATH");
+    }
+    assert!(!result);
   }
 }
