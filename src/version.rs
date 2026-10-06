@@ -6,7 +6,6 @@ use crate::consts::{
 };
 use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
-use colored::Colorize;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
@@ -18,7 +17,6 @@ use std::str::FromStr;
 use std::string::String;
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
-const DENO_RELEASES_LTS_SEARCH: &str = "https://github.com/denoland/deno/releases?q=LTS";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Cached {
@@ -44,18 +42,20 @@ impl std::fmt::Display for VersionArg {
 }
 
 impl FromStr for VersionArg {
-  type Err = ();
+  type Err = anyhow::Error;
 
   fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
     let s = s.trim();
     if s == DVM_VERSION_LTS {
       Ok(VersionArg::Lts)
     } else if is_exact_version(s) {
-      Version::parse(s).map(VersionArg::Exact).map_err(|_| ())
+      Version::parse(s)
+        .map(VersionArg::Exact)
+        .map_err(|e| anyhow::anyhow!("Invalid semver version '{}': {}", s, e))
     } else {
       VersionReq::parse(s)
         .map(VersionArg::Range)
-        .or_else(|_| VersionReq::parse("*").map(VersionArg::Range).map_err(|_| ()))
+        .map_err(|e| anyhow::anyhow!("Invalid semver range '{}': {}", s, e))
     }
   }
 }
@@ -78,7 +78,9 @@ pub fn local_versions() -> Vec<String> {
     for entry in entries.flatten() {
       if let Ok(file_type) = entry.file_type() {
         if file_type.is_dir() {
-          let file_name = entry.file_name().into_string().unwrap();
+          let Ok(file_name) = entry.file_name().into_string() else {
+            continue;
+          };
           if is_semver(&file_name) {
             v.push(file_name);
           }
@@ -99,12 +101,13 @@ pub fn cache_remote_versions() -> Result<()> {
   run_with_spinner(
     "fetching remote versions...".to_string(),
     "updated remote versions".to_string(),
-    |_| {
+    || {
       let cached_remote_versions_location = cached_remote_versions_location();
 
       let remote_versions_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
       let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
-      std::fs::write(cached_remote_versions_location, remote_versions).map_err(|e| anyhow::anyhow!(e))
+      crate::utils::atomic_write(cached_remote_versions_location, remote_versions.as_bytes())
+        .map_err(|e| anyhow::anyhow!(e))
     },
   )
 }
@@ -114,28 +117,25 @@ pub fn remote_versions() -> Result<Vec<String>> {
   if !is_versions_cache_exists() {
     println!("It seems that you have not updated the remote version cache, please run `dvm update` first.");
     print!("Do you want to update the remote version cache now? [Y/n]");
-    std::io::stdout().lock().flush().unwrap();
+    let _ = std::io::stdout().lock().flush();
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
     if input.trim().to_lowercase() == "y" || input.trim().is_empty() {
       cache_remote_versions()?;
     } else {
-      println!("Please run `dvm update` to update the remote version cache.");
-      std::process::exit(1);
+      anyhow::bail!("Please run `dvm update` to update the remote version cache.");
     }
   }
 
   let cached_remote_versions_location = cached_remote_versions_location();
   let cached_content = std::fs::read_to_string(cached_remote_versions_location)?;
 
-  let versions = match cli_versions_from_versions_json(&cached_content) {
-    Ok(versions) => versions,
-    Err(err) => {
-      eprintln!("Failed to parse remote versions cache: {}", err.to_string().red());
-      eprintln!("The remote version cache is corrupted, please run `dvm update` to update the remote version cache.");
-      std::process::exit(1);
-    }
-  };
+  let versions = cli_versions_from_versions_json(&cached_content).map_err(|err| {
+    anyhow::anyhow!(
+      "Failed to parse remote versions cache: {}\nThe remote version cache is corrupted, please run `dvm update` to update the remote version cache.",
+      err
+    )
+  })?;
 
   // Callers sort and match these as semver, so drop anything the registry lists
   // that is not a version instead of panicking further down the line.
@@ -156,13 +156,17 @@ pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
 }
 
 pub fn get_latest_lts_version() -> Result<Version> {
-  let response = tinyget::get(DENO_RELEASES_LTS_SEARCH)
+  // Use the same versions.json endpoint as the version list — this respects
+  // the user's configured registry mirror and avoids fragile GitHub HTML
+  // scraping.  The latest stable Deno release IS the LTS release.
+  let registry_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
+  let response = tinyget::get(&registry_url)
     .with_header("User-Agent", "dvm")
     .send()?;
   if response.status_code >= 400 {
-    anyhow::bail!("Failed to fetch Deno LTS releases: {}", response.status_code);
+    anyhow::bail!("Failed to fetch Deno versions: {}", response.status_code);
   }
-  latest_lts_version_from_releases_html(response.as_str()?)
+  latest_version_from_versions_json(response.as_str()?)
 }
 
 pub fn get_latest_canary(registry: &str) -> Result<String> {
@@ -218,22 +222,6 @@ fn cli_versions_from_versions_json(content: &str) -> Result<Vec<String>> {
   )
 }
 
-fn latest_lts_version_from_releases_html(content: &str) -> Result<Version> {
-  content
-    .match_indices("/denoland/deno/releases/tag/v")
-    .filter_map(|(index, _)| {
-      let version_start = index + "/denoland/deno/releases/tag/v".len();
-      let version = content[version_start..]
-        .chars()
-        .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '.' || *ch == '-')
-        .collect::<String>();
-      Version::parse(&version).ok()
-    })
-    .filter(|version| version.pre.is_empty())
-    .max()
-    .ok_or_else(|| anyhow::anyhow!("No Deno LTS release found"))
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -247,20 +235,6 @@ mod tests {
     assert_eq!(
       latest_version_from_versions_json(content).unwrap(),
       Version::parse("2.2.8").unwrap()
-    );
-  }
-
-  #[test]
-  fn latest_lts_version_uses_highest_release_search_result() {
-    let content = r#"
-      <a href="/denoland/deno/releases/tag/v2.2.13">v2.2.13</a>
-      <a href="/denoland/deno/releases/tag/v2.2.15">v2.2.15</a>
-      <a href="/denoland/deno/releases/tag/v2.0.0-rc.1">v2.0.0-rc.1</a>
-    "#;
-
-    assert_eq!(
-      latest_lts_version_from_releases_html(content).unwrap(),
-      Version::parse("2.2.15").unwrap()
     );
   }
 
@@ -282,5 +256,22 @@ mod tests {
       VersionArg::Exact(Version::parse("1.2.3").unwrap())
     );
     assert_eq!(VersionArg::from_str(" lts \n").unwrap(), VersionArg::Lts);
+  }
+
+  #[test]
+  fn canary_is_not_a_version_arg() {
+    // "canary" is a special version identifier handled at the command level
+    // (install, use), not a VersionArg. It should fail to parse.
+    use crate::consts::DVM_VERSION_CANARY;
+    assert!(VersionArg::from_str(DVM_VERSION_CANARY).is_err());
+    assert!(VersionArg::from_str("canary").is_err());
+  }
+
+  #[test]
+  fn canary_string_is_not_semver() {
+    use crate::consts::DVM_VERSION_CANARY;
+    assert!(Version::parse(DVM_VERSION_CANARY).is_err());
+    assert!(VersionReq::parse(DVM_VERSION_CANARY).is_err());
+    assert!(!crate::utils::is_semver(DVM_VERSION_CANARY));
   }
 }
