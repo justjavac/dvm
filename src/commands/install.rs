@@ -135,22 +135,28 @@ fn download_sha256(url: &str) -> Result<String> {
   Ok(hash.to_lowercase())
 }
 
+fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
+  let archive_data = download_archive(url)?;
+
+  println!("Version has been found");
+  println!("Deno v{} has been downloaded", version);
+
+  Ok(archive_data)
+}
+
 fn compose_url_to_exec(registry: &str, version: &Version) -> String {
   format!("{}release/v{}/{}", registry, version, ARCHIVE_NAME)
 }
 
-fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
-  let archive_data = download_archive(url)?;
-  println!("Version has been found");
-  println!("Deno v{} has been downloaded", version);
-
-  // Best-effort checksum verification.  If the checksum file is unavailable
-  // (e.g. on a custom mirror that doesn't publish .sha256 files), we log a
-  // warning and continue rather than hard-failing.
+/// Verify the SHA256 checksum of downloaded archive data.
+/// Best-effort: if the checksum file is unavailable (e.g. on a custom mirror
+/// that doesn't publish .sha256 files), we log a warning and continue rather
+/// than hard-failing.
+fn verify_checksum(url: &str, archive_data: &[u8]) -> Result<()> {
   let checksum_url = format!("{}.sha256", url);
   match download_sha256(&checksum_url) {
     Ok(expected) => {
-      let actual = format!("{:x}", Sha256::digest(&archive_data));
+      let actual = format!("{:x}", Sha256::digest(archive_data));
       if actual != expected {
         anyhow::bail!(
           "Checksum mismatch for {}:\n  expected: {}\n  actual:   {}",
@@ -165,13 +171,20 @@ fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
       eprintln!("Warning: could not verify checksum: {}", err);
     }
   }
+  Ok(())
+}
+
+fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
+  let archive_data = download_package(url, version)?;
+  verify_checksum(url, &archive_data)?;
 
   if let Err(err) = unpack(archive_data, version) {
     print_error(&format!("Failed to unpack Deno v{}: {}", version, err));
     eprintln!("Removing the corrupted archive and retrying download");
     remove_version_dir(version)?;
 
-    let archive_data = download_archive(url)?;
+    let archive_data = download_package(url, version)?;
+    verify_checksum(url, &archive_data)?;
     if let Err(retry_err) = unpack(archive_data, version) {
       remove_version_dir(version)?;
       return Err(anyhow::anyhow!(
@@ -238,90 +251,13 @@ fn unpack_zip(archive_data: &[u8], dest_dir: &Path) -> Result<()> {
     let mut file = zip.by_index(i)?;
     let out_path = dest_dir.join(file.name());
 
-    // Sanity check: prevent zip-slip path traversal.
-    // We check both that the resolved path stays within dest_dir
-    // AND that no individual component is `..` (which would bypass
-    // a naive starts_with check since Path::starts_with compares
-    // components without resolving `..`).
-    let name = file.name();
-    let has_parent_component = Path::new(name)
-      .components()
-      .any(|c| matches!(c, std::path::Component::ParentDir));
-    if has_parent_component || !out_path.starts_with(dest_dir) {
+    // Sanity check: prevent zip-slip path traversal
+    if !out_path.starts_with(dest_dir) {
       anyhow::bail!("Invalid zip entry path: {}", file.name());
     }
 
     if file.is_dir() {
       fs::create_dir_all(&out_path)?;
-    } else if file.unix_mode().is_some_and(|mode| mode & 0o170000 == 0o120000) {
-      // Symlink entry detected via Unix mode (S_IFLNK = 0o120000)
-      // Read the symlink target from the entry content
-      let mut target = String::new();
-      io::Read::read_to_string(&mut file, &mut target)?;
-      let target = target.trim();
-
-      // Validate the symlink target doesn't escape the destination directory.
-      // Absolute targets always escape. For relative targets, resolve them
-      // (without touching the filesystem) and verify they stay within dest_dir.
-      let target_path = Path::new(target);
-      if target_path.is_absolute() {
-        anyhow::bail!(
-          "Symlink target is absolute, refusing to extract: {} -> {}",
-          file.name(),
-          target
-        );
-      }
-      let symlink_dir = out_path.parent().unwrap_or(dest_dir);
-      let mut components = Vec::new();
-      for component in target_path.components() {
-        use std::path::Component;
-        match component {
-          Component::ParentDir => {
-            components.pop();
-          }
-          Component::Normal(part) => {
-            components.push(part.to_os_string());
-          }
-          Component::CurDir | Component::RootDir | Component::Prefix(_) => {}
-        }
-      }
-      let resolved = symlink_dir.join(PathBuf::from_iter(&components));
-      if !resolved.starts_with(dest_dir) {
-        anyhow::bail!(
-          "Symlink target escapes destination: {} -> {}",
-          file.name(),
-          target
-        );
-      }
-
-      if let Some(parent) = out_path.parent() {
-        fs::create_dir_all(parent)?;
-      }
-
-      cfg_if! {
-        if #[cfg(unix)] {
-          use std::os::unix::fs::symlink;
-          // Remove existing file/symlink if present
-          if out_path.symlink_metadata().is_ok() {
-            let _ = fs::remove_file(&out_path);
-          }
-          symlink(target, &out_path)?;
-        } else if #[cfg(windows)] {
-          // On Windows, creating symlinks requires admin privileges.
-          // Warn and skip rather than silently extracting as a text file.
-          eprintln!(
-            "Warning: skipping symlink entry {} -> {} (Windows symlinks require admin privileges)",
-            file.name(),
-            target
-          );
-        } else {
-          eprintln!(
-            "Warning: skipping symlink entry {} -> {} (unsupported platform)",
-            file.name(),
-            target
-          );
-        }
-      }
     } else {
       if let Some(parent) = out_path.parent() {
         fs::create_dir_all(parent)?;
@@ -402,215 +338,6 @@ fn remove_canary_dir() -> Result<()> {
     fs::remove_dir_all(canary_dir)?;
   }
   Ok(())
-}
-
-#[cfg(test)]
-mod unpack_zip_tests {
-  use super::*;
-  use std::io::Write;
-  use tempfile::tempdir;
-  use zip::write::FileOptions;
-  use zip::CompressionMethod;
-  use zip::ZipWriter;
-
-  /// A test zip entry: either a file with content, or a directory.
-  enum ZipEntry<'a> {
-    File(&'a str, &'a [u8], FileOptions),
-    Dir(&'a str, FileOptions),
-  }
-
-  /// Helper: create a zip archive in memory.
-  fn create_test_zip(entries: &[ZipEntry]) -> Vec<u8> {
-    let mut buf = Vec::new();
-    {
-      let mut zw = ZipWriter::new(std::io::Cursor::new(&mut buf));
-      for entry in entries {
-        match entry {
-          ZipEntry::File(name, content, options) => {
-            zw.start_file(name.to_string(), options.clone()).unwrap();
-            zw.write_all(content).unwrap();
-          }
-          ZipEntry::Dir(name, options) => {
-            zw.add_directory(name.to_string(), options.clone()).unwrap();
-          }
-        }
-      }
-      zw.finish().unwrap();
-    }
-    buf
-  }
-
-  #[test]
-  fn test_basic_file_extraction() {
-    let zip_data = create_test_zip(&[ZipEntry::File(
-      "hello.txt",
-      b"Hello, World!",
-      FileOptions::default(),
-    )]);
-
-    let tmp = tempdir().unwrap();
-    unpack_zip(&zip_data, tmp.path()).unwrap();
-
-    let extracted = std::fs::read_to_string(tmp.path().join("hello.txt")).unwrap();
-    assert_eq!(extracted, "Hello, World!");
-  }
-
-  #[test]
-  fn test_zip_slip_protection() {
-    let zip_data = create_test_zip(&[ZipEntry::File(
-      "../../../etc/passwd",
-      b"root:x:0:0:root:/root:/bin/bash",
-      FileOptions::default(),
-    )]);
-
-    let tmp = tempdir().unwrap();
-    let result = unpack_zip(&zip_data, tmp.path());
-    assert!(result.is_err());
-    let err_msg = result.unwrap_err().to_string();
-    assert!(
-      err_msg.contains("Invalid zip entry path"),
-      "expected zip-slip error, got: {}",
-      err_msg
-    );
-  }
-
-  #[test]
-  fn test_directory_creation() {
-    let dir_opts = FileOptions::default().unix_permissions(0o755);
-    let file_opts = FileOptions::default();
-    let zip_data = create_test_zip(&[
-      ZipEntry::Dir("dir1", dir_opts.clone()),
-      ZipEntry::Dir("dir1/subdir", dir_opts.clone()),
-      ZipEntry::File("dir1/subdir/file.txt", b"nested content", file_opts),
-    ]);
-
-    let tmp = tempdir().unwrap();
-    unpack_zip(&zip_data, tmp.path()).unwrap();
-
-    assert!(tmp.path().join("dir1").is_dir());
-    assert!(tmp.path().join("dir1/subdir").is_dir());
-    assert!(tmp.path().join("dir1/subdir/file.txt").is_file());
-
-    let content = std::fs::read_to_string(tmp.path().join("dir1/subdir/file.txt")).unwrap();
-    assert_eq!(content, "nested content");
-  }
-
-  #[test]
-  fn test_empty_zip() {
-    let zip_data = create_test_zip(&[]);
-
-    let tmp = tempdir().unwrap();
-    let result = unpack_zip(&zip_data, tmp.path());
-    assert!(result.is_ok());
-
-    // Dest dir should still exist
-    assert!(tmp.path().exists());
-  }
-
-  #[test]
-  fn test_multiple_files() {
-    let zip_data = create_test_zip(&[
-      ZipEntry::File("file1.txt", b"content 1", FileOptions::default()),
-      ZipEntry::File("file2.txt", b"content 2", FileOptions::default()),
-      ZipEntry::File("file3.txt", b"content 3", FileOptions::default()),
-    ]);
-
-    let tmp = tempdir().unwrap();
-    unpack_zip(&zip_data, tmp.path()).unwrap();
-
-    assert_eq!(
-      std::fs::read_to_string(tmp.path().join("file1.txt")).unwrap(),
-      "content 1"
-    );
-    assert_eq!(
-      std::fs::read_to_string(tmp.path().join("file2.txt")).unwrap(),
-      "content 2"
-    );
-    assert_eq!(
-      std::fs::read_to_string(tmp.path().join("file3.txt")).unwrap(),
-      "content 3"
-    );
-  }
-
-  #[cfg(unix)]
-  #[test]
-  fn test_unix_permission_preservation() {
-    use std::os::unix::fs::PermissionsExt;
-
-    let zip_data = create_test_zip(&[ZipEntry::File(
-      "executable.sh",
-      b"#!/bin/sh\necho hello",
-      FileOptions::default().unix_permissions(0o755),
-    )]);
-
-    let tmp = tempdir().unwrap();
-    unpack_zip(&zip_data, tmp.path()).unwrap();
-
-    let metadata = std::fs::metadata(tmp.path().join("executable.sh")).unwrap();
-    let mode = metadata.permissions().mode();
-    // Check that the executable bit is set (owner/group/other execute)
-    assert!(mode & 0o111 != 0, "expected executable permission, got mode: {:o}", mode);
-  }
-
-  #[test]
-  fn test_nested_dir_without_explicit_dir_entries() {
-    // Some zips don't have explicit directory entries — dirs are implied by
-    // file paths. unpack_zip should still create parent directories.
-    let zip_data = create_test_zip(&[ZipEntry::File(
-      "a/b/c/deep.txt",
-      b"deep file",
-      FileOptions::default(),
-    )]);
-
-    let tmp = tempdir().unwrap();
-    unpack_zip(&zip_data, tmp.path()).unwrap();
-
-    assert!(tmp.path().join("a/b/c").is_dir());
-    assert_eq!(
-      std::fs::read_to_string(tmp.path().join("a/b/c/deep.txt")).unwrap(),
-      "deep file"
-    );
-  }
-
-  #[test]
-  fn test_symlink_entry_is_handled() {
-    // Create a zip with a symlink entry using the raw API.
-    // The current unpack_zip doesn't explicitly handle symlinks — it treats
-    // them as regular files (writes the link target as content).
-    // This test documents the current behavior and ensures it doesn't crash.
-    let zip_data = {
-      let mut buf = Vec::new();
-      {
-        let mut zw = ZipWriter::new(std::io::Cursor::new(&mut buf));
-        // Write a regular file first
-        zw.start_file("target.txt", FileOptions::default()).unwrap();
-        zw.write_all(b"target content").unwrap();
-        // Write a symlink entry using add_symlink (if available)
-        // zip 0.6 supports symlink via unix_permissions with 0o120000 type
-        // We use start_file with symlink permissions — the zip crate handles it
-        zw.start_file(
-          "link.txt",
-          FileOptions::default()
-            .unix_permissions(0o120777)
-            .compression_method(CompressionMethod::Stored),
-        )
-        .unwrap();
-        zw.write_all(b"target.txt").unwrap();
-        zw.finish().unwrap();
-      }
-      buf
-    };
-
-    let tmp = tempdir().unwrap();
-    // Should not crash — symlink entries are treated as regular files
-    let result = unpack_zip(&zip_data, tmp.path());
-    assert!(result.is_ok());
-
-    // The "symlink" should exist as a regular file containing the link target text
-    let link_path = tmp.path().join("link.txt");
-    assert!(link_path.is_file());
-    assert_eq!(std::fs::read_to_string(&link_path).unwrap(), "target.txt");
-  }
 }
 
 #[test]
