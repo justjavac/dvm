@@ -8,7 +8,6 @@ use phf::phf_map;
 use semver::Version;
 
 const ALIAS_COLORS: phf::Map<&str, (u8, u8, u8)> = phf_map! {
-    "lighter" => (0xD1, 0xFA, 0xFF),        // unused
     "norm" => (0x9B, 0xD1, 0xE5),           // user add alias
     "darker" => (0x6A, 0x8E, 0xAE),         // default alias
     "highlight" => (0x15, 0x71, 0x45),      // latest version
@@ -16,11 +15,11 @@ const ALIAS_COLORS: phf::Map<&str, (u8, u8, u8)> = phf_map! {
 };
 
 fn apply_alias_color(a: &str, c: &str) -> ColoredString {
-  a.truecolor(
-    ALIAS_COLORS.get(c).unwrap().0,
-    ALIAS_COLORS.get(c).unwrap().1,
-    ALIAS_COLORS.get(c).unwrap().2,
-  )
+  let (r, g, b) = ALIAS_COLORS
+    .get(c)
+    .map(|(r, g, b)| (*r, *g, *b))
+    .unwrap_or((0xFF, 0xFF, 0xFF));
+  a.truecolor(r, g, b)
 }
 
 pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
@@ -29,11 +28,11 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
       // Reject a range dvm cannot resolve later rather than storing it and
       // failing on every subsequent `dvm alias list` / `dvm use <name>`.
       version_req_parse(content.as_str())?;
-      meta.set_alias(name, content);
+      meta.set_alias(name, content)?;
       Ok(())
     }
     AliasCommands::Unset { name } => {
-      meta.delete_alias(name);
+      meta.delete_alias(name)?;
       Ok(())
     }
     AliasCommands::List => {
