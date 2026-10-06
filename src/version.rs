@@ -158,8 +158,13 @@ pub fn is_versions_cache_exists() -> bool {
   remote_versions_location.exists()
 }
 
-pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
-  let response = ureq::get(registry)
+/// Fetch the latest stable Deno version from a registry URL.
+///
+/// Performs an HTTP GET with a User-Agent header, validates the response
+/// status, and parses the highest stable version from the returned JSON.
+fn fetch_latest_version(registry_url: &str) -> Result<Version> {
+  let response = ureq::get(registry_url)
+    .set("User-Agent", "dvm")
     .timeout(Duration::from_secs(30))
     .call()
     .map_err(|e| match e {
@@ -169,20 +174,16 @@ pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
   latest_version_from_versions_json(&response.into_string()?)
 }
 
+pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
+  fetch_latest_version(registry)
+}
+
 pub fn get_latest_lts_version() -> Result<Version> {
   // Use the same versions.json endpoint as the version list — this respects
   // the user's configured registry mirror and avoids fragile GitHub HTML
   // scraping.  The latest stable Deno release IS the LTS release.
   let registry_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
-  let response = ureq::get(&registry_url)
-    .set("User-Agent", "dvm")
-    .timeout(Duration::from_secs(30))
-    .call()
-    .map_err(|e| match e {
-      ureq::Error::Status(code, _) => anyhow::anyhow!("Failed to fetch Deno versions: {}", code),
-      e => anyhow::anyhow!("Network error: {}", e),
-    })?;
-  latest_version_from_versions_json(&response.into_string()?)
+  fetch_latest_version(&registry_url)
 }
 
 pub fn get_latest_canary(registry: &str) -> Result<String> {
