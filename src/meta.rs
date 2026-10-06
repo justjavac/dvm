@@ -257,9 +257,8 @@ impl DvmMeta {
       .map(|it| it.current.clone())
   }
 
-  ///
-  /// delete a version mapping
-  /// this will also delete actual files.
+  /// Delete a version mapping from metadata.
+  /// Does NOT delete actual version files on disk.
   pub fn delete_version_mapping(&mut self, required: String) -> anyhow::Result<()> {
     if let Some(index) = self.versions.iter().position(|it| it.required == required) {
       self.versions.remove(index);
