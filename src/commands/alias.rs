@@ -64,7 +64,7 @@ pub fn exec(meta: &mut DvmMeta, command: AliasCommands) -> Result<()> {
         }
         println!("{} -> {}", apply_alias_color(key, "darker"), val);
       }
-      for alias in &meta.alias {
+      for alias in meta.alias.values() {
         let upgrade_version = get_upgrade_version(&alias.required);
         if let Some(upgrade_version) = upgrade_version {
           println!(
