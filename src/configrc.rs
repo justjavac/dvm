@@ -139,8 +139,47 @@ fn rc_read(is_local: bool) -> io::Result<String> {
   fs::read_to_string(rc_path(is_local)?)
 }
 
+/// Read merged config: global (user-wide) values form the base, and local
+/// (current directory) values override on a per-key basis.  This way a project
+/// `.dvmrc` that only sets `deno_version` does not erase the user's registry
+/// preferences.
 fn rc_content_cascade() -> io::Result<String> {
-  rc_read(true).or_else(|_| rc_read(false))
+  let global = rc_read(false).unwrap_or_default();
+  let local = rc_read(true).unwrap_or_default();
+
+  if local.is_empty() {
+    return if global.is_empty() {
+      Err(io::Error::new(io::ErrorKind::NotFound, "no rc file found"))
+    } else {
+      Ok(global)
+    };
+  }
+
+  // Start from global pairs, then overlay local pairs.
+  let global_pairs = rc_parse(&global);
+  let mut merged: std::collections::HashMap<String, String> = global_pairs
+    .into_iter()
+    .map(|(k, v)| (k.to_string(), v.to_string()))
+    .collect();
+
+  for (k, v) in rc_parse(&local) {
+    merged.insert(k.to_string(), v.to_string());
+  }
+
+  // Preserve original global ordering, append any new local keys at the end.
+  let mut result: Vec<String> = Vec::new();
+  for (k, _) in rc_parse(&global) {
+    if let Some(v) = merged.get(k) {
+      result.push(format!("{}={}", k, v));
+    }
+  }
+  for (k, v) in rc_parse(&local) {
+    if !result.iter().any(|line| line.starts_with(&format!("{}=", k))) {
+      result.push(format!("{}={}", k, v));
+    }
+  }
+
+  Ok(result.join("\n"))
 }
 
 /// remove all key value pair that ain't supported by dvm from config file
@@ -187,5 +226,51 @@ mod tests {
       config,
       vec![("deno_version", "1.2.3"), ("registry_binary", "https://example.com/")]
     );
+  }
+
+  #[test]
+  fn rc_merge_local_overrides_global_per_key() {
+    // Simulate a global config with registry settings and a local config
+    // that only overrides deno_version.  The merged result should contain
+    // all three keys — this is the bug fix: previously a local .dvmrc
+    // would completely replace global config, losing registry settings.
+    let global = "registry_binary=https://example.com/\nregistry_version=https://example.com/versions.json";
+    let local = "deno_version=1.0.0";
+
+    let global_pairs = rc_parse(global);
+    let mut merged: std::collections::HashMap<String, String> = global_pairs
+      .into_iter()
+      .map(|(k, v)| (k.to_string(), v.to_string()))
+      .collect();
+    for (k, v) in rc_parse(local) {
+      merged.insert(k.to_string(), v.to_string());
+    }
+
+    assert_eq!(merged.len(), 3);
+    assert_eq!(merged.get("registry_binary").unwrap(), "https://example.com/");
+    assert_eq!(
+      merged.get("registry_version").unwrap(),
+      "https://example.com/versions.json"
+    );
+    assert_eq!(merged.get("deno_version").unwrap(), "1.0.0");
+  }
+
+  #[test]
+  fn rc_merge_local_overrides_same_key() {
+    let global = "deno_version=2.0.0\nregistry_binary=https://global.example.com/";
+    let local = "deno_version=1.0.0";
+
+    let global_pairs = rc_parse(global);
+    let mut merged: std::collections::HashMap<String, String> = global_pairs
+      .into_iter()
+      .map(|(k, v)| (k.to_string(), v.to_string()))
+      .collect();
+    for (k, v) in rc_parse(local) {
+      merged.insert(k.to_string(), v.to_string());
+    }
+
+    // local deno_version overrides global, but registry_binary stays global
+    assert_eq!(merged.get("deno_version").unwrap(), "1.0.0");
+    assert_eq!(merged.get("registry_binary").unwrap(), "https://global.example.com/");
   }
 }
