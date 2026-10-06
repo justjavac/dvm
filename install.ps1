@@ -42,5 +42,5 @@ if (!(";$Path;".ToLower() -like "*;$BinDir;*".ToLower())) {
 }
 
 Write-Output "Dvm was installed successfully to $DvmExe"
-Invoke-Expression -Command "dvm doctor"
+& dvm doctor
 Write-Output "Run 'dvm --help' to get started"

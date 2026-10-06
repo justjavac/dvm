@@ -5,15 +5,21 @@ use colored::Colorize;
 use std::fs;
 
 use crate::meta::DvmMeta;
-use crate::utils::{deno_resolution, dvm_bin_dir, dvm_root, is_exact_version, DenoResolution};
+use crate::utils::{deno_resolution, dvm_bin_dir, dvm_bin_on_path, dvm_root, is_exact_version, DenoResolution};
 
 pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   // Init enviroments if need
   // actually set DVM_DIR env var if not exist.
   let home_path = dvm_root();
-  check_or_set_env("DVM_DIR", home_path.to_str().unwrap())?;
-  let path = get_env("PATH")?;
-  let looking_for = dvm_bin_dir().to_str().unwrap().to_string();
+  let home_str = home_path
+    .to_str()
+    .ok_or_else(|| anyhow::anyhow!("DVM_DIR path contains non-UTF-8 bytes"))?;
+  check_or_set_env("DVM_DIR", home_str)?;
+  let bin_dir = dvm_bin_dir();
+  let looking_for = bin_dir
+    .to_str()
+    .ok_or_else(|| anyhow::anyhow!("dvm bin path contains non-UTF-8 bytes"))?
+    .to_string();
 
   // Share the resolution with `dvm use` so both agree on what "dvm's deno wins
   // on PATH" means: a plain string prefix would also accept a sibling directory
@@ -26,7 +32,7 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
       println!("{}", "Please restart your shell of choice to take effects.".red());
     }
     DenoResolution::NotOnPath => {
-      if !env_path_contains(&path, looking_for.as_str()) {
+      if !dvm_bin_on_path() {
         prepend_env_path(looking_for.as_str())?;
         println!("{}", "Please restart your shell of choice to take effects.".red());
       }
@@ -63,9 +69,9 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
   }
 
   // clean user-wide rc file
-  rc_clean(true).expect("clean local rc file failed");
-  rc_clean(false).expect("clean user-wide rc file failed");
-  rc_fix().expect("fix rc file failed");
+  rc_clean(true)?;
+  rc_clean(false)?;
+  rc_fix()?;
 
   // The success line is the spinner's finish message in `main`, printing it
   // here too showed it twice.
@@ -78,18 +84,8 @@ fn check_or_set_env(name: &str, value: &str) -> Result<()> {
 }
 
 #[cfg(not(windows))]
-fn get_env(name: &str) -> Result<String> {
-  set_env::get(name).map_err(Into::into)
-}
-
-#[cfg(not(windows))]
 fn prepend_env_path(value: &str) -> Result<()> {
   set_env::prepend("PATH", value).map_err(Into::into)
-}
-
-#[cfg(not(windows))]
-fn env_path_contains(path: &str, value: &str) -> bool {
-  path.contains(value)
 }
 
 #[cfg(windows)]
@@ -98,11 +94,6 @@ fn check_or_set_env(name: &str, value: &str) -> Result<()> {
     set_user_env(name, value)?;
   }
   Ok(())
-}
-
-#[cfg(windows)]
-fn get_env(name: &str) -> Result<String> {
-  std::env::var(name).map_err(Into::into)
 }
 
 #[cfg(windows)]
@@ -155,16 +146,6 @@ fn set_user_env(name: &str, value: &str) -> Result<()> {
 
   std::env::set_var(name, value);
   Ok(())
-}
-
-#[cfg(windows)]
-fn path_contains(path: &str, value: &str) -> bool {
-  path.split(';').any(|item| item.eq_ignore_ascii_case(value))
-}
-
-#[cfg(windows)]
-fn env_path_contains(path: &str, value: &str) -> bool {
-  path_contains(path, value)
 }
 
 #[cfg(windows)]

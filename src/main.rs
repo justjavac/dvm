@@ -1,9 +1,8 @@
-extern crate core;
-
 mod cli;
 mod commands;
 mod configrc;
 mod consts;
+mod downloader;
 mod meta;
 mod utils;
 pub mod version;
@@ -17,7 +16,6 @@ use meta::DvmMeta;
 use utils::{dvm_root, run_with_spinner};
 
 use crate::meta::DEFAULT_ALIAS;
-use crate::utils::deno_bin_path;
 
 cfg_if! {
   if #[cfg(windows)] {
@@ -32,24 +30,40 @@ cfg_if! {
 pub fn main() {
   let mut meta = DvmMeta::new();
 
-  let Ok(cli) = cli::cli_parse(&mut meta) else {
-    return;
-  };
+  let cli = cli::cli_parse();
+  let command = cli.command;
 
-  let result = match cli.command {
+  // `dvm exec` is a transparent wrapper around deno — it must forward
+  // deno's exit code verbatim so scripts and CI see the right status.
+  // Handled before the main match because exec calls process::exit directly
+  // (its return type is effectively `!`, not `Result<()>`).
+  if let Commands::Exec { version, args } = command {
+    commands::exec::exec(&mut meta, version, args).unwrap_or_else(|err| {
+      utils::print_error(&err);
+      std::process::exit(1);
+    });
+    // exec never returns on success (it calls process::exit with deno's code)
+    unreachable!("exec should have exited the process");
+  }
+
+  let result = match command {
     Commands::Completions { shell } => commands::completions::exec(&mut Cli::command(), shell),
     Commands::Info => commands::info::exec(),
     Commands::Install { no_use, version } => run_with_spinner(
       format!("Installing {}", version.clone().unwrap_or_else(|| "latest".to_string())),
       "Installed".to_string(),
-      |stop_with_error| match commands::install::exec(&meta, no_use, version) {
-        Ok(ok) => Ok(ok),
-        Err(err) => stop_with_error(format!("Failed to install: {}", err)),
-      },
+      || commands::install::exec(&meta, no_use, version)
+        .map_err(|err| anyhow::anyhow!("Failed to install: {}", err)),
     ),
-    Commands::List => commands::list::exec(),
+    Commands::List { remote } => {
+      if remote {
+        commands::list::exec_remote()
+      } else {
+        commands::list::exec()
+      }
+    }
     Commands::ListRemote => commands::list::exec_remote(),
-    Commands::Uninstall { version } => commands::uninstall::exec(version),
+    Commands::Uninstall { version } => commands::uninstall::exec(&mut meta, version),
     Commands::Use { version, write_local } => commands::use_version::exec(&mut meta, version, write_local),
     Commands::Alias { command } => commands::alias::exec(&mut meta, command),
     Commands::Activate => commands::activate::exec(&mut meta),
@@ -57,46 +71,36 @@ pub fn main() {
     Commands::Doctor => run_with_spinner(
       "Fixing...".to_string(),
       "All fixes applied, DVM is ready to use.".green().to_string(),
-      |fail| match commands::doctor::exec(&mut meta) {
-        Ok(ok) => Ok(ok),
-        Err(err) => fail(format!("Failed to fix: {}", err)),
-      },
+      || commands::doctor::exec(&mut meta)
+        .map_err(|err| anyhow::anyhow!("Failed to fix: {}", err)),
     ),
-    Commands::Upgrade { alias } => run_with_spinner(
+    Commands::Upgrade { alias, dry_run } => run_with_spinner(
       "Upgrading...".to_string(),
       "All alias have been upgraded.".to_string(),
-      |fail| match commands::upgrade::exec(&mut meta, alias) {
-        Ok(ok) => Ok(ok),
-        Err(err) => fail(format!("Failed to upgrade: {}", err)),
-      },
+      || commands::upgrade::exec(&mut meta, alias, dry_run)
+        .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err)),
     ),
+    // exec handled above (before the match)
+    Commands::Exec { .. } => unreachable!(),
 
-    Commands::Exec { command: _, version: _ } => {
-      /* unused */
-      Ok(())
-    }
     Commands::Clean => {
       run_with_spinner(
         "Cleaning...".to_string(),
         "clean finished".to_string(),
-        |fail| match commands::clean::exec(&mut meta) {
-          Ok(ok) => Ok(ok),
-          Err(err) => fail(format!("Failed to clean: {}", err)),
-        },
+        || commands::clean::exec(&mut meta)
+          .map_err(|err| anyhow::anyhow!("Failed to clean: {}", err)),
       )
     }
 
     Commands::Registry { command } => commands::registry::exec(command),
-    Commands::Update => run_with_spinner("Updating cache...".to_string(), "Update success".to_string(), |fail| {
-      match commands::update::exec(&mut meta) {
-        Ok(ok) => Ok(ok),
-        Err(err) => fail(format!("Failed to update: {}", err)),
-      }
+    Commands::Update => run_with_spinner("Updating cache...".to_string(), "Update success".to_string(), || {
+      commands::update::exec(&mut meta)
+        .map_err(|err| anyhow::anyhow!("Failed to update: {}", err))
     }),
   };
 
   if let Err(err) = result {
-    eprintln!("\x1b[31merror:\x1b[39m: {}", err);
+    utils::print_error(&err);
     std::process::exit(1);
   }
 }

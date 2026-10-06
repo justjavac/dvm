@@ -1,6 +1,6 @@
 use crate::dvm_root;
 use crate::utils::{check_is_deactivated, remove_deno_bin_link};
-use anyhow::{Ok, Result};
+use anyhow::Result;
 
 pub fn exec() -> Result<()> {
   let home = dvm_root();

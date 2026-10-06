@@ -82,13 +82,10 @@ pub fn rc_get_with_fix(key: &str) -> io::Result<String> {
 pub fn rc_update(is_local: bool, key: &str, value: &str) -> io::Result<()> {
   let (config_path, content) = rc_content(is_local)?;
 
-  let _content;
-  let mut config = if let Ok(c) = content {
-    _content = c;
-    rc_parse(_content.as_str())
-  } else {
-    Vec::new()
-  };
+  let mut config: Vec<(&str, &str)> = content
+    .as_ref()
+    .map(|c| rc_parse(c.as_str()))
+    .unwrap_or_default();
 
   let idx = config.iter().position(|(k, _)| k == &key);
   if let Some(idx) = idx {
@@ -102,30 +99,11 @@ pub fn rc_update(is_local: bool, key: &str, value: &str) -> io::Result<()> {
     .map(|(k, v)| format!("{}={}", k, v))
     .collect::<Vec<_>>()
     .join("\n");
-  fs::write(config_path, config)
-}
-
-/// remove key value pair from config file
-#[allow(dead_code)]
-pub fn rc_remove(is_local: bool, key: &str) -> io::Result<()> {
-  let (config_path, content) = rc_content(is_local)?;
-  let Ok(content) = content else {
-    // no need to remove
-    return Ok(());
-  };
-  let config = rc_parse(content.as_str());
-  let config = config.iter().filter(|(k, _)| k != &key).collect::<Vec<_>>();
-
-  let config = config
-    .iter()
-    .map(|(k, v)| format!("{}={}", k, v))
-    .collect::<Vec<_>>()
-    .join("\n");
-  fs::write(config_path, config)
+  crate::utils::atomic_write(config_path, config.as_bytes())
 }
 
 fn rc_parse(content: &str) -> Vec<(&str, &str)> {
-  let config = content
+  content
     .lines()
     // throw away non key value pair
     .filter(|it| it.contains('='))
@@ -135,8 +113,7 @@ fn rc_parse(content: &str) -> Vec<(&str, &str)> {
       let v = parts.next().unwrap_or("").trim();
       (k, v)
     })
-    .collect::<Vec<_>>();
-  config
+    .collect::<Vec<_>>()
 }
 
 /// Path of the local (current directory) or user-wide rc file.
@@ -195,21 +172,7 @@ pub fn rc_clean(is_local: bool) -> io::Result<()> {
     .map(|(k, v)| format!("{}={}", k, v))
     .collect::<Vec<_>>()
     .join("\n");
-  fs::write(config_path, config)
-}
-
-/// clear and delete the rc file
-/// if is_local is true, delete the local rc file
-/// if is_local is false, delete the global(user-wide) rc file
-#[allow(dead_code)]
-pub fn rc_unlink(is_local: bool) -> io::Result<()> {
-  if is_local {
-    fs::remove_file(DVM_CONFIGRC_FILENAME)
-  } else {
-    let home_dir = dirs::home_dir().ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
-    let rc_file = home_dir.join(DVM_CONFIGRC_FILENAME);
-    fs::remove_file(rc_file)
-  }
+  crate::utils::atomic_write(config_path, config.as_bytes())
 }
 
 #[cfg(test)]
