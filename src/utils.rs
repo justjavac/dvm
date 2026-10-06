@@ -154,6 +154,12 @@ pub fn deno_canary_path() -> PathBuf {
   dvm_dir.join(DENO_EXE)
 }
 
+/// Path to the file that stores the current canary build hash.
+/// Used to skip re-downloading when the latest canary is already installed.
+pub fn canary_hash_path() -> PathBuf {
+  dvm_root().join(DVM_CANARY_PATH_PREFIX).join(".canary-hash")
+}
+
 /// CGQAQ: Put hardlink to executable to this file,
 ///        and prepend this folder to env when dvm activated.
 pub fn deno_bin_path() -> PathBuf {
