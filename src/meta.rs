@@ -331,4 +331,28 @@ mod tests {
     assert!(parsed.versions[1].try_to_version_req().is_ok());
     assert!(parsed.versions[1].is_valid_mapping());
   }
+
+  #[test]
+  fn canary_version_string_is_not_valid_semver_mapping() {
+    // "canary" is a special version identifier, not a semver version.
+    // A version mapping with "canary" as current should be invalid.
+    let mapping = VersionMapping {
+      required: "canary".to_string(),
+      current: "canary".to_string(),
+    };
+    assert!(!mapping.is_valid_mapping());
+    assert!(mapping.try_to_version_req().is_err());
+  }
+
+  #[test]
+  fn canary_not_allowed_as_version_mapping_current() {
+    // The current field of a version mapping must be a valid semver;
+    // "canary" is handled separately at the command level.
+    let mapping = VersionMapping {
+      required: "*".to_string(),
+      current: "canary".to_string(),
+    };
+    assert!(!mapping.is_valid_mapping());
+    assert!(Version::parse(&mapping.current).is_err());
+  }
 }

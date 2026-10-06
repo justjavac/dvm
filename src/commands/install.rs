@@ -356,3 +356,70 @@ fn test_compose_url_to_exec() {
     }
   }
 }
+
+#[test]
+fn test_compose_url_to_canary() {
+  use crate::consts::REGISTRY_OFFICIAL;
+  use asserts_rs::asserts_eq_one_of;
+
+  let hash = "a1b2c3d4e5f6";
+  let url = compose_url_to_canary(REGISTRY_OFFICIAL, hash);
+
+  cfg_if! {
+    if #[cfg(windows)] {
+      asserts_eq_one_of!(
+        url.as_str(),
+        "https://dl.deno.land/canary/a1b2c3d4e5f6/deno-x86_64-pc-windows-msvc.zip",
+        "https://dl.deno.js.cn/canary/a1b2c3d4e5f6/deno-x86_64-pc-windows-msvc.zip"
+      );
+    } else if #[cfg(all(target_os = "macos", target_arch = "x86_64"))] {
+      asserts_eq_one_of!(
+        url.as_str(),
+        "https://dl.deno.land/canary/a1b2c3d4e5f6/deno-x86_64-apple-darwin.zip",
+        "https://dl.deno.js.cn/canary/a1b2c3d4e5f6/deno-x86_64-apple-darwin.zip"
+      );
+    } else if #[cfg(all(target_os = "macos", target_arch = "aarch64"))] {
+      asserts_eq_one_of!(
+        url.as_str(),
+        "https://dl.deno.land/canary/a1b2c3d4e5f6/deno-aarch64-apple-darwin.zip",
+        "https://dl.deno.js.cn/canary/a1b2c3d4e5f6/deno-aarch64-apple-darwin.zip"
+      );
+    } else if #[cfg(all(target_os = "linux", target_arch = "x86_64"))] {
+      asserts_eq_one_of!(
+        url.as_str(),
+        "https://dl.deno.land/canary/a1b2c3d4e5f6/deno-x86_64-unknown-linux-gnu.zip",
+        "https://dl.deno.js.cn/canary/a1b2c3d4e5f6/deno-x86_64-unknown-linux-gnu.zip"
+      );
+    } else if #[cfg(all(target_os = "linux", target_arch = "aarch64"))] {
+      asserts_eq_one_of!(
+        url.as_str(),
+        "https://dl.deno.land/canary/a1b2c3d4e5f6/deno-aarch64-unknown-linux-gnu.zip",
+        "https://dl.deno.js.cn/canary/a1b2c3d4e5f6/deno-aarch64-unknown-linux-gnu.zip"
+      );
+    }
+  }
+}
+
+#[test]
+fn test_compose_url_to_canary_with_cn_registry() {
+  use crate::consts::REGISTRY_CN;
+
+  let hash = "deadbeef1234";
+  let url = compose_url_to_canary(REGISTRY_CN, hash);
+
+  // Verify the URL starts with the CN registry and contains the canary path
+  assert!(url.starts_with(REGISTRY_CN));
+  assert!(url.contains("canary/deadbeef1234/"));
+  // Verify it ends with the archive name (platform-specific)
+  assert!(url.ends_with(ARCHIVE_NAME));
+}
+
+#[test]
+fn test_compose_url_to_canary_empty_hash() {
+  use crate::consts::REGISTRY_OFFICIAL;
+
+  let url = compose_url_to_canary(REGISTRY_OFFICIAL, "");
+  // Even with an empty hash, the URL structure should be valid
+  assert!(url.contains("canary//"));
+  assert!(url.ends_with(ARCHIVE_NAME));
+}

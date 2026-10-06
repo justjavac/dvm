@@ -257,4 +257,21 @@ mod tests {
     );
     assert_eq!(VersionArg::from_str(" lts \n").unwrap(), VersionArg::Lts);
   }
+
+  #[test]
+  fn canary_is_not_a_version_arg() {
+    // "canary" is a special version identifier handled at the command level
+    // (install, use), not a VersionArg. It should fail to parse.
+    use crate::consts::DVM_VERSION_CANARY;
+    assert!(VersionArg::from_str(DVM_VERSION_CANARY).is_err());
+    assert!(VersionArg::from_str("canary").is_err());
+  }
+
+  #[test]
+  fn canary_string_is_not_semver() {
+    use crate::consts::DVM_VERSION_CANARY;
+    assert!(Version::parse(DVM_VERSION_CANARY).is_err());
+    assert!(VersionReq::parse(DVM_VERSION_CANARY).is_err());
+    assert!(!crate::utils::is_semver(DVM_VERSION_CANARY));
+  }
 }
