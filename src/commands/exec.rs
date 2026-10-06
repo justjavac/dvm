@@ -1,9 +1,9 @@
 use std::process::Stdio;
 
 use crate::{
-  consts::{DVM_VERSION_LATEST, DVM_VERSION_LTS},
+  consts::{DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_LTS},
   meta::DvmMeta,
-  utils::{best_version, deno_version_path, is_exact_version, prompt_request},
+  utils::{best_version, deno_canary_path, deno_version_path, is_exact_version, prompt_request},
   version::{get_latest_lts_version, remote_versions, VersionArg},
 };
 use anyhow::Result;
@@ -14,6 +14,26 @@ use super::install;
 pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> Result<()> {
   let version = version.unwrap_or_else(|| DVM_VERSION_LATEST.to_string());
   let v = version.clone();
+
+  // Canary is a special case: it has its own install location and doesn't
+  // have a semver version number, so it's handled before the normal flow.
+  if version == DVM_VERSION_CANARY {
+    if !deno_canary_path().exists() {
+      if prompt_request("deno canary is not installed. do you want to install it?") {
+        install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
+      } else {
+        anyhow::bail!("deno canary is not installed");
+      }
+    }
+    let status = std::process::Command::new(deno_canary_path())
+      .args(args)
+      .stderr(Stdio::inherit())
+      .stdout(Stdio::inherit())
+      .stdin(Stdio::inherit())
+      .spawn()?
+      .wait()?;
+    std::process::exit(status.code().unwrap_or(1));
+  }
 
   let version = if is_exact_version(&version) {
     version
