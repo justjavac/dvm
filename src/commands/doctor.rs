@@ -59,7 +59,7 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
           "Found old dvm cache of version `{}`, migrating to new dvm cache location...",
           name
         );
-        fs::rename(&path, home_path.join(DVM_CACHE_PATH_PREFIX).join(name))?;
+        move_dir(&path, &home_path.join(DVM_CACHE_PATH_PREFIX).join(name))?;
       }
     }
   }
@@ -161,6 +161,61 @@ fn prepend_path_value(path: &str, value: &str) -> String {
   } else {
     format!("{};{}", value, rest)
   }
+}
+
+/// Move a directory from `src` to `dst`.
+///
+/// Tries `fs::rename` first (fast, atomic within a filesystem).  Falls back
+/// to a recursive copy + delete when the source and destination are on
+/// different filesystems (EXDEV error).
+fn move_dir(src: &std::path::Path, dst: &std::path::Path) -> Result<()> {
+  match fs::rename(src, dst) {
+    Ok(()) => Ok(()),
+    Err(e) if is_cross_device_error(&e) => {
+      // Cross-filesystem move — fall back to copy + remove
+      copy_dir_recursive(src, dst)?;
+      fs::remove_dir_all(src)?;
+      Ok(())
+    }
+    Err(e) => Err(e.into()),
+  }
+}
+
+/// Returns `true` if the I/O error indicates a cross-device link (EXDEV),
+/// meaning `fs::rename` cannot move the file because source and destination
+/// are on different filesystems.
+///
+/// Uses `raw_os_error` for compatibility with Rust versions before 1.85
+/// (which stabilized `ErrorKind::CrossesDevices`).  On Unix, EXDEV is
+/// defined as 18 by POSIX.
+#[cfg(unix)]
+fn is_cross_device_error(e: &std::io::Error) -> bool {
+  e.raw_os_error() == Some(18) // EXDEV
+}
+
+#[cfg(not(unix))]
+fn is_cross_device_error(_e: &std::io::Error) -> bool {
+  false
+}
+
+/// Recursively copy a directory from `src` to `dst`.
+///
+/// Creates `dst` and copies all entries (files and subdirectories) into it.
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> Result<()> {
+  fs::create_dir_all(dst)?;
+  for entry in fs::read_dir(src)? {
+    let entry = entry?;
+    let path = entry.path();
+    let file_name = entry.file_name();
+    let dst_path = dst.join(file_name);
+
+    if path.is_dir() {
+      copy_dir_recursive(&path, &dst_path)?;
+    } else {
+      fs::copy(&path, &dst_path)?;
+    }
+  }
+  Ok(())
 }
 
 #[cfg(all(test, windows))]
