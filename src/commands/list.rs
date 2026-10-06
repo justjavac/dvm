@@ -1,5 +1,6 @@
 use crate::version::{current_version, local_versions, remote_versions};
 use anyhow::Result;
+use colored::Colorize;
 use semver::Version;
 use std::cmp::Ordering;
 
@@ -25,7 +26,7 @@ fn print_versions(mut versions: Vec<String>) {
   for v in &versions {
     if *v == current_version {
       // display current used version with bright green
-      println!("\x1b[0;92m*{}\x1b[0m", v);
+      println!("*{}", v.green());
     } else {
       println!(" {}", v)
     }
