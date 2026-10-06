@@ -5,7 +5,7 @@ use crate::consts::{
   DVM_VERSION_LTS, DVM_VERSION_SYSTEM, REGISTRY_LIST_OFFICIAL,
 };
 use crate::meta::DvmMeta;
-use crate::utils::{best_version, deno_canary_path, deno_version_path, link_deno_bin, prompt_request, run_with_spinner, update_stub};
+use crate::utils::{best_version, check_is_deactivated, deno_canary_path, deno_version_path, dvm_root, link_deno_bin, prompt_request, run_with_spinner, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc, remove_deno_bin_link, DenoResolution};
 use crate::version::remote_versions;
 use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};
@@ -127,6 +127,7 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
 
     Ok(())
   })?;
+  reactivate_if_deactivated();
   warn_if_deno_shadowed();
   Ok(())
 }
@@ -141,8 +142,19 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;
     Ok(())
   })?;
+  reactivate_if_deactivated();
   warn_if_deno_shadowed();
   Ok(())
+}
+
+/// If dvm was previously deactivated (`.deactivated` mark file exists),
+/// remove the mark to restore consistent state. Called after `dvm use`
+/// successfully creates the deno link.
+fn reactivate_if_deactivated() {
+  if check_is_deactivated() {
+    let _ = std::fs::remove_file(dvm_root().join(".deactivated"));
+    println!("dvm has been re-activated");
+  }
 }
 
 /// `dvm use` only rewrites the hard link inside dvm's bin directory. When
