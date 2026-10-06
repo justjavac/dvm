@@ -4,6 +4,7 @@ use crate::version::VersionArg;
 use colored::Colorize;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -52,15 +53,20 @@ impl ToVersionReq for Alias {
   }
 }
 
-#[derive(Clone, Default, Eq, PartialEq, Deserialize, Serialize)]
-pub struct DvmMeta {
+/// Legacy format used by older versions of dvm, where `versions` and `alias`
+/// were stored as JSON arrays (Vec). We keep this around to support migration.
+#[derive(Clone, Default, Eq, PartialEq, Deserialize)]
+struct DvmMetaLegacy {
   pub versions: Vec<VersionMapping>,
   pub alias: Vec<Alias>,
 }
 
-/// Remove version mappings whose corresponding deno binary directory no
-/// longer exists on disk.
-///
+#[derive(Clone, Default, Eq, PartialEq, Deserialize, Serialize)]
+pub struct DvmMeta {
+  pub versions: HashMap<String, VersionMapping>,
+  pub alias: HashMap<String, Alias>,
+}
+
 impl DvmMeta {
   pub fn path() -> PathBuf {
     let mut meta = dvm_root();
@@ -73,8 +79,18 @@ impl DvmMeta {
     if path.exists() {
       let content = read_to_string(path);
       if let Ok(content) = content {
+        // Try the new HashMap-based format first
         let config = serde_json::from_str::<DvmMeta>(content.as_str());
         if let Ok(config) = config {
+          return config;
+        }
+
+        // Fall back to the legacy Vec-based format and migrate it
+        let legacy = serde_json::from_str::<DvmMetaLegacy>(content.as_str());
+        if let Ok(legacy) = legacy {
+          let config = DvmMeta::from(legacy);
+          // Best-effort: persist the migrated format so future reads are fast
+          let _ = config.save();
           return config;
         }
       }
@@ -96,7 +112,7 @@ impl DvmMeta {
     let before = self.versions.len();
     self
       .versions
-      .retain(|mapping| Version::parse(&mapping.current).is_ok_and(|it| deno_version_path(&it).exists()));
+      .retain(|_, mapping| Version::parse(&mapping.current).is_ok_and(|it| deno_version_path(&it).exists()));
     let removed = before - self.versions.len();
     if removed > 0 {
       self.save()?;
@@ -164,7 +180,7 @@ impl DvmMeta {
   /// A version is referenced if it appears as the `current` field of any
   /// version mapping (which includes both direct ranges and alias targets).
   fn is_version_referenced(&self, version: &str) -> bool {
-    self.versions.iter().any(|it| it.current == version)
+    self.versions.values().any(|it| it.current == version)
   }
 
   ///
@@ -172,11 +188,9 @@ impl DvmMeta {
   ///   `required` is either a semver range or a alias to a semver rage
   ///   `current` is the current directory that the deno located in
   pub fn set_version_mapping(&mut self, required: String, current: String) -> anyhow::Result<()> {
-    if let Some(mapping) = self.versions.iter_mut().find(|it| it.required == required) {
-      mapping.current = current;
-    } else {
-      self.versions.push(VersionMapping { required, current });
-    }
+    self
+      .versions
+      .insert(required.clone(), VersionMapping { required, current });
     self.save()
   }
 
@@ -184,7 +198,7 @@ impl DvmMeta {
   /// Returns the number of mappings removed.
   pub fn remove_mappings_for_version(&mut self, version: &str) -> anyhow::Result<usize> {
     let before = self.versions.len();
-    self.versions.retain(|it| it.current != version);
+    self.versions.retain(|_, it| it.current != version);
     let removed = before - self.versions.len();
     if removed > 0 {
       self.save()?;
@@ -197,19 +211,13 @@ impl DvmMeta {
   /// None if there haven't a deno version met the required semver range or alias that
   /// are installed already
   pub fn get_version_mapping(&self, required: &str) -> Option<String> {
-    self
-      .versions
-      .iter()
-      .find(|it| it.required == required)
-      .map(|it| it.current.clone())
+    self.versions.get(required).map(|it| it.current.clone())
   }
 
   /// Delete a version mapping from metadata.
   /// Does NOT delete actual version files on disk.
   pub fn delete_version_mapping(&mut self, required: String) -> anyhow::Result<()> {
-    if let Some(index) = self.versions.iter().position(|it| it.required == required) {
-      self.versions.remove(index);
-    }
+    self.versions.remove(&required);
     self.save()
   }
 
@@ -217,7 +225,7 @@ impl DvmMeta {
   /// list aliases
   /// including predefined aliases
   pub fn list_alias(&self) -> Vec<Alias> {
-    let mut alias = self.alias.clone();
+    let mut alias: Vec<Alias> = self.alias.values().cloned().collect();
     for (k, v) in DEFAULT_ALIAS.into_iter() {
       alias.insert(
         0,
@@ -238,11 +246,7 @@ impl DvmMeta {
     if DEFAULT_ALIAS.contains_key(name.as_str()) {
       return Ok(());
     }
-    if let Some(alias) = self.alias.iter_mut().find(|it| it.name == name) {
-      alias.required = required;
-    } else {
-      self.alias.push(Alias { name, required });
-    }
+    self.alias.insert(name.clone(), Alias { name, required });
     self.save()
   }
 
@@ -257,17 +261,14 @@ impl DvmMeta {
     } else {
       self
         .alias
-        .iter()
-        .find(|it| it.name == name)
+        .get(name)
         .and_then(|alias| VersionArg::from_str(&alias.required).ok())
     }
   }
 
   /// delete a alias
   pub fn delete_alias(&mut self, name: String) -> anyhow::Result<()> {
-    if let Some(index) = self.alias.iter().position(|it| it.name == name) {
-      self.alias.remove(index);
-    }
+    self.alias.remove(&name);
     self.save()
   }
 
@@ -287,6 +288,18 @@ impl DvmMeta {
   }
 }
 
+impl From<DvmMetaLegacy> for DvmMeta {
+  fn from(legacy: DvmMetaLegacy) -> Self {
+    let versions = legacy
+      .versions
+      .into_iter()
+      .map(|vm| (vm.required.clone(), vm))
+      .collect();
+    let alias = legacy.alias.into_iter().map(|a| (a.name.clone(), a)).collect();
+    DvmMeta { versions, alias }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -296,55 +309,67 @@ mod tests {
   fn test_default_config() {
     let result = serde_json::to_string(&DvmMeta::default());
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "{\"versions\":[],\"alias\":[]}");
+    // HashMap serializes to a JSON object
+    assert_eq!(result.unwrap(), "{\"versions\":{},\"alias\":{}}");
   }
 
   #[test]
   fn test_versions_config() {
     let mut conf = DvmMeta::default();
-    conf.versions.push(VersionMapping {
-      required: "~1.0.0".to_string(),
-      current: "1.0.1".to_string(),
-    });
+    conf.versions.insert(
+      "~1.0.0".to_string(),
+      VersionMapping {
+        required: "~1.0.0".to_string(),
+        current: "1.0.1".to_string(),
+      },
+    );
     let result = serde_json::to_string(&conf);
     assert!(result.is_ok());
-    assert_eq!(
-      result.unwrap(),
-      "{\"versions\":[{\"required\":\"~1.0.0\",\"current\":\"1.0.1\"}],\"alias\":[]}"
-    )
+    // HashMap order is not guaranteed, so we parse and check instead of string comparison
+    let parsed: DvmMeta = serde_json::from_str(&result.unwrap()).unwrap();
+    assert_eq!(parsed.versions.len(), 1);
+    let vm = parsed.versions.get("~1.0.0").unwrap();
+    assert_eq!(vm.required, "~1.0.0");
+    assert_eq!(vm.current, "1.0.1");
   }
 
   #[test]
   fn test_alias_config() {
     let mut conf = DvmMeta::default();
-    conf.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "1.0.0".to_string(),
-    });
-    conf.alias.push(Alias {
-      name: "two-point-o".to_string(),
-      required: "2.0.0".to_string(),
-    });
+    conf.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "1.0.0".to_string(),
+      },
+    );
+    conf.alias.insert(
+      "two-point-o".to_string(),
+      Alias {
+        name: "two-point-o".to_string(),
+        required: "2.0.0".to_string(),
+      },
+    );
     let result = serde_json::to_string(&conf);
     assert!(result.is_ok());
-    assert_eq!(
-            result.unwrap(),
-            "{\"versions\":[],\"alias\":[{\"name\":\"stable\",\"required\":\"1.0.0\"},{\"name\":\"two-point-o\",\"required\":\"2.0.0\"}]}"
-        )
+    let parsed: DvmMeta = serde_json::from_str(&result.unwrap()).unwrap();
+    assert_eq!(parsed.alias.len(), 2);
+    assert_eq!(parsed.alias.get("stable").unwrap().required, "1.0.0");
+    assert_eq!(parsed.alias.get("two-point-o").unwrap().required, "2.0.0");
   }
 
   #[test]
   fn test_parse_valid() {
     let raw = json!(
         {
-            "versions": [
-                { "required": "~1.0.0", "current": "1.0.1" },
-                { "required": "^1.0.0", "current": "1.2.0" },
-            ],
-            "alias": [
-                { "name": "latest", "required": "*" },
-                { "name": "stable", "required": "^1.0.0"},
-            ]
+            "versions": {
+                "~1.0.0": { "required": "~1.0.0", "current": "1.0.1" },
+                "^1.0.0": { "required": "^1.0.0", "current": "1.2.0" }
+            },
+            "alias": {
+                "latest": { "name": "latest", "required": "*" },
+                "stable": { "name": "stable", "required": "^1.0.0" }
+            }
         }
     );
 
@@ -353,24 +378,117 @@ mod tests {
     let parsed = parsed.unwrap();
     assert_eq!(parsed.alias.len(), 2);
     assert_eq!(parsed.versions.len(), 2);
-    assert_eq!(parsed.alias[0].name, "latest");
-    assert_eq!(parsed.alias[0].required, "*");
-    assert_eq!(
-      parsed.alias[0].try_to_version_req().unwrap(),
-      VersionReq::parse("*").unwrap()
+
+    let latest = parsed.alias.get("latest").unwrap();
+    assert_eq!(latest.name, "latest");
+    assert_eq!(latest.required, "*");
+    assert_eq!(latest.try_to_version_req().unwrap(), VersionReq::parse("*").unwrap());
+    assert!(latest.try_to_version_req().is_ok());
+
+    let stable = parsed.alias.get("stable").unwrap();
+    assert_eq!(stable.name, "stable");
+    assert_eq!(stable.required, "^1.0.0");
+    assert!(stable.try_to_version_req().is_ok());
+
+    let v1 = parsed.versions.get("~1.0.0").unwrap();
+    assert_eq!(v1.required, "~1.0.0");
+    assert_eq!(v1.current, "1.0.1");
+    assert!(v1.try_to_version_req().is_ok());
+    assert!(v1.is_valid_mapping());
+
+    let v2 = parsed.versions.get("^1.0.0").unwrap();
+    assert_eq!(v2.required, "^1.0.0");
+    assert_eq!(v2.current, "1.2.0");
+    assert!(v2.try_to_version_req().is_ok());
+    assert!(v2.is_valid_mapping());
+  }
+
+  #[test]
+  fn test_migration_from_legacy_format() {
+    // Simulate the old Vec-based JSON format
+    let legacy_json = json!(
+        {
+            "versions": [
+                { "required": "~1.0.0", "current": "1.0.1" },
+                { "required": "^1.0.0", "current": "1.2.0" },
+            ],
+            "alias": [
+                { "name": "stable", "required": "^1.0.0"},
+                { "name": "lts", "required": "1.40.0" },
+            ]
+        }
     );
-    assert!(parsed.alias[0].try_to_version_req().is_ok());
-    assert_eq!(parsed.alias[1].name, "stable");
-    assert_eq!(parsed.alias[1].required, "^1.0.0");
-    assert!(parsed.alias[1].try_to_version_req().is_ok());
-    assert_eq!(parsed.versions[0].required, "~1.0.0");
-    assert_eq!(parsed.versions[0].current, "1.0.1");
-    assert!(parsed.versions[0].try_to_version_req().is_ok());
-    assert!(parsed.versions[0].is_valid_mapping());
-    assert_eq!(parsed.versions[1].required, "^1.0.0");
-    assert_eq!(parsed.versions[1].current, "1.2.0");
-    assert!(parsed.versions[1].try_to_version_req().is_ok());
-    assert!(parsed.versions[1].is_valid_mapping());
+
+    let legacy: DvmMetaLegacy = serde_json::from_value(legacy_json).unwrap();
+    let migrated = DvmMeta::from(legacy);
+
+    assert_eq!(migrated.versions.len(), 2);
+    assert_eq!(migrated.alias.len(), 2);
+    assert_eq!(migrated.versions.get("~1.0.0").unwrap().current, "1.0.1");
+    assert_eq!(migrated.versions.get("^1.0.0").unwrap().current, "1.2.0");
+    assert_eq!(migrated.alias.get("stable").unwrap().required, "^1.0.0");
+    assert_eq!(migrated.alias.get("lts").unwrap().required, "1.40.0");
+  }
+
+  #[test]
+  fn test_set_and_get_version_mapping() {
+    let mut meta = DvmMeta::default();
+    meta.versions.insert(
+      "~1.0.0".to_string(),
+      VersionMapping {
+        required: "~1.0.0".to_string(),
+        current: "1.0.5".to_string(),
+      },
+    );
+    assert_eq!(meta.get_version_mapping("~1.0.0"), Some("1.0.5".to_string()));
+    assert_eq!(meta.get_version_mapping("^2.0.0"), None);
+  }
+
+  #[test]
+  fn test_delete_version_mapping() {
+    let mut meta = DvmMeta::default();
+    meta.versions.insert(
+      "~1.0.0".to_string(),
+      VersionMapping {
+        required: "~1.0.0".to_string(),
+        current: "1.0.5".to_string(),
+      },
+    );
+    assert!(meta.versions.contains_key("~1.0.0"));
+    meta.versions.remove("~1.0.0");
+    assert!(!meta.versions.contains_key("~1.0.0"));
+  }
+
+  #[test]
+  fn test_remove_mappings_for_version() {
+    let mut meta = DvmMeta::default();
+    meta.versions.insert(
+      "~1.0.0".to_string(),
+      VersionMapping {
+        required: "~1.0.0".to_string(),
+        current: "1.0.5".to_string(),
+      },
+    );
+    meta.versions.insert(
+      "^1.0.0".to_string(),
+      VersionMapping {
+        required: "^1.0.0".to_string(),
+        current: "1.0.5".to_string(),
+      },
+    );
+    meta.versions.insert(
+      "^2.0.0".to_string(),
+      VersionMapping {
+        required: "^2.0.0".to_string(),
+        current: "2.0.0".to_string(),
+      },
+    );
+    let before = meta.versions.len();
+    meta.versions.retain(|_, it| it.current != "1.0.5");
+    let removed = before - meta.versions.len();
+    assert_eq!(removed, 2);
+    assert_eq!(meta.versions.len(), 1);
+    assert!(meta.versions.contains_key("^2.0.0"));
   }
 
   // --- Alias operation tests ---
@@ -378,37 +496,44 @@ mod tests {
   #[test]
   fn test_set_new_alias() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
     assert_eq!(meta.alias.len(), 1);
-    assert_eq!(meta.alias[0].name, "stable");
-    assert_eq!(meta.alias[0].required, "^1.0.0");
+    assert_eq!(meta.alias.get("stable").unwrap().name, "stable");
+    assert_eq!(meta.alias.get("stable").unwrap().required, "^1.0.0");
   }
 
   #[test]
   fn test_set_alias_updates_existing() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
     // update existing alias
-    if let Some(a) = meta.alias.iter_mut().find(|it| it.name == "stable") {
-      a.required = "^2.0.0".to_string();
-    }
+    meta.alias.get_mut("stable").unwrap().required = "^2.0.0".to_string();
     assert_eq!(meta.alias.len(), 1);
-    assert_eq!(meta.alias[0].required, "^2.0.0");
+    assert_eq!(meta.alias.get("stable").unwrap().required, "^2.0.0");
   }
 
   #[test]
   fn test_get_existing_alias() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
     let result = meta.get_alias("stable");
     assert!(result.is_some());
   }
@@ -430,45 +555,53 @@ mod tests {
   #[test]
   fn test_delete_alias() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
     assert_eq!(meta.alias.len(), 1);
     // remove the alias
-    if let Some(index) = meta.alias.iter().position(|it| it.name == "stable") {
-      meta.alias.remove(index);
-    }
-    assert_eq!(meta.alias.len(), 0);
+    meta.alias.remove("stable");
+    assert!(meta.alias.is_empty());
     assert!(meta.get_alias("stable").is_none());
   }
 
   #[test]
   fn test_delete_nonexistent_alias_is_noop() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
     let before = meta.alias.len();
     // try to remove an alias that doesn't exist
-    if let Some(index) = meta.alias.iter().position(|it| it.name == "nonexistent") {
-      meta.alias.remove(index);
-    }
+    meta.alias.remove("nonexistent");
     assert_eq!(meta.alias.len(), before);
   }
 
   #[test]
   fn test_list_alias_includes_default_and_custom() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
-    meta.alias.push(Alias {
-      name: "lts".to_string(),
-      required: "1.40.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
+    meta.alias.insert(
+      "lts".to_string(),
+      Alias {
+        name: "lts".to_string(),
+        required: "1.40.0".to_string(),
+      },
+    );
     let list = meta.list_alias();
     // default "latest" + 2 custom = 3 total
     assert_eq!(list.len(), 3);
@@ -492,10 +625,13 @@ mod tests {
   #[test]
   fn test_has_alias_for_existing() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
     assert!(meta.has_alias("stable"));
     // default alias also returns true
     assert!(meta.has_alias("latest"));
@@ -510,10 +646,13 @@ mod tests {
   #[test]
   fn test_resolve_version_req_exact_alias() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "v1".to_string(),
-      required: "1.2.3".to_string(),
-    });
+    meta.alias.insert(
+      "v1".to_string(),
+      Alias {
+        name: "v1".to_string(),
+        required: "1.2.3".to_string(),
+      },
+    );
     let result = meta.resolve_version_req("v1");
     assert!(result.is_ok());
   }
@@ -521,10 +660,13 @@ mod tests {
   #[test]
   fn test_resolve_version_req_lts_alias() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "lts".to_string(),
-      required: "1.40.0".to_string(),
-    });
+    meta.alias.insert(
+      "lts".to_string(),
+      Alias {
+        name: "lts".to_string(),
+        required: "1.40.0".to_string(),
+      },
+    );
     let result = meta.resolve_version_req("lts");
     assert!(result.is_ok());
   }
@@ -532,10 +674,13 @@ mod tests {
   #[test]
   fn test_resolve_version_req_range_alias() {
     let mut meta = DvmMeta::default();
-    meta.alias.push(Alias {
-      name: "stable".to_string(),
-      required: "^1.0.0".to_string(),
-    });
+    meta.alias.insert(
+      "stable".to_string(),
+      Alias {
+        name: "stable".to_string(),
+        required: "^1.0.0".to_string(),
+      },
+    );
     let result = meta.resolve_version_req("stable");
     assert!(result.is_ok());
   }
@@ -586,14 +731,18 @@ mod tests {
     if DEFAULT_ALIAS.contains_key("latest") {
       // skip, simulating set_alias behavior for default aliases
     } else {
-      meta.alias.push(Alias {
-        name: "latest".to_string(),
-        required: "*".to_string(),
-      });
+      meta.alias.insert(
+        "latest".to_string(),
+        Alias {
+          name: "latest".to_string(),
+          required: "*".to_string(),
+        },
+      );
     }
     assert_eq!(meta.alias.len(), 0);
   }
 
+  #[test]
   fn test_deserialize_garbage_text_fails() {
     let result = serde_json::from_str::<DvmMeta>("this is not json at all!!!");
     assert!(result.is_err());
@@ -611,13 +760,14 @@ mod tests {
 
   #[test]
   fn test_deserialize_missing_versions_field_fails() {
-    let result = serde_json::from_str::<DvmMeta>(r#"{"alias": [{"name": "stable", "required": "1.0.0"}]}"#);
+    let result = serde_json::from_str::<DvmMeta>(r#"{"alias": {"stable": {"name": "stable", "required": "1.0.0"}}}"#);
     assert!(result.is_err());
   }
 
   #[test]
   fn test_deserialize_missing_alias_field_fails() {
-    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": [{"required": "~1.0.0", "current": "1.0.1"}]}"#);
+    let result =
+      serde_json::from_str::<DvmMeta>(r#"{"versions": {"~1.0.0": {"required": "~1.0.0", "current": "1.0.1"}}}"#);
     assert!(result.is_err());
   }
 
@@ -675,8 +825,8 @@ mod tests {
     // Extra unknown fields should be ignored (forward compatibility)
     let result = serde_json::from_str::<DvmMeta>(
       r#"{
-        "versions": [],
-        "alias": [],
+        "versions": {},
+        "alias": {},
         "new_field": "some value",
         "another_new_thing": 42
       }"#,
@@ -689,12 +839,12 @@ mod tests {
 
   #[test]
   fn test_deserialize_wrong_types_fails_cleanly() {
-    // versions is a string instead of an array
-    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": "not-an-array", "alias": []}"#);
+    // versions is a string instead of an object
+    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": "not-an-object", "alias": {}}"#);
     assert!(result.is_err());
 
-    // alias is a number instead of an array
-    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": [], "alias": 123}"#);
+    // alias is a number instead of an object
+    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": {}, "alias": 123}"#);
     assert!(result.is_err());
   }
 
