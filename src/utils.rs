@@ -120,7 +120,7 @@ where
       let version = Version::parse(v).ok()?;
       required.matches(&version).then_some(version)
     })
-    .max_by(|a, b| a.partial_cmp(b).unwrap())
+    .max_by(|a, b| a.cmp(b))
 }
 
 ///
