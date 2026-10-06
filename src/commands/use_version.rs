@@ -125,8 +125,27 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
 }
 
 pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String, local: bool) -> Result<()> {
+  use_this_bin_path_inner(exe_path, version, raw_version, local, true)
+}
+
+/// Like `use_this_bin_path` but skips the `deno -V` verification step.
+/// Safe to use when the binary was just downloaded and SHA256-verified.
+pub fn use_this_bin_path_no_verify(exe_path: &Path, version: &Version, raw_version: String, local: bool) -> Result<()> {
+  use_this_bin_path_inner(exe_path, version, raw_version, local, false)
+}
+
+/// Internal version with control over whether to verify the binary via `deno -V`.
+fn use_this_bin_path_inner(
+  exe_path: &Path,
+  version: &Version,
+  raw_version: String,
+  local: bool,
+  verify: bool,
+) -> Result<()> {
   run_with_spinner("Processing".to_string(), format!("Now using deno {}", version), || {
-    check_exe(exe_path, version)?;
+    if verify {
+      check_exe(exe_path, version)?;
+    }
 
     remove_deno_bin_link()?;
     link_deno_bin(exe_path)?;

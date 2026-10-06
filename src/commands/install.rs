@@ -86,7 +86,7 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   }
 
   if !no_use {
-    use_version::use_this_bin_path(
+    use_version::use_this_bin_path_no_verify(
       &exe_path,
       &install_version,
       version.unwrap_or_else(|| DVM_VERSION_LATEST.to_string()),
@@ -97,11 +97,9 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   Ok(())
 }
 
-/// Fetch `url`, rejecting error responses so a 404 page never reaches the
-/// unpacker as if it were an archive.
-fn download_archive(url: &str) -> Result<Vec<u8>> {
-  println!("downloading {}", url);
-
+/// Core download function: fetches `url` bytes with error handling.
+/// No user-facing output — use `download_archive` for archives.
+fn download_bytes(url: &str) -> Result<Vec<u8>> {
   let response = match tinyget::get(url).send() {
     Ok(response) => response,
     Err(error) => anyhow::bail!("Network error {}", error),
@@ -118,10 +116,17 @@ fn download_archive(url: &str) -> Result<Vec<u8>> {
   Ok(response.into_bytes())
 }
 
+/// Fetch an archive from `url`, rejecting error responses so a 404 page never
+/// reaches the unpacker as if it were an archive.  Prints progress to stdout.
+fn download_archive(url: &str) -> Result<Vec<u8>> {
+  println!("downloading {}", url);
+  download_bytes(url)
+}
+
 /// Download a .sha256 checksum file and return the hex-encoded hash.
 /// Handles the standard `sha256sum` format: `<hash>  <filename>`.
 fn download_sha256(url: &str) -> Result<String> {
-  let content = download_archive(url)?;
+  let content = download_bytes(url)?;
   let text = String::from_utf8(content)?;
   // sha256sum format: "HASH  FILENAME" or just "HASH"
   let hash = text

@@ -107,7 +107,7 @@ pub fn update_stub(version: &str) -> std::io::Result<()> {
 }
 
 pub fn is_exact_version(input: &str) -> bool {
-  Version::parse(input).is_ok()
+  Version::parse(input.trim()).is_ok()
 }
 
 pub fn best_version<'a, T>(choices: T, required: VersionReq) -> Option<Version>
@@ -298,7 +298,7 @@ pub fn deno_version_path(version: &Version) -> PathBuf {
 
 #[inline]
 pub fn is_semver(version: &str) -> bool {
-  Version::parse(version).is_ok()
+  Version::parse(version.trim()).is_ok()
 }
 
 #[inline]
