@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::string::String;
+use std::time::Duration;
 
 pub const DVM: &str = env!("CARGO_PKG_VERSION");
 
@@ -105,7 +106,11 @@ pub fn cache_remote_versions() -> Result<()> {
       let cached_remote_versions_location = cached_remote_versions_location();
 
       let remote_versions_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
-      let remote_versions = tinyget::get(remote_versions_url).send()?.as_str()?.to_owned();
+      let remote_versions = ureq::get(&remote_versions_url)
+        .timeout(Duration::from_secs(30))
+        .call()
+        .map_err(|e| anyhow::anyhow!("Network error: {}", e))?
+        .into_string()?;
       crate::utils::atomic_write(cached_remote_versions_location, remote_versions.as_bytes())
         .map_err(|e| anyhow::anyhow!(e))
     },
@@ -148,11 +153,14 @@ pub fn is_versions_cache_exists() -> bool {
 }
 
 pub fn get_latest_remote_version(registry: &str) -> Result<Version> {
-  let response = tinyget::get(registry).send()?;
-  if response.status_code >= 400 {
-    anyhow::bail!("Failed to fetch Deno versions: {}", response.status_code);
-  }
-  latest_version_from_versions_json(response.as_str()?)
+  let response = ureq::get(registry)
+    .timeout(Duration::from_secs(30))
+    .call()
+    .map_err(|e| match e {
+      ureq::Error::Status(code, _) => anyhow::anyhow!("Failed to fetch Deno versions: {}", code),
+      e => anyhow::anyhow!("Network error: {}", e),
+    })?;
+  latest_version_from_versions_json(&response.into_string()?)
 }
 
 pub fn get_latest_lts_version() -> Result<Version> {
@@ -160,22 +168,27 @@ pub fn get_latest_lts_version() -> Result<Version> {
   // the user's configured registry mirror and avoids fragile GitHub HTML
   // scraping.  The latest stable Deno release IS the LTS release.
   let registry_url = rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION)?;
-  let response = tinyget::get(&registry_url)
-    .with_header("User-Agent", "dvm")
-    .send()?;
-  if response.status_code >= 400 {
-    anyhow::bail!("Failed to fetch Deno versions: {}", response.status_code);
-  }
-  latest_version_from_versions_json(response.as_str()?)
+  let response = ureq::get(&registry_url)
+    .set("User-Agent", "dvm")
+    .timeout(Duration::from_secs(30))
+    .call()
+    .map_err(|e| match e {
+      ureq::Error::Status(code, _) => anyhow::anyhow!("Failed to fetch Deno versions: {}", code),
+      e => anyhow::anyhow!("Network error: {}", e),
+    })?;
+  latest_version_from_versions_json(&response.into_string()?)
 }
 
 pub fn get_latest_canary(registry: &str) -> Result<String> {
-  let response = tinyget::get(format!("{}{}", registry, REGISTRY_LATEST_CANARY_PATH)).send()?;
-  if response.status_code >= 400 {
-    anyhow::bail!("Failed to fetch the latest canary hash: {}", response.status_code);
-  }
+  let response = ureq::get(&format!("{}{}", registry, REGISTRY_LATEST_CANARY_PATH))
+    .timeout(Duration::from_secs(30))
+    .call()
+    .map_err(|e| match e {
+      ureq::Error::Status(code, _) => anyhow::anyhow!("Failed to fetch the latest canary hash: {}", code),
+      e => anyhow::anyhow!("Network error: {}", e),
+    })?;
 
-  let body = response.as_str()?;
+  let body = response.into_string()?;
   Ok(body.trim().trim_start_matches('v').to_string())
 }
 

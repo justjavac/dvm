@@ -14,8 +14,9 @@ use cfg_if::cfg_if;
 use semver::Version;
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::io;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 cfg_if! {
   if #[cfg(windows)] {
@@ -102,20 +103,16 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
 fn download_archive(url: &str) -> Result<Vec<u8>> {
   println!("downloading {}", url);
 
-  let response = match tinyget::get(url).send() {
+  let response = match ureq::get(url).timeout(Duration::from_secs(30)).call() {
     Ok(response) => response,
-    Err(error) => anyhow::bail!("Network error {}", error),
+    Err(ureq::Error::Status(404, _)) => anyhow::bail!("'{}' has not been found", url),
+    Err(ureq::Error::Status(code, _)) => anyhow::bail!("Download '{}' failed: {}", url, code),
+    Err(e) => anyhow::bail!("Network error {}", e),
   };
 
-  if response.status_code == 404 {
-    anyhow::bail!("'{}' has not been found", url);
-  }
-
-  if response.status_code >= 400 {
-    anyhow::bail!("Download '{}' failed: {}", url, response.status_code);
-  }
-
-  Ok(response.into_bytes())
+  let mut bytes = Vec::new();
+  response.into_reader().read_to_end(&mut bytes)?;
+  Ok(bytes)
 }
 
 /// Download a .sha256 checksum file and return the hex-encoded hash.
