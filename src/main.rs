@@ -2,6 +2,7 @@ mod cli;
 mod commands;
 mod configrc;
 mod consts;
+mod downloader;
 mod meta;
 mod utils;
 pub mod version;
