@@ -7,7 +7,7 @@ use crate::consts::{
   DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_LTS, REGISTRY_LIST_OFFICIAL, REGISTRY_OFFICIAL,
 };
 use crate::meta::DvmMeta;
-use crate::utils::{deno_canary_path, deno_version_path, dvm_root};
+use crate::utils::{deno_canary_path, deno_version_path, dvm_root, print_error};
 use crate::version::{get_latest_canary, get_latest_lts_version, get_latest_remote_version};
 use anyhow::Result;
 use cfg_if::cfg_if;
@@ -177,7 +177,7 @@ fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
   }
 
   if let Err(err) = unpack(archive_data, version) {
-    eprintln!("Failed to unpack Deno v{}: {}", version, err);
+    print_error(&format!("Failed to unpack Deno v{}: {}", version, err));
     eprintln!("Removing the corrupted archive and retrying download");
     remove_version_dir(version)?;
 
@@ -288,7 +288,7 @@ fn download_and_unpack_canary(registry: &str, hash: &str) -> Result<()> {
 
   let archive_data = download_archive(&url)?;
   if let Err(err) = unpack_canary(archive_data) {
-    eprintln!("Failed to unpack Deno canary {}: {}", hash, err);
+    print_error(&format!("Failed to unpack Deno canary {}: {}", hash, err));
     eprintln!("Removing the corrupted archive and retrying download");
     remove_canary_dir()?;
 

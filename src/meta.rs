@@ -1,5 +1,5 @@
 use crate::consts::DVM_CACHE_INVALID_TIMEOUT;
-use crate::utils::{deno_version_path, dvm_root, dvm_versions, now};
+use crate::utils::{deno_version_path, dvm_root, dvm_versions, now, print_error};
 use crate::version::VersionArg;
 use colored::Colorize;
 use semver::{Version, VersionReq};
@@ -121,7 +121,7 @@ impl DvmMeta {
 
           println!("Cleaning version {}", name.bright_black());
           if let Err(err) = std::fs::remove_dir_all(&path) {
-            eprintln!("Failed to clean version {}: {}", name, err);
+            print_error(&format!("Failed to clean version {}: {}", name, err));
           }
         }
       }
