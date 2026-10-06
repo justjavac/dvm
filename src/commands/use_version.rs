@@ -1,5 +1,5 @@
 use crate::commands::install;
-use crate::configrc::{rc_get_with_fix, rc_update};
+use crate::configrc::{rc_get_with_fix, rc_get_with_source, rc_update, RcSource};
 use crate::consts::{
   DVM_CONFIGRC_KEY_DENO_VERSION, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_CANARY, DVM_VERSION_LATEST,
   DVM_VERSION_LTS, DVM_VERSION_SYSTEM, REGISTRY_LIST_OFFICIAL,
@@ -50,8 +50,13 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
       );
     }
   } else {
-    println!("No version input detect, try to use version in .dvmrc file");
     let version_req = load_dvmrc();
+    let source_msg = match rc_get_with_source(DVM_CONFIGRC_KEY_DENO_VERSION) {
+      Ok((_, RcSource::Local)) => "Using version from local .dvmrc file",
+      Ok((_, RcSource::Global)) => "Using version from global .dvmrc file",
+      Err(_) => "No .dvmrc file found, using latest version",
+    };
+    println!("{}", source_msg);
     println!("Using semver range: {}", version_req);
     version_req
   };
