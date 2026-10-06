@@ -33,7 +33,9 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, write_local: bool) -> R
       return Ok(());
     } else if version == DVM_VERSION_SYSTEM {
       remove_deno_bin_link()?;
-      println!("Deno that was previously installed on your system will be activated now.");
+      rc_update(write_local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_SYSTEM)?;
+      println!("Now using system deno");
+      warn_if_deno_shadowed();
       return Ok(());
     } else if version == DVM_VERSION_LTS {
       VersionArg::Lts
