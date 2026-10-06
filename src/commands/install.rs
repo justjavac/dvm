@@ -7,15 +7,15 @@ use crate::consts::{
   DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_LTS, REGISTRY_LIST_OFFICIAL, REGISTRY_OFFICIAL,
 };
 use crate::meta::DvmMeta;
-use crate::utils::{deno_canary_path, deno_version_path, dvm_root};
+use crate::utils::{deno_canary_path, deno_version_path, dvm_root, print_warning};
 use crate::version::{get_latest_canary, get_latest_lts_version, get_latest_remote_version};
 use anyhow::Result;
 use cfg_if::cfg_if;
 use semver::Version;
+use sha2::{Digest, Sha256};
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::string::String;
 
 cfg_if! {
   if #[cfg(windows)] {
@@ -39,17 +39,15 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   let version_registry_url =
     rc_get_with_fix(DVM_CONFIGRC_KEY_REGISTRY_VERSION).unwrap_or_else(|_| REGISTRY_LIST_OFFICIAL.to_string());
 
-  if let Some(version) = version.clone() {
-    if version == *DVM_VERSION_CANARY {
-      let hash = get_latest_canary(&binary_registry_url)?;
-      download_and_unpack_canary(&binary_registry_url, &hash)?;
+  if version.as_deref() == Some(DVM_VERSION_CANARY) {
+    let hash = get_latest_canary(&binary_registry_url)?;
+    download_and_unpack_canary(&binary_registry_url, &hash)?;
 
-      if !no_use {
-        use_version::use_canary_bin_path(false)?;
-      }
-
-      return Ok(());
+    if !no_use {
+      use_version::use_canary_bin_path(false)?;
     }
+
+    return Ok(());
   }
 
   let install_version = match version {
@@ -120,6 +118,26 @@ fn download_archive(url: &str) -> Result<Vec<u8>> {
   Ok(response.into_bytes())
 }
 
+/// Download a .sha256 checksum file and return the hex-encoded hash.
+/// Handles the standard `sha256sum` format: `<hash>  <filename>`.
+fn download_sha256(url: &str) -> Result<String> {
+  let content = download_archive(url)?;
+  let text = String::from_utf8(content)?;
+  // sha256sum format: "HASH  FILENAME" or just "HASH"
+  let hash = text
+    .lines()
+    .next()
+    .and_then(|line| line.split_whitespace().next())
+    .ok_or_else(|| anyhow::anyhow!("Empty checksum file"))?
+    .to_string();
+
+  if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+    anyhow::bail!("Invalid SHA256 checksum format");
+  }
+
+  Ok(hash.to_lowercase())
+}
+
 fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
   let archive_data = download_archive(url)?;
 
@@ -135,6 +153,29 @@ fn compose_url_to_exec(registry: &str, version: &Version) -> String {
 
 fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
   let archive_data = download_package(url, version)?;
+
+  // Best-effort checksum verification.  If the checksum file is unavailable
+  // (e.g. on a custom mirror that doesn't publish .sha256 files), we log a
+  // warning and continue rather than hard-failing.
+  let checksum_url = format!("{}.sha256", url);
+  match download_sha256(&checksum_url) {
+    Ok(expected) => {
+      let actual = format!("{:x}", Sha256::digest(&archive_data));
+      if actual != expected {
+        anyhow::bail!(
+          "Checksum mismatch for {}:\n  expected: {}\n  actual:   {}",
+          ARCHIVE_NAME,
+          expected,
+          actual
+        );
+      }
+      println!("Checksum verified OK");
+    }
+    Err(err) => {
+      print_warning(&format!("could not verify checksum: {}", err));
+    }
+  }
+
   if let Err(err) = unpack(archive_data, version) {
     eprintln!("Failed to unpack Deno v{}: {}", version, err);
     eprintln!("Removing the corrupted archive and retrying download");
@@ -176,7 +217,7 @@ fn unpack_canary(archive_data: Vec<u8>) -> Result<PathBuf> {
   let exe_path = deno_canary_path();
 
   if exe_path.exists() {
-    fs::remove_file(exe_path.clone())?;
+    fs::remove_file(&exe_path)?;
   }
 
   unpack_impl(archive_data, canary_dir, exe_path)
@@ -186,63 +227,57 @@ fn unpack_impl(archive_data: Vec<u8>, version_dir: PathBuf, path: PathBuf) -> Re
   let archive_ext = Path::new(ARCHIVE_NAME)
     .extension()
     .and_then(|ext| ext.to_str())
-    .unwrap();
-  let unpack_status = match archive_ext {
-    "zip" if cfg!(windows) => {
-      let archive_path = version_dir.join("deno.zip");
-      fs::write(&archive_path, &archive_data)?;
-      Command::new("powershell.exe")
-        .arg("-NoLogo")
-        .arg("-NoProfile")
-        .arg("-NonInteractive")
-        .arg("-Command")
-        .arg(
-          "& {
-            param($Path, $DestinationPath)
-            trap { $host.ui.WriteErrorLine($_.Exception); exit 1 }
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            [System.IO.Compression.ZipFile]::ExtractToDirectory(
-              $Path,
-              $DestinationPath
-            );
-          }",
-        )
-        .arg("-Path")
-        .arg(format!("'{}'", archive_path.to_str().unwrap()))
-        .arg("-DestinationPath")
-        .arg(format!("'{}'", version_dir.to_str().unwrap()))
-        .spawn()?
-        .wait()?
-    }
-    "zip" => {
-      let archive_path = version_dir.join("deno.zip");
-      fs::write(&archive_path, &archive_data)?;
-      Command::new("unzip")
-        .current_dir(&version_dir)
-        .arg(archive_path)
-        .spawn()?
-        .wait()?
-    }
+    .expect("ARCHIVE_NAME always has a UTF-8 extension");
+
+  match archive_ext {
+    "zip" => unpack_zip(&archive_data, &version_dir)?,
     ext => anyhow::bail!("Unsupported archive type: '{}'", ext),
-  };
-  if !unpack_status.success() {
-    anyhow::bail!("Failed to unpack archive");
   }
+
   if !path.exists() {
     anyhow::bail!("Unpacked archive did not contain {}", path.display());
   }
   Ok(version_dir)
 }
 
-fn compose_url_to_canary(registry: &str, hash: &str) -> String {
-  // TODO: remove this when deno canary support m1 chip,
-  let archive_name = if ARCHIVE_NAME == "deno-aarch64-apple-darwin.zip" {
-    "deno-x86_64-apple-darwin.zip"
-  } else {
-    ARCHIVE_NAME
-  };
+fn unpack_zip(archive_data: &[u8], dest_dir: &Path) -> Result<()> {
+  let reader = io::Cursor::new(archive_data);
+  let mut zip = zip::ZipArchive::new(reader)?;
 
-  format!("{}canary/{}/{}", registry, hash, archive_name)
+  for i in 0..zip.len() {
+    let mut file = zip.by_index(i)?;
+    let out_path = dest_dir.join(file.name());
+
+    // Sanity check: prevent zip-slip path traversal
+    if !out_path.starts_with(dest_dir) {
+      anyhow::bail!("Invalid zip entry path: {}", file.name());
+    }
+
+    if file.is_dir() {
+      fs::create_dir_all(&out_path)?;
+    } else {
+      if let Some(parent) = out_path.parent() {
+        fs::create_dir_all(parent)?;
+      }
+      let mut out_file = fs::File::create(&out_path)?;
+      io::copy(&mut file, &mut out_file)?;
+
+      // Preserve Unix permissions (executable bit)
+      #[cfg(unix)]
+      {
+        use std::os::unix::fs::PermissionsExt;
+        if let Some(mode) = file.unix_mode() {
+          fs::set_permissions(&out_path, fs::Permissions::from_mode(mode))?;
+        }
+      }
+    }
+  }
+
+  Ok(())
+}
+
+fn compose_url_to_canary(registry: &str, hash: &str) -> String {
+  format!("{}canary/{}/{}", registry, hash, ARCHIVE_NAME)
 }
 
 /// Same retry as `download_and_unpack_package`: a truncated download would
