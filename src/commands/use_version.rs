@@ -5,12 +5,11 @@ use crate::consts::{
   DVM_VERSION_LTS, DVM_VERSION_SYSTEM, REGISTRY_LIST_OFFICIAL,
 };
 use crate::meta::DvmMeta;
-use crate::utils::{best_version, deno_canary_path, deno_version_path, link_deno_bin, prompt_request, run_with_spinner, update_stub};
+use crate::utils::{best_version, deno_canary_path, deno_version_path, link_deno_bin, print_warning, prompt_request, run_with_spinner, update_stub};
 use crate::utils::{is_exact_version, load_dvmrc, remove_deno_bin_link, DenoResolution};
 use crate::version::remote_versions;
 use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};
 use anyhow::Result;
-use colored::Colorize;
 use semver::{Version, VersionReq};
 use std::path::Path;
 use std::process::Command;
@@ -147,26 +146,18 @@ fn warn_if_deno_shadowed() {
   let bin_dir = crate::utils::dvm_bin_dir();
   match crate::utils::deno_resolution() {
     DenoResolution::Dvm => {}
-    DenoResolution::Shadowed(path) => eprintln!(
-      "{}",
-      format!(
-        "Warning: `deno` resolves to `{}` instead of `{}`.\n\
-         The selected version will not be used. Run `dvm doctor` and restart your shell, \
-         or move dvm's bin directory earlier in your PATH.",
-        path.display(),
-        bin_dir.display()
-      )
-      .yellow()
-    ),
-    DenoResolution::NotOnPath => eprintln!(
-      "{}",
-      format!(
-        "Warning: `deno` was not found on your PATH.\n\
-         Add `{}` to your PATH (or run `dvm doctor`), then restart your shell.",
-        bin_dir.display()
-      )
-      .yellow()
-    ),
+    DenoResolution::Shadowed(path) => print_warning(&format!(
+      "`deno` resolves to `{}` instead of `{}`.\n\
+       The selected version will not be used. Run `dvm doctor` and restart your shell, \
+       or move dvm's bin directory earlier in your PATH.",
+      path.display(),
+      bin_dir.display()
+    )),
+    DenoResolution::NotOnPath => print_warning(&format!(
+      "`deno` was not found on your PATH.\n\
+       Add `{}` to your PATH (or run `dvm doctor`), then restart your shell.",
+      bin_dir.display()
+    )),
   }
 }
 

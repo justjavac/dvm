@@ -7,7 +7,7 @@ use crate::consts::{
   DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_LTS, REGISTRY_LIST_OFFICIAL, REGISTRY_OFFICIAL,
 };
 use crate::meta::DvmMeta;
-use crate::utils::{deno_canary_path, deno_version_path, dvm_root};
+use crate::utils::{deno_canary_path, deno_version_path, dvm_root, print_warning};
 use crate::version::{get_latest_canary, get_latest_lts_version, get_latest_remote_version};
 use anyhow::Result;
 use cfg_if::cfg_if;
@@ -172,7 +172,7 @@ fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
       println!("Checksum verified OK");
     }
     Err(err) => {
-      eprintln!("Warning: could not verify checksum: {}", err);
+      print_warning(&format!("could not verify checksum: {}", err));
     }
   }
 

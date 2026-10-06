@@ -22,6 +22,13 @@ pub fn print_error(err: &dyn std::fmt::Display) {
   eprintln!("{} {}", "error:".red().bold(), err);
 }
 
+/// Print a warning to stderr in yellow, in the `warning: <message>` style used
+/// throughout dvm's CLI. Centralized here so the prefix stays consistent and
+/// single-colon.
+pub fn print_warning(msg: &dyn std::fmt::Display) {
+  eprintln!("{} {}", "warning:".yellow().bold(), msg);
+}
+
 /// Atomically write `content` to `path` by writing to a temp file in the same
 /// directory and then renaming it into place.  This guarantees the destination
 /// file is never left in a half-written state if the process crashes mid-write.
