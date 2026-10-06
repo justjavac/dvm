@@ -120,7 +120,6 @@ pub fn use_canary_bin_path(local: bool) -> Result<()> {
       anyhow::bail!("Canary dir not found, will not be used");
     }
 
-    remove_deno_bin_link()?;
     link_deno_bin(&canary_dir)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, DVM_VERSION_CANARY)?;
@@ -136,7 +135,6 @@ pub fn use_this_bin_path(exe_path: &Path, version: &Version, raw_version: String
   run_with_spinner("Processing".to_string(), format!("Now using deno {}", version), || {
     check_exe(exe_path, version)?;
 
-    remove_deno_bin_link()?;
     link_deno_bin(exe_path)?;
 
     rc_update(local, DVM_CONFIGRC_KEY_DENO_VERSION, raw_version.as_str())?;

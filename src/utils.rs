@@ -308,6 +308,10 @@ pub fn remove_deno_bin_link() -> std::io::Result<()> {
 /// efficient (zero-copy) but fail across filesystems.  Symlinks also fail on
 /// some Windows configurations (non-admin users).  Copying always works but
 /// uses extra disk space.
+///
+/// The replacement is atomic: the link/copy is first created at a temporary
+/// path and then renamed into place, so there is no window where `deno`
+/// is missing from dvm's bin directory.
 pub fn link_deno_bin(src: &Path) -> Result<()> {
   let dst = deno_bin_path();
 
@@ -315,27 +319,41 @@ pub fn link_deno_bin(src: &Path) -> Result<()> {
     std::fs::create_dir_all(parent)?;
   }
 
+  let tmp = dst.with_extension("tmp");
+  // Clean up any leftover temp file from a previous crash
+  let _ = std::fs::remove_file(&tmp);
+
   // 1. Hard link — fall through to symlink on failure (e.g. cross-filesystem)
-  if std::fs::hard_link(src, &dst).is_ok() {
+  if std::fs::hard_link(src, &tmp).is_ok() {
+    // Atomic rename: replace dst with tmp
+    std::fs::rename(&tmp, &dst)?;
     return Ok(());
   }
 
   // 2. Symlink — fall through to copy on failure (e.g. Windows without admin)
   #[cfg(unix)]
   {
-    if std::os::unix::fs::symlink(src, &dst).is_ok() {
+    if std::os::unix::fs::symlink(src, &tmp).is_ok() {
+      std::fs::rename(&tmp, &dst)?;
       return Ok(());
     }
   }
   #[cfg(windows)]
   {
-    if std::os::windows::fs::symlink_file(src, &dst).is_ok() {
+    if std::os::windows::fs::symlink_file(src, &tmp).is_ok() {
+      std::fs::rename(&tmp, &dst)?;
       return Ok(());
     }
   }
 
-  // 3. Copy (last resort)
-  std::fs::copy(src, &dst)?;
+  // 3. Copy (last resort) — write to temp file, fsync, then atomic rename
+  let mut tmp_file = std::fs::File::create(&tmp)?;
+  let mut src_file = std::fs::File::open(src)?;
+  std::io::copy(&mut src_file, &mut tmp_file)?;
+  tmp_file.sync_all()?;
+  drop(tmp_file);
+  std::fs::rename(&tmp, &dst)?;
+
   Ok(())
 }
 
