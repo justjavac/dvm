@@ -80,12 +80,104 @@ pub fn exec(meta: &mut DvmMeta) -> Result<()> {
 
 #[cfg(not(windows))]
 fn check_or_set_env(name: &str, value: &str) -> Result<()> {
-  set_env::check_or_set(name, value).map_err(Into::into)
+  // Already set in the current process — nothing to do.
+  if std::env::var_os(name).is_some() {
+    return Ok(());
+  }
+
+  // Persist the variable in the user's shell config so future shells pick it up.
+  let export_line = format!("export {}=\"{}\"", name, value);
+  add_to_shell_config(&export_line)?;
+
+  // Also set it for the current process so subsequent checks in this run pass.
+  std::env::set_var(name, value);
+  Ok(())
 }
 
 #[cfg(not(windows))]
 fn prepend_env_path(value: &str) -> Result<()> {
-  set_env::prepend("PATH", value).map_err(Into::into)
+  // Already on PATH in the current process — nothing to do.
+  if let Ok(path) = std::env::var("PATH") {
+    if path.split(':').any(|p| p == value) {
+      return Ok(());
+    }
+  }
+
+  // Persist the PATH entry in the user's shell config.
+  let export_line = format!("export PATH=\"{}:$PATH\"", value);
+  add_to_shell_config(&export_line)?;
+
+  // Also prepend it for the current process.
+  let current_path = std::env::var("PATH").unwrap_or_default();
+  let new_path = if current_path.is_empty() {
+    value.to_string()
+  } else {
+    format!("{}:{}", value, current_path)
+  };
+  std::env::set_var("PATH", new_path);
+  Ok(())
+}
+
+/// Append `line` to the user's shell configuration file(s) if it is not
+/// already present.  The shell is detected from the `$SHELL` environment
+/// variable, falling back to common config files when unknown.
+#[cfg(not(windows))]
+fn add_to_shell_config(line: &str) -> Result<()> {
+  use std::io::Write;
+
+  let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
+  let shell = std::env::var("SHELL").unwrap_or_default();
+
+  // Build a list of candidate config files in priority order.
+  let config_files: Vec<std::path::PathBuf> = if shell.contains("zsh") {
+    vec![home.join(".zshrc")]
+  } else if shell.contains("fish") {
+    vec![home.join(".config/fish/config.fish")]
+  } else if shell.contains("bash") {
+    let mut files = vec![home.join(".bashrc")];
+    // On macOS, login shells read .bash_profile instead of .bashrc.
+    #[cfg(target_os = "macos")]
+    files.push(home.join(".bash_profile"));
+    files
+  } else {
+    // Unknown shell — try the most common ones.
+    let mut files = vec![home.join(".bashrc"), home.join(".zshrc")];
+    #[cfg(target_os = "macos")]
+    files.push(home.join(".bash_profile"));
+    files
+  };
+
+  let mut added = false;
+
+  for config_file in &config_files {
+    // Only touch files that already exist, so we don't create random config
+    // files for shells the user doesn't use.
+    if config_file.exists() {
+      let content = std::fs::read_to_string(config_file)?;
+      if !content.lines().any(|l| l.trim() == line.trim()) {
+        let mut file = std::fs::OpenOptions::new().append(true).open(config_file)?;
+        writeln!(file, "{}", line)?;
+        added = true;
+      } else {
+        // Already present in this file — consider it done.
+        added = true;
+      }
+    }
+  }
+
+  // No existing config file was found — create the primary one for the
+  // detected shell (or .bashrc as a fallback).
+  if !added {
+    if let Some(primary) = config_files.first() {
+      if let Some(parent) = primary.parent() {
+        std::fs::create_dir_all(parent)?;
+      }
+      let mut file = std::fs::OpenOptions::new().create(true).append(true).open(primary)?;
+      writeln!(file, "{}", line)?;
+    }
+  }
+
+  Ok(())
 }
 
 #[cfg(windows)]
