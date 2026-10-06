@@ -791,4 +791,91 @@ registry_binary=https://example.com/
       assert!(config.iter().any(|(k, v)| *k == "registry_binary" && *v == "https://example.com/"));
     });
   }
+
+  fn rc_parse_empty_input() {
+    let config = rc_parse("");
+    assert!(config.is_empty());
+  }
+
+  #[test]
+  fn rc_parse_blank_lines() {
+    let config = rc_parse("\n\n\n");
+    assert!(config.is_empty());
+  }
+
+  #[test]
+  fn rc_parse_lines_without_equals() {
+    let config = rc_parse("just a line\nanother line\ndenovo=1.0.0\n");
+    assert_eq!(config, vec![("denovo", "1.0.0")]);
+  }
+
+  #[test]
+  fn rc_parse_multiple_equals_in_value() {
+    // splitn(2, '=') ensures only the first = splits key from value
+    let config = rc_parse("key=value=with=equals\ndenovo=1.0.0\n");
+    assert_eq!(
+      config,
+      vec![("key", "value=with=equals"), ("denovo", "1.0.0")]
+    );
+  }
+
+  #[test]
+  fn rc_parse_empty_value() {
+    let config = rc_parse("key=\n");
+    assert_eq!(config, vec![("key", "")]);
+  }
+
+  #[test]
+  fn rc_parse_empty_key() {
+    // A line with only "=value" results in an empty key after trimming
+    let config = rc_parse("=value\n");
+    assert_eq!(config, vec![("", "value")]);
+  }
+
+  #[test]
+  fn rc_parse_only_equals() {
+    let config = rc_parse("=\n");
+    assert_eq!(config, vec![("", "")]);
+  }
+
+  #[test]
+  fn rc_parse_whitespace_only_lines() {
+    let config = rc_parse("   \n\t\ndenovo=1.0.0\n  \n");
+    assert_eq!(config, vec![("denovo", "1.0.0")]);
+  }
+
+  #[test]
+  fn rc_parse_preserves_order() {
+    let config = rc_parse("c=3\na=1\nb=2\n");
+    assert_eq!(config, vec![("c", "3"), ("a", "1"), ("b", "2")]);
+  }
+
+  #[test]
+  fn rc_parse_duplicate_keys_preserved() {
+    // rc_parse doesn't deduplicate; duplicates are kept as-is
+    let config = rc_parse("key=first\nkey=second\n");
+    assert_eq!(config, vec![("key", "first"), ("key", "second")]);
+  }
+
+  #[test]
+  fn rc_parse_url_with_query_params() {
+    // URLs with query strings contain = which should be preserved in the value
+    let config = rc_parse("registry_binary=https://example.com/deno?ref=v1.0&arch=x86\n");
+    assert_eq!(
+      config,
+      vec![("registry_binary", "https://example.com/deno?ref=v1.0&arch=x86")]
+    );
+  }
+
+  #[test]
+  fn rc_parse_no_trailing_newline() {
+    let config = rc_parse("key=value");
+    assert_eq!(config, vec![("key", "value")]);
+  }
+
+  #[test]
+  fn rc_parse_single_line_with_leading_and_trailing_whitespace() {
+    let config = rc_parse("   my_key   =   my_value   ");
+    assert_eq!(config, vec![("my_key", "my_value")]);
+  }
 }
