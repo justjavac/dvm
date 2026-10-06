@@ -201,13 +201,27 @@ pub fn dvm_bin_on_path() -> bool {
 }
 
 /// Compare two paths for equality, case-insensitively on Windows.
+/// Uses canonicalization when both paths exist for accurate comparison
+/// (handles 8.3 names, UNC paths, relative path components, trailing slashes).
+/// Falls back to string-based normalization when paths don't exist.
 #[cfg(not(windows))]
 fn paths_equal(a: &Path, b: &Path) -> bool {
-  a == b
+  if a.exists() && b.exists() {
+    std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok()
+  } else {
+    a == b
+  }
 }
 
 #[cfg(windows)]
 fn paths_equal(a: &Path, b: &Path) -> bool {
+  // Try canonicalization first for accurate comparison
+  if a.exists() && b.exists() {
+    if let (Ok(ca), Ok(cb)) = (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+      return ca == cb;
+    }
+  }
+  // Fall back to string-based normalization
   fn normalize(p: &Path) -> String {
     p.to_string_lossy().replace('/', "\\").to_lowercase()
   }
@@ -226,6 +240,11 @@ fn classify_deno_resolution(resolved: Option<&Path>, bin_dir: &Path) -> DenoReso
 /// count as inside `/a/bin`. Case-insensitive on Windows.
 #[cfg(not(windows))]
 fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  if path.exists() && dir.exists() {
+    if let (Ok(p), Ok(d)) = (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+      return p.starts_with(&d);
+    }
+  }
   path.starts_with(dir)
 }
 
@@ -233,6 +252,13 @@ fn path_contains_dir(path: &Path, dir: &Path) -> bool {
 /// count as inside `/a/bin`. Case-insensitive on Windows.
 #[cfg(windows)]
 fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  // Try canonicalization first for accurate comparison
+  if path.exists() && dir.exists() {
+    if let (Ok(p), Ok(d)) = (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+      return p.starts_with(&d);
+    }
+  }
+  // Fall back to string-based normalization
   fn normalize(p: &Path) -> String {
     p.to_string_lossy().replace('/', "\\").to_lowercase()
   }

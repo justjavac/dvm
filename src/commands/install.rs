@@ -163,7 +163,11 @@ fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
       let actual = format!("{:x}", Sha256::digest(&archive_data));
       if actual != expected {
         anyhow::bail!(
-          "Checksum mismatch for {}:\n  expected: {}\n  actual:   {}",
+          "Checksum verification failed for {}.\n\
+           This usually means the download was corrupted or tampered with.\n\
+           Expected: {}\n\
+           Actual:   {}\n\
+           Try running `dvm install` again, or switch to a different registry.",
           ARCHIVE_NAME,
           expected,
           actual

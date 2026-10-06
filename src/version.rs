@@ -4,7 +4,7 @@ use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_LTS,
   REGISTRY_LATEST_CANARY_PATH,
 };
-use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
+use crate::utils::{deno_bin_path, dvm_root, is_exact_version, is_semver, run_with_spinner};
 use anyhow::Result;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
@@ -68,6 +68,23 @@ pub fn current_version() -> Option<String> {
   let stdout = String::from_utf8(output.stdout).ok()?;
   // `deno -V` prints `deno x.y.z`; return the version, or None if the format
   // is not what we expect rather than slicing into the middle of a char.
+  stdout.trim().strip_prefix("deno ").map(|version| version.to_string())
+}
+
+/// Get the version of deno that dvm has activated (from dvm's bin directory).
+/// Unlike `current_version()`, this does not depend on PATH, so it correctly
+/// reports the dvm-managed version even when another deno installation
+/// shadows dvm's bin directory on PATH.
+pub fn current_dvm_version() -> Option<String> {
+  let bin_path = deno_bin_path();
+  if !bin_path.exists() {
+    return None;
+  }
+  let output = Command::new(&bin_path).arg("-V").stderr(Stdio::null()).output().ok()?;
+  if !output.status.success() {
+    return None;
+  }
+  let stdout = String::from_utf8(output.stdout).ok()?;
   stdout.trim().strip_prefix("deno ").map(|version| version.to_string())
 }
 

@@ -155,9 +155,19 @@ fn upgrade_self() -> Result<()> {
       fs::write(&tmp, script)?;
       let mut cmd = std::process::Command::new("powershell");
       cmd.arg("-ExecutionPolicy").arg("Bypass").arg("-File").arg(tmp);
-      let status = cmd.status()?;
-      if !status.success() {
-        anyhow::bail!("Failed to upgrade dvm");
+      let output = cmd.output()?;
+      let stdout = String::from_utf8_lossy(&output.stdout);
+      if !stdout.trim().is_empty() {
+        println!("{}", stdout.trim());
+      }
+      if !output.status.success() {
+        let exit_code = output.status.code().unwrap_or(-1);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!(
+          "Failed to upgrade dvm (exit code: {})\n{}",
+          exit_code,
+          stderr.trim()
+        );
       }
     } else {
       let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.sh";
@@ -166,9 +176,19 @@ fn upgrade_self() -> Result<()> {
       let tmp = tempfile::tempdir()?;
       let tmp = tmp.path().join("install.sh");
       fs::write(&tmp, script)?;
-      let status = std::process::Command::new("bash").arg(&tmp).status()?;
-      if !status.success() {
-        anyhow::bail!("Failed to upgrade dvm");
+      let output = std::process::Command::new("bash").arg(&tmp).output()?;
+      let stdout = String::from_utf8_lossy(&output.stdout);
+      if !stdout.trim().is_empty() {
+        println!("{}", stdout.trim());
+      }
+      if !output.status.success() {
+        let exit_code = output.status.code().unwrap_or(-1);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!(
+          "Failed to upgrade dvm (exit code: {})\n{}",
+          exit_code,
+          stderr.trim()
+        );
       }
     }
   }
