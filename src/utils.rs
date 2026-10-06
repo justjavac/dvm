@@ -2,6 +2,7 @@ use crate::configrc::rc_get_with_fix;
 use crate::consts::{DENO_EXE, DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_DENO_VERSION};
 use crate::version::VersionArg;
 use anyhow::Result;
+use colored::Colorize;
 use dirs::home_dir;
 use semver::{Version, VersionReq};
 use std::env;
@@ -12,12 +13,42 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tempfile::TempDir;
+use tempfile::NamedTempFile;
+
+/// Print an error to stderr in red, in the `error: <message>` style used
+/// throughout dvm's CLI. Centralized here so the prefix stays consistent and
+/// single-colon.
+pub fn print_error(err: &dyn std::fmt::Display) {
+  eprintln!("{} {}", "error:".red().bold(), err);
+}
+
+/// Atomically write `content` to `path` by writing to a temp file in the same
+/// directory and then renaming it into place.  This guarantees the destination
+/// file is never left in a half-written state if the process crashes mid-write.
+pub fn atomic_write<P: AsRef<Path>>(path: P, content: &[u8]) -> std::io::Result<()> {
+  let path = path.as_ref();
+  let dir = path
+    .parent()
+    .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "path has no parent"))?;
+
+  // Ensure the target directory exists
+  std::fs::create_dir_all(dir)?;
+
+  // Create a temp file in the same directory so rename is atomic
+  let mut tmp = NamedTempFile::new_in(dir)?;
+  tmp.write_all(content)?;
+  tmp.flush()?;
+
+  // Atomically replace the destination
+  tmp.persist(path)?;
+
+  Ok(())
+}
 
 pub fn run_with_spinner(
   message: String,
   finish_message: String,
-  f: impl FnOnce(Box<dyn FnOnce(String) -> Result<()>>) -> Result<()>,
+  f: impl FnOnce() -> Result<()>,
 ) -> Result<()> {
   let spinner = indicatif::ProgressBar::new_spinner().with_message(message);
   spinner.set_style(
@@ -27,23 +58,22 @@ pub fn run_with_spinner(
       .unwrap(),
   );
   spinner.enable_steady_tick(time::Duration::from_millis(100));
-  let result = f(Box::new({
-    let spinner = spinner.clone();
-    move |err| {
-      spinner.finish_and_clear();
-      eprintln!("{}", err);
-      std::process::exit(1);
+  let result = f();
+  match &result {
+    Ok(()) => {
+      spinner.finish_with_message(format!("{} in {:.2}s", finish_message, spinner.elapsed().as_secs_f32()));
     }
-  }));
-  spinner.finish_with_message(format!("{} in {:.2}s", finish_message, spinner.elapsed().as_secs_f32()));
-
+    Err(_) => {
+      spinner.finish_and_clear();
+    }
+  }
   result
 }
 
 pub fn prompt_request(prompt: &str) -> bool {
   print!("{} (Y/n)", prompt);
 
-  stdout().flush().unwrap();
+  let _ = stdout().flush();
   let mut buffer = [0; 1];
   let confirm = BufReader::new(stdin())
     .read(&mut buffer)
@@ -60,25 +90,24 @@ pub fn check_is_deactivated() -> bool {
 }
 
 pub fn now() -> u128 {
-  SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
+  SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map(|it| it.as_millis())
+    .unwrap_or(0)
 }
 
-pub fn update_stub(verison: &str) {
+pub fn update_stub(version: &str) -> std::io::Result<()> {
   let mut home = dvm_versions();
-  home.push(verison);
+  home.push(version);
   if home.is_dir() {
     home.push(".dvmstub");
-    write(home, now().to_string()).unwrap();
+    write(home, now().to_string())?;
   }
+  Ok(())
 }
 
 pub fn is_exact_version(input: &str) -> bool {
   Version::parse(input).is_ok()
-}
-
-#[allow(dead_code)]
-pub fn is_valid_semver_range(input: &str) -> bool {
-  VersionReq::parse(input).is_ok()
 }
 
 pub fn best_version<'a, T>(choices: T, required: VersionReq) -> Option<Version>
@@ -99,8 +128,9 @@ where
 /// local -> user -> default
 pub fn load_dvmrc() -> VersionArg {
   rc_get_with_fix(DVM_CONFIGRC_KEY_DENO_VERSION)
-    .map(|v| VersionArg::from_str(&v).unwrap())
-    .unwrap_or_else(|_| VersionArg::from_str("*").unwrap())
+    .ok()
+    .and_then(|v| VersionArg::from_str(&v).ok())
+    .unwrap_or_else(|| VersionArg::Range(VersionReq::parse("*").expect("\"*\" is a valid VersionReq")))
 }
 
 pub fn dvm_root() -> PathBuf {
@@ -109,7 +139,7 @@ pub fn dvm_root() -> PathBuf {
     // third party software, but it is non-standard and should not be relied upon.
     home_dir()
       .map(|it| it.join(".dvm"))
-      .unwrap_or_else(|| TempDir::new().unwrap().keep().join(".dvm"))
+      .unwrap_or_else(|| std::env::temp_dir().join(".dvm"))
   })
 }
 
@@ -134,7 +164,10 @@ pub fn deno_bin_path() -> PathBuf {
 /// dvm's bin directory, i.e. the directory that must come first on `PATH`
 /// for the version selected by `dvm use` to win.
 pub fn dvm_bin_dir() -> PathBuf {
-  deno_bin_path().parent().unwrap().to_path_buf()
+  deno_bin_path()
+    .parent()
+    .map(Path::to_path_buf)
+    .unwrap_or_else(|| dvm_root().join("bin"))
 }
 
 /// Where the `deno` command found on `PATH` actually points, relative to
@@ -156,6 +189,45 @@ pub fn deno_resolution() -> DenoResolution {
   classify_deno_resolution(which::which("deno").ok().as_deref(), &dvm_bin_dir())
 }
 
+/// Check whether dvm's bin directory is already present in the PATH env var.
+/// Uses proper path-component comparison (not substring matching) and is
+/// case-insensitive on Windows.
+pub fn dvm_bin_on_path() -> bool {
+  let bin_dir = dvm_bin_dir();
+  std::env::var_os("PATH")
+    .iter()
+    .flat_map(|p| std::env::split_paths(p))
+    .any(|entry| paths_equal(&entry, &bin_dir))
+}
+
+/// Compare two paths for equality, case-insensitively on Windows.
+/// Uses canonicalization when both paths exist for accurate comparison
+/// (handles 8.3 names, UNC paths, relative path components, trailing slashes).
+/// Falls back to string-based normalization when paths don't exist.
+#[cfg(not(windows))]
+fn paths_equal(a: &Path, b: &Path) -> bool {
+  if a.exists() && b.exists() {
+    std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok()
+  } else {
+    a == b
+  }
+}
+
+#[cfg(windows)]
+fn paths_equal(a: &Path, b: &Path) -> bool {
+  // Try canonicalization first for accurate comparison
+  if a.exists() && b.exists() {
+    if let (Ok(ca), Ok(cb)) = (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+      return ca == cb;
+    }
+  }
+  // Fall back to string-based normalization
+  fn normalize(p: &Path) -> String {
+    p.to_string_lossy().replace('/', "\\").to_lowercase()
+  }
+  normalize(a) == normalize(b)
+}
+
 fn classify_deno_resolution(resolved: Option<&Path>, bin_dir: &Path) -> DenoResolution {
   match resolved {
     None => DenoResolution::NotOnPath,
@@ -168,6 +240,11 @@ fn classify_deno_resolution(resolved: Option<&Path>, bin_dir: &Path) -> DenoReso
 /// count as inside `/a/bin`. Case-insensitive on Windows.
 #[cfg(not(windows))]
 fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  if path.exists() && dir.exists() {
+    if let (Ok(p), Ok(d)) = (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+      return p.starts_with(&d);
+    }
+  }
   path.starts_with(dir)
 }
 
@@ -175,6 +252,13 @@ fn path_contains_dir(path: &Path, dir: &Path) -> bool {
 /// count as inside `/a/bin`. Case-insensitive on Windows.
 #[cfg(windows)]
 fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  // Try canonicalization first for accurate comparison
+  if path.exists() && dir.exists() {
+    if let (Ok(p), Ok(d)) = (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+      return p.starts_with(&d);
+    }
+  }
+  // Fall back to string-based normalization
   fn normalize(p: &Path) -> String {
     p.to_string_lossy().replace('/', "\\").to_lowercase()
   }
@@ -194,6 +278,43 @@ pub fn remove_deno_bin_link() -> std::io::Result<()> {
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
     result => result,
   }
+}
+
+/// Create a link at `deno_bin_path()` pointing to `src`.
+///
+/// Tries, in order: hard link → symlink → copy.  Hard links are the most
+/// efficient (zero-copy) but fail across filesystems.  Symlinks also fail on
+/// some Windows configurations (non-admin users).  Copying always works but
+/// uses extra disk space.
+pub fn link_deno_bin(src: &Path) -> Result<()> {
+  let dst = deno_bin_path();
+
+  if let Some(parent) = dst.parent() {
+    std::fs::create_dir_all(parent)?;
+  }
+
+  // 1. Hard link — fall through to symlink on failure (e.g. cross-filesystem)
+  if std::fs::hard_link(src, &dst).is_ok() {
+    return Ok(());
+  }
+
+  // 2. Symlink — fall through to copy on failure (e.g. Windows without admin)
+  #[cfg(unix)]
+  {
+    if std::os::unix::fs::symlink(src, &dst).is_ok() {
+      return Ok(());
+    }
+  }
+  #[cfg(windows)]
+  {
+    if std::os::windows::fs::symlink_file(src, &dst).is_ok() {
+      return Ok(());
+    }
+  }
+
+  // 3. Copy (last resort)
+  std::fs::copy(src, &dst)?;
+  Ok(())
 }
 
 pub fn deno_version_path(version: &Version) -> PathBuf {
