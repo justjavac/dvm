@@ -102,8 +102,10 @@ impl DvmMeta {
             continue;
           };
 
-          // it's been pointed by dvm versions
-          if self.versions.iter().any(|it| it.current == name) {
+          // Layer 1: skip versions that are actively referenced in meta
+          // (either as a current version mapping or targeted by an alias).
+          // This prevents deleting a version that dvm is actively managing.
+          if self.is_version_referenced(name) {
             continue;
           }
 
@@ -119,6 +121,24 @@ impl DvmMeta {
             }
           }
 
+          // Layer 2: double-check the stub timestamp right before deleting
+          // to defend against TOCTOU races. Between the first check above and
+          // this point, another process could have started using this version
+          // (which updates the stub). Re-reading confirms it's still expired.
+          if stub.is_file() {
+            let last_used = std::fs::read_to_string(&stub)
+              .ok()
+              .and_then(|content| content.trim().parse::<u128>().ok());
+            if last_used.is_some_and(|it| it > now().saturating_sub(DVM_CACHE_INVALID_TIMEOUT)) {
+              continue;
+            }
+          }
+          // Also re-check the meta reference right before deletion, in case
+          // another process registered this version since our first check.
+          if self.is_version_referenced(name) {
+            continue;
+          }
+
           println!("Cleaning version {}", name.bright_black());
           if let Err(err) = std::fs::remove_dir_all(&path) {
             eprintln!("Failed to clean version {}: {}", name, err);
@@ -126,6 +146,13 @@ impl DvmMeta {
         }
       }
     }
+  }
+
+  /// Check whether a version directory is actively referenced in metadata.
+  /// A version is referenced if it appears as the `current` field of any
+  /// version mapping (which includes both direct ranges and alias targets).
+  fn is_version_referenced(&self, version: &str) -> bool {
+    self.versions.iter().any(|it| it.current == version)
   }
 
   ///
