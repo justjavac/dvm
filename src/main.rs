@@ -60,7 +60,7 @@ pub fn main() {
       if remote {
         commands::list::exec_remote()
       } else {
-        commands::list::exec()
+        commands::list::exec(&mut meta)
       }
     }
     Commands::ListRemote => commands::list::exec_remote(),

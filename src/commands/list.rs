@@ -1,10 +1,16 @@
+use crate::meta::DvmMeta;
 use crate::version::{current_version, local_versions, remote_versions};
 use anyhow::Result;
 use colored::Colorize;
 use semver::Version;
 use std::cmp::Ordering;
 
-pub fn exec() -> Result<()> {
+pub fn exec(meta: &mut DvmMeta) -> Result<()> {
+  // Clean up stale version mappings so the metadata stays in sync with
+  // what's actually installed — list is a natural place to do this since
+  // the user is inspecting installed versions.
+  let _ = meta.cleanup_stale_mappings()?;
+
   let versions = local_versions();
 
   print_versions(versions);

@@ -138,13 +138,7 @@ impl DvmMeta {
       let content = read_to_string(path);
       if let Ok(content) = content {
         let config = serde_json::from_str::<DvmMeta>(content.as_str());
-        if let Ok(mut config) = config {
-          // Drop mappings that no longer point at an installed deno. An
-          // unparseable `current` counts as gone rather than as a panic:
-          // `DvmMeta::new` runs before every command, so panicking here would
-          // also take down the `dvm doctor` / `dvm clean` meant to repair the
-          // metadata.
-          cleanup_stale_mappings(&mut config);
+        if let Ok(config) = config {
           return config;
         }
       }
@@ -155,6 +149,23 @@ impl DvmMeta {
     // (e.g. read-only home on a first run).
     let _ = config.save();
     config
+  }
+
+  /// Remove version mappings whose target directory no longer exists on disk.
+  /// This is an integrity check that should only run from `dvm doctor` and
+  /// `dvm list` — doing it on every command startup would add O(n) filesystem
+  /// stat calls to every dvm invocation. Returns the number of stale mappings
+  /// that were removed.
+  pub fn cleanup_stale_mappings(&mut self) -> anyhow::Result<usize> {
+    let before = self.versions.len();
+    self
+      .versions
+      .retain(|mapping| Version::parse(&mapping.current).is_ok_and(|it| deno_version_path(&it).exists()));
+    let removed = before - self.versions.len();
+    if removed > 0 {
+      self.save()?;
+    }
+    Ok(removed)
   }
 
   pub fn clean_files(&self) {
