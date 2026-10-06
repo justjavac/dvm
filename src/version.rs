@@ -225,6 +225,8 @@ fn cli_versions_from_versions_json(content: &str) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::consts::DVM_VERSION_LATEST;
+  use crate::utils::is_exact_version;
 
   #[test]
   fn latest_remote_version_uses_highest_stable_cli_version() {
@@ -256,5 +258,167 @@ mod tests {
       VersionArg::Exact(Version::parse("1.2.3").unwrap())
     );
     assert_eq!(VersionArg::from_str(" lts \n").unwrap(), VersionArg::Lts);
+  }
+
+  #[test]
+  fn is_exact_version_valid_versions() {
+    assert!(is_exact_version("1.0.0"));
+    assert!(is_exact_version("0.0.1"));
+    assert!(is_exact_version("2.3.4"));
+    assert!(is_exact_version("1.0.0-alpha"));
+    assert!(is_exact_version("1.0.0-beta.1"));
+    assert!(is_exact_version("1.0.0+build.1"));
+  }
+
+  #[test]
+  fn is_exact_version_invalid_versions() {
+    assert!(!is_exact_version(""));
+    assert!(!is_exact_version("1.0"));
+    assert!(!is_exact_version("1"));
+    assert!(!is_exact_version("v1.0.0"));
+    assert!(!is_exact_version("latest"));
+    assert!(!is_exact_version("lts"));
+    assert!(!is_exact_version("abc"));
+    assert!(!is_exact_version("1.0.0.0"));
+    assert!(!is_exact_version("^1.0.0"));
+    assert!(!is_exact_version("~1.0.0"));
+    assert!(!is_exact_version(">=1.0.0"));
+  }
+
+  #[test]
+  fn is_exact_version_empty_string() {
+    assert!(!is_exact_version(""));
+  }
+
+  #[test]
+  fn is_exact_version_partial_versions() {
+    assert!(!is_exact_version("1"));
+    assert!(!is_exact_version("1.0"));
+    assert!(!is_exact_version("1."));
+    assert!(!is_exact_version(".0.0"));
+  }
+
+  #[test]
+  fn version_req_parse_valid_ranges() {
+    assert!(version_req_parse("*").is_ok());
+    assert!(version_req_parse("^1.0.0").is_ok());
+    assert!(version_req_parse("~1.2.3").is_ok());
+    assert!(version_req_parse(">=1.0.0").is_ok());
+    assert!(version_req_parse(">=1.0.0, <2.0.0").is_ok());
+    assert!(version_req_parse("1.2.3").is_ok());
+    assert!(version_req_parse("2.x").is_ok());
+    assert!(version_req_parse("1.2.x").is_ok());
+  }
+
+  #[test]
+  fn version_req_parse_invalid_ranges() {
+    assert!(version_req_parse("not a range").is_err());
+    assert!(version_req_parse("").is_err());
+    assert!(version_req_parse("abcdef").is_err());
+    assert!(version_req_parse(">==").is_err());
+  }
+
+  #[test]
+  fn find_max_matching_version_exact_match() {
+    let versions = ["1.0.0", "1.2.3", "2.0.0"];
+    let result = find_max_matching_version("=1.2.3", versions.iter().map(AsRef::as_ref)).unwrap();
+    assert_eq!(result, Some(Version::parse("1.2.3").unwrap()));
+  }
+
+  #[test]
+  fn find_max_matching_version_range_match() {
+    let versions = ["1.0.0", "1.2.3", "1.5.0", "2.0.0"];
+    let result = find_max_matching_version("^1.0.0", versions.iter().map(AsRef::as_ref)).unwrap();
+    assert_eq!(result, Some(Version::parse("1.5.0").unwrap()));
+  }
+
+  #[test]
+  fn find_max_matching_version_no_match() {
+    let versions = ["1.0.0", "1.2.3", "2.0.0"];
+    let result = find_max_matching_version("^3.0.0", versions.iter().map(AsRef::as_ref)).unwrap();
+    assert_eq!(result, None);
+  }
+
+  #[test]
+  fn find_max_matching_version_pre_release_filtering() {
+    let versions = ["1.0.0", "1.1.0-alpha.1", "1.1.0-beta.1", "1.0.5"];
+    // ^1.0.0 matches 1.x.x, but pre-releases of 1.1.0 should NOT match by default
+    // because the version request does not include a pre-release component.
+    let result = find_max_matching_version("^1.0.0", versions.iter().map(AsRef::as_ref)).unwrap();
+    // semver crate: pre-release versions are matched only if the req also has pre-release
+    // So 1.1.0-alpha.1 should NOT match ^1.0.0
+    assert_eq!(result, Some(Version::parse("1.0.5").unwrap()));
+  }
+
+  #[test]
+  fn find_max_matching_version_empty_list() {
+    let versions: Vec<&str> = vec![];
+    let result = find_max_matching_version("*", versions.into_iter()).unwrap();
+    assert_eq!(result, None);
+  }
+
+  #[test]
+  fn dvm_version_latest_constant() {
+    assert_eq!(DVM_VERSION_LATEST, "latest");
+  }
+
+  #[test]
+  fn version_arg_from_str_exact_version() {
+    assert_eq!(
+      VersionArg::from_str("1.2.3").unwrap(),
+      VersionArg::Exact(Version::parse("1.2.3").unwrap())
+    );
+    assert_eq!(
+      VersionArg::from_str("0.0.1").unwrap(),
+      VersionArg::Exact(Version::parse("0.0.1").unwrap())
+    );
+    assert_eq!(
+      VersionArg::from_str("2.0.0-alpha.1").unwrap(),
+      VersionArg::Exact(Version::parse("2.0.0-alpha.1").unwrap())
+    );
+  }
+
+  #[test]
+  fn version_arg_from_str_lts() {
+    assert_eq!(VersionArg::from_str("lts").unwrap(), VersionArg::Lts);
+    assert_eq!(VersionArg::from_str(" lts ").unwrap(), VersionArg::Lts);
+  }
+
+  #[test]
+  fn version_arg_from_str_range() {
+    match VersionArg::from_str("^1.0.0").unwrap() {
+      VersionArg::Range(req) => assert_eq!(req.to_string(), "^1.0.0"),
+      _ => panic!("Expected VersionArg::Range"),
+    }
+    match VersionArg::from_str("~1.2.3").unwrap() {
+      VersionArg::Range(_) => {}
+      _ => panic!("Expected VersionArg::Range"),
+    }
+    match VersionArg::from_str("*").unwrap() {
+      VersionArg::Range(_) => {}
+      _ => panic!("Expected VersionArg::Range"),
+    }
+  }
+
+  #[test]
+  fn version_arg_from_str_invalid_input_returns_error() {
+    assert!(VersionArg::from_str("").is_err());
+    assert!(VersionArg::from_str("not-a-version").is_err());
+    assert!(VersionArg::from_str("abcdef").is_err());
+    assert!(VersionArg::from_str("1.").is_err());
+    assert!(VersionArg::from_str("canary").is_err());
+  }
+
+  #[test]
+  fn version_arg_display() {
+    assert_eq!(
+      format!("{}", VersionArg::Exact(Version::parse("1.2.3").unwrap())),
+      "1.2.3"
+    );
+    assert_eq!(format!("{}", VersionArg::Lts), "lts");
+    assert_eq!(
+      format!("{}", VersionArg::Range(VersionReq::parse("^1.0.0").unwrap())),
+      "^1.0.0"
+    );
   }
 }
