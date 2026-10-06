@@ -1,5 +1,8 @@
 use std::process::Stdio;
 
+#[cfg(unix)]
+use std::os::unix::process::ExitStatusExt;
+
 use crate::{
   consts::{DVM_VERSION_LATEST, DVM_VERSION_LTS},
   meta::DvmMeta,
@@ -69,5 +72,12 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>, args: Vec<String>) -> R
 
   // `dvm exec` is a transparent wrapper around deno, so scripts and CI have to
   // see deno's own exit code. A process killed by a signal reports no code.
+  // On Unix, forward the standard 128+signo exit code so CI/CD can detect
+  // signals like SIGTERM (143), SIGKILL (137), SIGSEGV (139), etc.
+  #[cfg(unix)]
+  if let Some(signal) = status.signal() {
+    std::process::exit(128 + signal);
+  }
+
   std::process::exit(status.code().unwrap_or(1))
 }
