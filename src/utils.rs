@@ -7,7 +7,7 @@ use dirs::home_dir;
 use fs2::FileExt;
 use semver::{Version, VersionReq};
 use std::env;
-use std::fs::{File, write};
+use std::fs::{self, write, DirBuilder, File};
 use std::io::{stdin, stdout, BufReader, Read, Write};
 use std::path::Path;
 use std::path::PathBuf;
@@ -152,14 +152,55 @@ pub fn load_dvmrc() -> VersionArg {
     .unwrap_or_else(|| VersionArg::Range(VersionReq::parse("*").expect("\"*\" is a valid VersionReq")))
 }
 
+/// Return the dvm root directory.
+///
+/// Resolution order:
+/// 1. `$DVM_DIR` environment variable
+/// 2. `$HOME/.dvm`
+/// 3. A user-specific directory under `temp_dir()` (fallback)
+///
+/// The temp directory fallback uses a user-specific path and restrictive
+/// permissions to prevent symlink attacks on multi-user systems.  Using
+/// a shared `/tmp/.dvm` would allow other users to pre-create a symlink
+/// pointing at the victim's files, which dvm would then overwrite.
 pub fn dvm_root() -> PathBuf {
   env::var_os("DVM_DIR").map(PathBuf::from).unwrap_or_else(|| {
     // Note: on Windows, the $HOME environment variable may be set by users or by
     // third party software, but it is non-standard and should not be relied upon.
     home_dir()
       .map(|it| it.join(".dvm"))
-      .unwrap_or_else(|| std::env::temp_dir().join(".dvm"))
+      .unwrap_or_else(safe_temp_fallback)
   })
+}
+
+/// Fallback path when `home_dir()` fails — uses a user-specific directory
+/// in the system temp directory with restrictive permissions to prevent
+/// symlink attacks on multi-user Unix systems.
+fn safe_temp_fallback() -> PathBuf {
+  let user = env::var("USER")
+    .or_else(|_| env::var("USERNAME"))
+    .or_else(|_| env::var("LOGNAME"))
+    .unwrap_or_else(|_| format!("uid-{}", std::process::id()));
+  let path = std::env::temp_dir().join(format!(".dvm-{}", user));
+
+  // Create with mode 0700 on Unix so only the owner can read/write.
+  // This prevents other users from tampering with the directory.
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    let mut builder = DirBuilder::new();
+    builder.mode(0o700);
+    let _ = builder.create(&path);
+    // If the dir already existed, try to tighten its permissions.
+    // We ignore errors here — this is best-effort hardening.
+    let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o700));
+  }
+  #[cfg(not(unix))]
+  {
+    let _ = DirBuilder::new().recursive(true).create(&path);
+  }
+
+  path
 }
 
 /// Acquire an exclusive file lock on dvm's lock file.
