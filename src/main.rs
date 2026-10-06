@@ -96,6 +96,8 @@ pub fn main() {
       commands::update::exec(&mut meta)
         .map_err(|err| anyhow::anyhow!("Failed to update: {}", err))
     }),
+
+    Commands::Which => commands::which::exec(),
   };
 
   if let Err(err) = result {

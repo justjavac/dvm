@@ -123,6 +123,9 @@ pub enum Commands {
 
   #[clap(about = "Update remove version list local cache to the latest")]
   Update,
+
+  #[clap(about = "Print the path to the current deno executable")]
+  Which,
 }
 
 #[derive(Subcommand)]
