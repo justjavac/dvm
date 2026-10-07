@@ -135,21 +135,14 @@ fn download_sha256(url: &str) -> Result<String> {
   Ok(hash.to_lowercase())
 }
 
-fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
-  let archive_data = download_archive(url)?;
-
-  println!("Version has been found");
-  println!("Deno v{} has been downloaded", version);
-
-  Ok(archive_data)
-}
-
 fn compose_url_to_exec(registry: &str, version: &Version) -> String {
   format!("{}release/v{}/{}", registry, version, ARCHIVE_NAME)
 }
 
 fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
-  let archive_data = download_package(url, version)?;
+  let archive_data = download_archive(url)?;
+  println!("Version has been found");
+  println!("Deno v{} has been downloaded", version);
 
   // Best-effort checksum verification.  If the checksum file is unavailable
   // (e.g. on a custom mirror that doesn't publish .sha256 files), we log a
@@ -178,7 +171,7 @@ fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
     eprintln!("Removing the corrupted archive and retrying download");
     remove_version_dir(version)?;
 
-    let archive_data = download_package(url, version)?;
+    let archive_data = download_archive(url)?;
     if let Err(retry_err) = unpack(archive_data, version) {
       remove_version_dir(version)?;
       return Err(anyhow::anyhow!(
