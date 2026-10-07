@@ -48,6 +48,37 @@ pub fn rc_has(key: &str) -> bool {
   rc_parse(content.as_str()).iter().any(|(k, _)| *k == key)
 }
 
+/// Source of a dvmrc configuration value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RcSource {
+  /// Value came from the local (current-directory) .dvmrc file.
+  Local,
+  /// Value came from the user-wide (home-directory) .dvmrc file.
+  Global,
+}
+
+/// get value by key from configrc, along with which file it came from.
+/// first try to get from current folder
+/// if not found, try to get from home folder
+/// if not found, return Err
+pub fn rc_get_with_source(key: &str) -> io::Result<(String, RcSource)> {
+  // Try local .dvmrc first
+  if let Ok(content) = rc_read(true) {
+    let config = rc_parse(&content);
+    if let Some((_, v)) = config.iter().find(|(k, _)| *k == key) {
+      return Ok((v.to_string(), RcSource::Local));
+    }
+  }
+  // Fall back to global .dvmrc
+  if let Ok(content) = rc_read(false) {
+    let config = rc_parse(&content);
+    if let Some((_, v)) = config.iter().find(|(k, _)| *k == key) {
+      return Ok((v.to_string(), RcSource::Global));
+    }
+  }
+  Err(io::Error::new(io::ErrorKind::NotFound, "key not found"))
+}
+
 /// get value by key from configrc
 /// first try to get from current folder
 /// if not found, try to get from home folder
