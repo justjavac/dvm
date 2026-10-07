@@ -10,6 +10,7 @@ use colored::Colorize;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::str::FromStr;
+use std::time::Duration;
 
 pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<()> {
   if let Some(alias) = alias {
@@ -149,8 +150,11 @@ fn upgrade_self() -> Result<()> {
   cfg_if::cfg_if! {
     if #[cfg(windows)] {
       let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.ps1";
-      let script = tinyget::get(url).send()?;
-      let script = script.as_str()?;
+      let script = ureq::get(url)
+        .timeout(Duration::from_secs(30))
+        .call()
+        .map_err(|e| anyhow::anyhow!("Failed to download install script: {}", e))?
+        .into_string()?;
       verify_checksum(url, script.as_bytes())?;
       let tmp = tempfile::tempdir()?;
       let tmp = tmp.path().join("install.ps1");
@@ -171,8 +175,11 @@ fn upgrade_self() -> Result<()> {
       }
     } else {
       let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.sh";
-      let script = tinyget::get(url).send()?;
-      let script = script.as_str()?;
+      let script = ureq::get(url)
+        .timeout(Duration::from_secs(30))
+        .call()
+        .map_err(|e| anyhow::anyhow!("Failed to download install script: {}", e))?
+        .into_string()?;
       verify_checksum(url, script.as_bytes())?;
       let tmp = tempfile::tempdir()?;
       let tmp = tmp.path().join("install.sh");
@@ -208,9 +215,13 @@ fn upgrade_self() -> Result<()> {
 fn verify_checksum(script_url: &str, script_bytes: &[u8]) -> Result<()> {
   let checksum_url = format!("{}.sha256", script_url);
 
-  let checksum_resp = tinyget::get(&checksum_url).send()?;
+  let checksum_resp = ureq::get(&checksum_url)
+    .timeout(Duration::from_secs(30))
+    .call()
+    .map_err(|e| anyhow::anyhow!("Failed to fetch checksum: {}", e))?;
 
-  if checksum_resp.status_code == 404 {
+  let status = checksum_resp.status();
+  if status == 404 {
     println!(
       "{} checksum file not found at {}, skipping verification",
       "warning:".yellow().bold(),
@@ -219,16 +230,16 @@ fn verify_checksum(script_url: &str, script_bytes: &[u8]) -> Result<()> {
     return Ok(());
   }
 
-  if checksum_resp.status_code >= 400 {
+  if status >= 400 {
     println!(
       "{} could not fetch checksum file (HTTP {}), skipping verification",
       "warning:".yellow().bold(),
-      checksum_resp.status_code
+      status
     );
     return Ok(());
   }
 
-  let expected_hash = checksum_resp.as_str()?.trim().to_string();
+  let expected_hash = checksum_resp.into_string()?.trim().to_string();
   // Some checksum files contain "<hash>  <filename>" format, extract just the hash
   let expected_hash = expected_hash
     .split_whitespace()
