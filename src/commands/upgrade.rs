@@ -109,8 +109,22 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
       );
 
       if !dry_run {
-        install::exec(meta, true, Some(latest.clone()))?;
-        meta.set_version_mapping(alias.name, latest)?;
+        if let Err(err) = install::exec(meta, true, Some(latest.clone())) {
+          anyhow::bail!(
+            "Failed to upgrade `{}` ({} succeeded before failure): {}",
+            alias.name,
+            upgraded - 1,
+            err
+          );
+        }
+        if let Err(err) = meta.set_version_mapping(alias.name.clone(), latest.clone()) {
+          anyhow::bail!(
+            "Failed to update version mapping for `{}` ({} succeeded before failure): {}",
+            alias.name,
+            upgraded - 1,
+            err
+          );
+        }
       }
     }
 
@@ -125,7 +139,13 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
         println!("Would upgrade canary (latest canary build)");
       } else {
         println!("Upgrading {}", DVM_VERSION_CANARY.bright_black());
-        install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string()))?;
+        if let Err(err) = install::exec(meta, true, Some(DVM_VERSION_CANARY.to_string())) {
+          anyhow::bail!(
+            "Failed to upgrade canary ({} succeeded before failure): {}",
+            upgraded - 1,
+            err
+          );
+        }
       }
     }
 
