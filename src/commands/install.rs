@@ -42,7 +42,17 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
 
   if version.as_deref() == Some(DVM_VERSION_CANARY) {
     let hash = get_latest_canary(&binary_registry_url)?;
-    download_and_unpack_canary(&binary_registry_url, &hash)?;
+
+    // Check if the latest canary is already installed
+    let hash_file = crate::utils::canary_hash_path();
+    let current_hash = std::fs::read_to_string(&hash_file).ok().map(|s| s.trim().to_string());
+    if current_hash.as_deref() == Some(&hash) && crate::utils::deno_canary_path().exists() {
+      println!("Canary version ({}) is already up to date", &hash[..8]);
+    } else {
+      download_and_unpack_canary(&binary_registry_url, &hash)?;
+      // Save the current canary hash for future skip checks
+      let _ = crate::utils::atomic_write(&hash_file, hash.as_bytes());
+    }
 
     if !no_use {
       use_version::use_canary_bin_path(false)?;
@@ -98,11 +108,9 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   Ok(())
 }
 
-/// Fetch `url`, rejecting error responses so a 404 page never reaches the
-/// unpacker as if it were an archive.
-fn download_archive(url: &str) -> Result<Vec<u8>> {
-  println!("downloading {}", url);
-
+/// Core download function: fetches `url` bytes with error handling.
+/// No user-facing output — use `download_archive` for archives.
+fn download_bytes(url: &str) -> Result<Vec<u8>> {
   let response = match ureq::get(url).timeout(Duration::from_secs(30)).call() {
     Ok(response) => response,
     Err(ureq::Error::Status(404, _)) => anyhow::bail!("'{}' has not been found", url),
@@ -115,10 +123,17 @@ fn download_archive(url: &str) -> Result<Vec<u8>> {
   Ok(bytes)
 }
 
+/// Fetch an archive from `url`, rejecting error responses so a 404 page never
+/// reaches the unpacker as if it were an archive.  Prints progress to stdout.
+fn download_archive(url: &str) -> Result<Vec<u8>> {
+  println!("downloading {}", url);
+  download_bytes(url)
+}
+
 /// Download a .sha256 checksum file and return the hex-encoded hash.
 /// Handles the standard `sha256sum` format: `<hash>  <filename>`.
 fn download_sha256(url: &str) -> Result<String> {
-  let content = download_archive(url)?;
+  let content = download_bytes(url)?;
   let text = String::from_utf8(content)?;
   // sha256sum format: "HASH  FILENAME" or just "HASH"
   let hash = text
@@ -159,7 +174,7 @@ fn verify_checksum(url: &str, archive_data: &[u8]) -> Result<()> {
       let actual = format!("{:x}", Sha256::digest(archive_data));
       if actual != expected {
         anyhow::bail!(
-          "Checksum mismatch for {}:\n  expected: {}\n  actual:   {}",
+          "Checksum verification failed for {}.\nThis usually means the download was corrupted or tampered with.\nExpected: {}\nActual:   {}\nTry running `dvm install` again, or switch to a different registry.",
           ARCHIVE_NAME,
           expected,
           actual
@@ -300,7 +315,7 @@ fn download_and_unpack_canary(registry: &str, hash: &str) -> Result<()> {
       let actual = format!("{:x}", Sha256::digest(&archive_data));
       if actual != expected {
         anyhow::bail!(
-          "Checksum mismatch for {}:\n  expected: {}\n  actual:   {}",
+          "Checksum verification failed for {}.\nThis usually means the download was corrupted or tampered with.\nExpected: {}\nActual:   {}\nTry running `dvm install` again, or switch to a different registry.",
           ARCHIVE_NAME,
           expected,
           actual

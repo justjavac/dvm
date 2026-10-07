@@ -128,7 +128,7 @@ pub fn update_stub(version: &str) -> std::io::Result<()> {
 }
 
 pub fn is_exact_version(input: &str) -> bool {
-  Version::parse(input).is_ok()
+  Version::parse(input.trim()).is_ok()
 }
 
 pub fn best_version<'a, T>(choices: T, required: VersionReq) -> Option<Version>
@@ -245,6 +245,12 @@ pub fn deno_canary_path() -> PathBuf {
   dvm_dir.join(DENO_EXE)
 }
 
+/// Path to the file storing the current canary build hash.
+/// Used to skip re-downloading when the latest canary is already installed.
+pub fn canary_hash_path() -> PathBuf {
+  dvm_root().join(DVM_CANARY_PATH_PREFIX).join(".canary-hash")
+}
+
 /// CGQAQ: Put hardlink to executable to this file,
 ///        and prepend this folder to env when dvm activated.
 pub fn deno_bin_path() -> PathBuf {
@@ -294,11 +300,20 @@ pub fn dvm_bin_on_path() -> bool {
 /// Compare two paths for equality, case-insensitively on Windows.
 #[cfg(not(windows))]
 fn paths_equal(a: &Path, b: &Path) -> bool {
-  a == b
+  if a.exists() && b.exists() {
+    std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok()
+  } else {
+    a == b
+  }
 }
 
 #[cfg(windows)]
 fn paths_equal(a: &Path, b: &Path) -> bool {
+  if a.exists() && b.exists() {
+    if let (Ok(ca), Ok(cb)) = (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+      return ca == cb;
+    }
+  }
   fn normalize(p: &Path) -> String {
     p.to_string_lossy().replace('/', "\\").to_lowercase()
   }
@@ -317,6 +332,11 @@ fn classify_deno_resolution(resolved: Option<&Path>, bin_dir: &Path) -> DenoReso
 /// count as inside `/a/bin`. Case-insensitive on Windows.
 #[cfg(not(windows))]
 fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  if path.exists() && dir.exists() {
+    if let (Ok(p), Ok(d)) = (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+      return p.starts_with(&d);
+    }
+  }
   path.starts_with(dir)
 }
 
@@ -324,6 +344,11 @@ fn path_contains_dir(path: &Path, dir: &Path) -> bool {
 /// count as inside `/a/bin`. Case-insensitive on Windows.
 #[cfg(windows)]
 fn path_contains_dir(path: &Path, dir: &Path) -> bool {
+  if path.exists() && dir.exists() {
+    if let (Ok(p), Ok(d)) = (std::fs::canonicalize(path), std::fs::canonicalize(dir)) {
+      return p.starts_with(&d);
+    }
+  }
   fn normalize(p: &Path) -> String {
     p.to_string_lossy().replace('/', "\\").to_lowercase()
   }

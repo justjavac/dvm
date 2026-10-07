@@ -1,5 +1,5 @@
 use crate::meta::DvmMeta;
-use crate::version::{current_version, local_versions, remote_versions};
+use crate::version::{current_dvm_version, local_versions, remote_versions};
 use anyhow::Result;
 use colored::Colorize;
 use semver::Version;
@@ -25,7 +25,7 @@ pub fn exec_remote() -> Result<()> {
 }
 
 fn print_versions(mut versions: Vec<String>) {
-  let current_version = current_version().unwrap_or_default();
+  let current_version = current_dvm_version().unwrap_or_default();
 
   versions.sort_by(|a, b| sort_semver_version(a, b));
 

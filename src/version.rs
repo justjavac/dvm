@@ -72,6 +72,24 @@ pub fn current_version() -> Option<String> {
   stdout.trim().strip_prefix("deno ").map(|version| version.to_string())
 }
 
+/// Get the version of deno that dvm has activated (from dvm's bin directory).
+/// Unlike `current_version()`, this does not depend on PATH, so it correctly
+/// reports the dvm-managed version even when another deno installation
+/// shadows dvm's bin directory on PATH.
+pub fn current_dvm_version() -> Option<String> {
+  use crate::utils::deno_bin_path;
+  let bin_path = deno_bin_path();
+  if !bin_path.exists() {
+    return None;
+  }
+  let output = Command::new(&bin_path).arg("-V").stderr(Stdio::null()).output().ok()?;
+  if !output.status.success() {
+    return None;
+  }
+  let stdout = String::from_utf8(output.stdout).ok()?;
+  stdout.trim().strip_prefix("deno ").map(|version| version.to_string())
+}
+
 pub fn local_versions() -> Vec<String> {
   let mut v: Vec<String> = Vec::new();
 
