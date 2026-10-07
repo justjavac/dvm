@@ -26,6 +26,10 @@ pub fn print_error(err: &dyn std::fmt::Display) {
 /// Atomically write `content` to `path` by writing to a temp file in the same
 /// directory and then renaming it into place.  This guarantees the destination
 /// file is never left in a half-written state if the process crashes mid-write.
+///
+/// The file contents are fsynced to disk before the rename, and on Unix the
+/// parent directory is also fsynced after the rename, so the write is durable
+/// even if the system crashes shortly afterward.
 pub fn atomic_write<P: AsRef<Path>>(path: P, content: &[u8]) -> std::io::Result<()> {
   let path = path.as_ref();
   let dir = path
@@ -40,8 +44,22 @@ pub fn atomic_write<P: AsRef<Path>>(path: P, content: &[u8]) -> std::io::Result<
   tmp.write_all(content)?;
   tmp.flush()?;
 
+  // fsync the file to ensure all data is written to disk before the rename.
+  // `flush()` only flushes Rust's internal buffer; without `sync_all()`, the
+  // OS page cache may not have been written to disk, and a system crash after
+  // the rename could leave the destination file empty or corrupted.
+  tmp.as_file().sync_all()?;
+
   // Atomically replace the destination
-  tmp.persist(path)?;
+  let _persisted = tmp.persist(path)?;
+
+  // On Unix, fsync the parent directory to ensure the rename is durable.
+  #[cfg(unix)]
+  {
+    // On Unix, a directory can be opened as a `File` and fsynced.
+    let dir_file = std::fs::File::open(dir)?;
+    dir_file.sync_all()?;
+  }
 
   Ok(())
 }
