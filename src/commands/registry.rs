@@ -28,7 +28,7 @@ pub fn exec(registry: RegistryCommands) -> Result<()> {
       println!("for example: {}", "dvm registry set official".bright_green());
     }
     RegistryCommands::Show => {
-      println! {"{}: ", "current registry info".bright_blue()};
+      println!("{}: ", "current registry info".bright_blue());
       println!("  binary_registry\t{}", rc_binary_registry);
       println!("  version_registry\t{}", rc_version_registry);
     }
