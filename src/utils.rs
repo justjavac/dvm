@@ -345,11 +345,6 @@ pub fn deno_version_path(version: &Version) -> PathBuf {
 }
 
 #[inline]
-pub fn is_semver(version: &str) -> bool {
-  Version::parse(version).is_ok()
-}
-
-#[inline]
 pub fn is_http_like_url(url: &str) -> bool {
   url.starts_with("http://") || url.starts_with("https://")
 }
