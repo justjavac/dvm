@@ -113,7 +113,11 @@ pub enum Commands {
   },
 
   #[clap(about = "Clean dvm cache")]
-  Clean,
+  Clean {
+    /// Skip confirmation prompt
+    #[clap(long, short = 'y')]
+    yes: bool,
+  },
 
   #[clap(about = "Change registry that dvm fetch from")]
   Registry {

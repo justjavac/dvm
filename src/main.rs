@@ -82,11 +82,11 @@ pub fn main() {
     // exec handled above (before the match)
     Commands::Exec { .. } => unreachable!(),
 
-    Commands::Clean => {
+    Commands::Clean { yes } => {
       run_with_spinner(
         "Cleaning...".to_string(),
         "clean finished".to_string(),
-        || commands::clean::exec(&mut meta)
+        || commands::clean::exec(&mut meta, yes)
           .map_err(|err| anyhow::anyhow!("Failed to clean: {}", err)),
       )
     }
