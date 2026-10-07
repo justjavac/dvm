@@ -4,9 +4,10 @@ use crate::version::VersionArg;
 use anyhow::Result;
 use colored::Colorize;
 use dirs::home_dir;
+use fs2::FileExt;
 use semver::{Version, VersionReq};
 use std::env;
-use std::fs::write;
+use std::fs::{File, write};
 use std::io::{stdin, stdout, BufReader, Read, Write};
 use std::path::Path;
 use std::path::PathBuf;
@@ -141,6 +142,35 @@ pub fn dvm_root() -> PathBuf {
       .map(|it| it.join(".dvm"))
       .unwrap_or_else(|| std::env::temp_dir().join(".dvm"))
   })
+}
+
+/// Acquire an exclusive file lock on dvm's lock file.
+///
+/// Returns a `File` guard that holds the lock.  The lock is automatically
+/// released when the guard is dropped.  This prevents concurrent dvm
+/// processes from corrupting metadata (last-write-wins race) or leaving
+/// partial installs.
+pub fn acquire_dvm_lock() -> Result<File> {
+  let root = dvm_root();
+  std::fs::create_dir_all(&root)?;
+  let lock_path = root.join(".dvm.lock");
+  let file = File::create(lock_path)?;
+  file.lock_exclusive()?;
+  Ok(file)
+}
+
+/// Run a closure while holding dvm's exclusive file lock.
+///
+/// The lock is acquired before the closure runs and released automatically
+/// when it returns.  Use this to wrap any command that modifies dvm state
+/// (install, uninstall, use, alias, upgrade, doctor, clean, activate,
+/// deactivate) to prevent race conditions between concurrent dvm processes.
+pub fn with_dvm_lock<F, R>(f: F) -> Result<R>
+where
+  F: FnOnce() -> Result<R>,
+{
+  let _lock = acquire_dvm_lock()?;
+  f()
 }
 
 pub fn dvm_versions() -> PathBuf {

@@ -378,6 +378,7 @@ dependencies = [
  "colored",
  "ctor",
  "dirs 5.0.1",
+ "fs2",
  "indicatif",
  "native-tls",
  "output_vt100",
@@ -446,6 +447,16 @@ name = "foreign-types-shared"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
+
+[[package]]
+name = "fs2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
+dependencies = [
+ "libc",
+ "winapi",
+]
 
 [[package]]
 name = "generic-array"
