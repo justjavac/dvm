@@ -387,10 +387,6 @@ pub fn deno_version_path(version: &Version) -> PathBuf {
   dvm_dir.join(DENO_EXE)
 }
 
-#[inline]
-pub fn is_semver(version: &str) -> bool {
-  Version::parse(version).is_ok()
-}
 
 #[inline]
 pub fn is_http_like_url(url: &str) -> bool {
@@ -505,26 +501,6 @@ mod tests {
     ));
   }
 
-  #[test]
-  fn is_semver_valid() {
-    assert!(is_semver("1.0.0"));
-    assert!(is_semver("0.0.1"));
-    assert!(is_semver("2.3.4"));
-    assert!(is_semver("1.0.0-alpha"));
-    assert!(is_semver("1.0.0-beta.1"));
-    assert!(is_semver("1.0.0+build.123"));
-  }
-
-  #[test]
-  fn is_semver_invalid() {
-    assert!(!is_semver(""));
-    assert!(!is_semver("1.0"));
-    assert!(!is_semver("1"));
-    assert!(!is_semver("v1.0.0"));
-    assert!(!is_semver("latest"));
-    assert!(!is_semver("not-a-version"));
-    assert!(!is_semver("^1.0.0"));
-  }
 
   #[test]
   fn is_http_like_url_valid() {

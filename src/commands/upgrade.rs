@@ -1,8 +1,8 @@
 use crate::{
   commands::install,
   consts::{DVM_VERSION_CANARY, DVM_VERSION_INVALID, DVM_VERSION_SELF},
-  utils::{best_version, deno_canary_path},
-  version::{get_latest_lts_version, remote_versions, VersionArg},
+  utils::deno_canary_path,
+  version::{find_max_matching_version, get_latest_lts_version, remote_versions, VersionArg},
   DvmMeta,
 };
 use anyhow::Result;
@@ -70,7 +70,8 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
         // than up front: `dvm upgrade self` and `dvm upgrade canary` would
         // otherwise prompt for a version-cache update they never read.
         let versions = remote_versions()?;
-        let version = match_version(&versions, &r)?;
+        let version = find_max_matching_version(&r.to_string(), versions.iter().map(|s| s.as_str()))?
+          .ok_or_else(|| anyhow::anyhow!("No released Deno version matches `{}`", r))?;
         if dry_run {
           println!("Would upgrade {} from {} to {}", alias, current, version);
           return Ok(());
@@ -92,7 +93,9 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
       {
         VersionArg::Exact(v) => v.to_string(),
         VersionArg::Lts => get_latest_lts_version()?.to_string(),
-        VersionArg::Range(v) => match_version(&versions, &v)?.to_string(),
+        VersionArg::Range(v) => find_max_matching_version(&v.to_string(), versions.iter().map(|s| s.as_str()))?
+          .ok_or_else(|| anyhow::anyhow!("No released Deno version matches `{}`", v))?
+          .to_string(),
       };
 
       if current == latest {
@@ -157,13 +160,6 @@ pub fn exec(meta: &mut DvmMeta, alias: Option<String>, dry_run: bool) -> Result<
   }
 
   Ok(())
-}
-
-/// Highest installed-or-available version satisfying `req`, erroring instead of
-/// panicking when the registry lists nothing that matches.
-fn match_version(versions: &[String], req: &semver::VersionReq) -> Result<semver::Version> {
-  best_version(versions.iter().map(AsRef::as_ref), req.clone())
-    .ok_or_else(|| anyhow::anyhow!("No released Deno version matches `{}`", req))
 }
 
 fn upgrade_self() -> Result<()> {

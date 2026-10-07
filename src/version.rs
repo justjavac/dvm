@@ -4,7 +4,7 @@ use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CACHE_REMOTE_PATH, DVM_CONFIGRC_KEY_REGISTRY_VERSION, DVM_VERSION_LTS,
   REGISTRY_LATEST_CANARY_PATH,
 };
-use crate::utils::{dvm_root, is_exact_version, is_semver, run_with_spinner};
+use crate::utils::{dvm_root, is_exact_version, run_with_spinner};
 use anyhow::Result;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
@@ -82,7 +82,7 @@ pub fn local_versions() -> Vec<String> {
           let Ok(file_name) = entry.file_name().into_string() else {
             continue;
           };
-          if is_semver(&file_name) {
+          if is_exact_version(&file_name) {
             v.push(file_name);
           }
         }
@@ -150,7 +150,7 @@ pub fn remote_versions() -> Result<Vec<String>> {
 
   // Callers sort and match these as semver, so drop anything the registry lists
   // that is not a version instead of panicking further down the line.
-  Ok(versions.into_iter().filter(|version| is_semver(version)).collect())
+  Ok(versions.into_iter().filter(|version| is_exact_version(version)).collect())
 }
 
 pub fn is_versions_cache_exists() -> bool {
