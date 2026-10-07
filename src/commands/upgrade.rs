@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 use colored::Colorize;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::str::FromStr;
 
@@ -150,6 +151,7 @@ fn upgrade_self() -> Result<()> {
       let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.ps1";
       let script = tinyget::get(url).send()?;
       let script = script.as_str()?;
+      verify_checksum(url, script.as_bytes())?;
       let tmp = tempfile::tempdir()?;
       let tmp = tmp.path().join("install.ps1");
       fs::write(&tmp, script)?;
@@ -163,6 +165,7 @@ fn upgrade_self() -> Result<()> {
       let url = "https://raw.githubusercontent.com/justjavac/dvm/main/install.sh";
       let script = tinyget::get(url).send()?;
       let script = script.as_str()?;
+      verify_checksum(url, script.as_bytes())?;
       let tmp = tempfile::tempdir()?;
       let tmp = tmp.path().join("install.sh");
       fs::write(&tmp, script)?;
@@ -173,5 +176,63 @@ fn upgrade_self() -> Result<()> {
     }
   }
 
+  Ok(())
+}
+
+/// Verify the SHA256 checksum of a downloaded script.
+///
+/// Downloads the `.sha256` file from the same URL with `.sha256` appended
+/// and compares it against the computed hash of the script content.
+///
+/// This is a best-effort verification:
+/// - If the `.sha256` file is not found (404), a warning is printed and
+///   execution continues (the checksum file may not yet be published).
+/// - If the checksum does not match, an error is returned and execution
+///   is aborted to prevent running a potentially tampered script.
+fn verify_checksum(script_url: &str, script_bytes: &[u8]) -> Result<()> {
+  let checksum_url = format!("{}.sha256", script_url);
+
+  let checksum_resp = tinyget::get(&checksum_url).send()?;
+
+  if checksum_resp.status_code == 404 {
+    println!(
+      "{} checksum file not found at {}, skipping verification",
+      "warning:".yellow().bold(),
+      checksum_url
+    );
+    return Ok(());
+  }
+
+  if checksum_resp.status_code >= 400 {
+    println!(
+      "{} could not fetch checksum file (HTTP {}), skipping verification",
+      "warning:".yellow().bold(),
+      checksum_resp.status_code
+    );
+    return Ok(());
+  }
+
+  let expected_hash = checksum_resp.as_str()?.trim().to_string();
+  // Some checksum files contain "<hash>  <filename>" format, extract just the hash
+  let expected_hash = expected_hash
+    .split_whitespace()
+    .next()
+    .unwrap_or(&expected_hash)
+    .to_string();
+
+  let mut hasher = Sha256::new();
+  hasher.update(script_bytes);
+  let actual_hash = format!("{:x}", hasher.finalize());
+
+  if actual_hash.to_lowercase() != expected_hash.to_lowercase() {
+    anyhow::bail!(
+      "Checksum verification failed for {}\n  expected: {}\n  actual:   {}",
+      script_url,
+      expected_hash,
+      actual_hash
+    );
+  }
+
+  println!("{} checksum verified for {}", "info:".cyan().bold(), script_url);
   Ok(())
 }
