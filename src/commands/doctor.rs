@@ -138,6 +138,7 @@ fn add_to_shell_config(line: &str) -> Result<()> {
   } else if shell.contains("fish") {
     vec![home.join(".config/fish/config.fish")]
   } else if shell.contains("bash") {
+    #[allow(unused_mut)]
     let mut files = vec![home.join(".bashrc")];
     // On macOS, login shells read .bash_profile instead of .bashrc.
     #[cfg(target_os = "macos")]
@@ -145,6 +146,7 @@ fn add_to_shell_config(line: &str) -> Result<()> {
     files
   } else {
     // Unknown shell — try the most common ones.
+    #[allow(unused_mut)]
     let mut files = vec![home.join(".bashrc"), home.join(".zshrc")];
     #[cfg(target_os = "macos")]
     files.push(home.join(".bash_profile"));
