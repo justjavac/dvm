@@ -1,5 +1,3 @@
-use std::process;
-
 use crate::cli::{BinaryRegistryCommands, RegistryCommands, VersionRegistryCommands};
 use crate::consts::REGISTRY_NAME_OFFICIAL;
 use crate::consts::REGISTRY_OFFICIAL;
@@ -69,8 +67,7 @@ pub fn exec(registry: RegistryCommands) -> Result<()> {
         } else if is_http_like_url(&custom) {
           rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_BINARY, &custom)?;
         } else {
-          println!("{}: {}", "invalid registry".bright_red(), custom);
-          process::exit(1);
+          anyhow::bail!("invalid registry: {}", custom);
         }
       }
     },
@@ -86,9 +83,10 @@ pub fn exec(registry: RegistryCommands) -> Result<()> {
         } else if is_http_like_url(&custom) {
           rc_update(write_local, DVM_CONFIGRC_KEY_REGISTRY_VERSION, &custom)?;
         } else {
-          eprintln!("The {} is not valid URL, please starts with `http` or `https`", custom);
-          eprintln!("Registry will not be changed");
-          process::exit(1)
+          anyhow::bail!(
+            "`{}` is not a valid URL, please starts with `http` or `https`\nRegistry will not be changed",
+            custom
+          );
         }
       }
     },
