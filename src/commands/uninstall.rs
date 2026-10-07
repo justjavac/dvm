@@ -11,8 +11,7 @@ pub fn exec(meta: &mut DvmMeta, version: Option<String>) -> Result<()> {
     anyhow::bail!("Please specify the version to uninstall, for example `dvm uninstall 1.46.3`.");
   };
 
-  let target_version = Version::parse(&version)
-    .map_err(|_| anyhow::anyhow!("Invalid semver: {}", version))?;
+  let target_version = Version::parse(&version).map_err(|_| anyhow::anyhow!("Invalid semver: {}", version))?;
 
   let target_exe_path = deno_version_path(&target_version);
 

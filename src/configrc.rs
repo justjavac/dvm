@@ -513,7 +513,9 @@ registry_binary=https://example.com/
       assert!(config.iter().any(|(k, _)| *k == DVM_CONFIGRC_KEY_REGISTRY_BINARY));
       assert!(config.iter().any(|(k, _)| *k == DVM_CONFIGRC_KEY_REGISTRY_VERSION));
       // Existing value preserved
-      assert!(config.iter().any(|(k, v)| *k == DVM_CONFIGRC_KEY_DENO_VERSION && *v == "1.0.0"));
+      assert!(config
+        .iter()
+        .any(|(k, v)| *k == DVM_CONFIGRC_KEY_DENO_VERSION && *v == "1.0.0"));
     });
   }
 
@@ -621,7 +623,11 @@ registry_binary=https://example.com/
       let content = rc_content_cascade().unwrap();
       let config = rc_parse(&content);
       assert_eq!(
-        config.iter().find(|(k, _)| *k == DVM_CONFIGRC_KEY_DENO_VERSION).unwrap().1,
+        config
+          .iter()
+          .find(|(k, _)| *k == DVM_CONFIGRC_KEY_DENO_VERSION)
+          .unwrap()
+          .1,
         "local-version"
       );
 
@@ -645,7 +651,11 @@ registry_binary=https://example.com/
       let content = rc_content_cascade().unwrap();
       let config = rc_parse(&content);
       assert_eq!(
-        config.iter().find(|(k, _)| *k == DVM_CONFIGRC_KEY_DENO_VERSION).unwrap().1,
+        config
+          .iter()
+          .find(|(k, _)| *k == DVM_CONFIGRC_KEY_DENO_VERSION)
+          .unwrap()
+          .1,
         "global-version"
       );
 
@@ -788,7 +798,9 @@ registry_binary=https://example.com/
       let config = rc_parse(&content);
       assert_eq!(config.len(), 2);
       assert!(config.iter().any(|(k, v)| *k == "deno_version" && *v == "1.0.0"));
-      assert!(config.iter().any(|(k, v)| *k == "registry_binary" && *v == "https://example.com/"));
+      assert!(config
+        .iter()
+        .any(|(k, v)| *k == "registry_binary" && *v == "https://example.com/"));
     });
   }
 
@@ -813,10 +825,7 @@ registry_binary=https://example.com/
   fn rc_parse_multiple_equals_in_value() {
     // splitn(2, '=') ensures only the first = splits key from value
     let config = rc_parse("key=value=with=equals\ndenovo=1.0.0\n");
-    assert_eq!(
-      config,
-      vec![("key", "value=with=equals"), ("denovo", "1.0.0")]
-    );
+    assert_eq!(config, vec![("key", "value=with=equals"), ("denovo", "1.0.0")]);
   }
 
   #[test]

@@ -55,19 +55,13 @@ fn help_exits_successfully() {
   assert!(output.status.success(), "dvm --help should exit with status 0");
 
   let stdout = String::from_utf8_lossy(&output.stdout);
-  assert!(
-    !stdout.is_empty(),
-    "dvm --help should print help text to stdout"
-  );
+  assert!(!stdout.is_empty(), "dvm --help should print help text to stdout");
 }
 
 #[test]
 fn list_exits_successfully_with_empty_list() {
   let (mut cmd, _temp_dir) = dvm_command_with_temp_dir();
-  let output = cmd
-    .arg("list")
-    .output()
-    .expect("failed to run dvm list");
+  let output = cmd.arg("list").output().expect("failed to run dvm list");
 
   assert!(
     output.status.success(),
@@ -79,10 +73,7 @@ fn list_exits_successfully_with_empty_list() {
 #[test]
 fn info_exits_successfully() {
   let (mut cmd, _temp_dir) = dvm_command_with_temp_dir();
-  let output = cmd
-    .arg("info")
-    .output()
-    .expect("failed to run dvm info");
+  let output = cmd.arg("info").output().expect("failed to run dvm info");
 
   assert!(
     output.status.success(),
@@ -91,8 +82,5 @@ fn info_exits_successfully() {
   );
 
   let stdout = String::from_utf8_lossy(&output.stdout);
-  assert!(
-    !stdout.is_empty(),
-    "dvm info should print info to stdout"
-  );
+  assert!(!stdout.is_empty(), "dvm info should print info to stdout");
 }

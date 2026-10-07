@@ -5,7 +5,10 @@ use crate::consts::{
   DVM_VERSION_LTS, DVM_VERSION_SYSTEM, REGISTRY_LIST_OFFICIAL,
 };
 use crate::meta::DvmMeta;
-use crate::utils::{best_version, check_is_deactivated, deno_canary_path, deno_version_path, dvm_root, link_deno_bin, prompt_request, run_with_spinner, update_stub};
+use crate::utils::{
+  best_version, check_is_deactivated, deno_canary_path, deno_version_path, dvm_root, link_deno_bin, prompt_request,
+  run_with_spinner, update_stub,
+};
 use crate::utils::{is_exact_version, load_dvmrc, remove_deno_bin_link, DenoResolution};
 use crate::version::remote_versions;
 use crate::version::{get_latest_lts_version, get_latest_remote_version, VersionArg};

@@ -168,7 +168,12 @@ pub fn remote_versions() -> Result<Vec<String>> {
 
   // Callers sort and match these as semver, so drop anything the registry lists
   // that is not a version instead of panicking further down the line.
-  Ok(versions.into_iter().filter(|version| is_exact_version(version)).collect())
+  Ok(
+    versions
+      .into_iter()
+      .filter(|version| is_exact_version(version))
+      .collect(),
+  )
 }
 
 pub fn is_versions_cache_exists() -> bool {

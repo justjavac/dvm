@@ -64,11 +64,7 @@ pub fn atomic_write<P: AsRef<Path>>(path: P, content: &[u8]) -> std::io::Result<
   Ok(())
 }
 
-pub fn run_with_spinner(
-  message: String,
-  finish_message: String,
-  f: impl FnOnce() -> Result<()>,
-) -> Result<()> {
+pub fn run_with_spinner(message: String, finish_message: String, f: impl FnOnce() -> Result<()>) -> Result<()> {
   let spinner = indicatif::ProgressBar::new_spinner().with_message(message);
   spinner.set_style(
     indicatif::ProgressStyle::default_spinner()
@@ -169,9 +165,7 @@ pub fn dvm_root() -> PathBuf {
   env::var_os("DVM_DIR").map(PathBuf::from).unwrap_or_else(|| {
     // Note: on Windows, the $HOME environment variable may be set by users or by
     // third party software, but it is non-standard and should not be relied upon.
-    home_dir()
-      .map(|it| it.join(".dvm"))
-      .unwrap_or_else(safe_temp_fallback)
+    home_dir().map(|it| it.join(".dvm")).unwrap_or_else(safe_temp_fallback)
   })
 }
 
@@ -412,7 +406,6 @@ pub fn deno_version_path(version: &Version) -> PathBuf {
   dvm_dir.join(DENO_EXE)
 }
 
-
 #[inline]
 pub fn is_http_like_url(url: &str) -> bool {
   url.starts_with("http://") || url.starts_with("https://")
@@ -526,13 +519,14 @@ mod tests {
     ));
   }
 
-
   #[test]
   fn is_http_like_url_valid() {
     assert!(is_http_like_url("http://example.com"));
     assert!(is_http_like_url("https://example.com"));
     assert!(is_http_like_url("http://example.com/path"));
-    assert!(is_http_like_url("https://raw.githubusercontent.com/justjavac/dvm/main/install.sh"));
+    assert!(is_http_like_url(
+      "https://raw.githubusercontent.com/justjavac/dvm/main/install.sh"
+    ));
   }
 
   #[test]

@@ -419,7 +419,10 @@ mod tests {
     assert_eq!(parsed.versions.len(), 2);
     assert_eq!(parsed.alias[0].name, "latest");
     assert_eq!(parsed.alias[0].required, "*");
-    assert_eq!(parsed.alias[0].try_to_version_req().unwrap(), VersionReq::parse("*").unwrap());
+    assert_eq!(
+      parsed.alias[0].try_to_version_req().unwrap(),
+      VersionReq::parse("*").unwrap()
+    );
     assert!(parsed.alias[0].try_to_version_req().is_ok());
     assert_eq!(parsed.alias[1].name, "stable");
     assert_eq!(parsed.alias[1].required, "^1.0.0");
@@ -672,25 +675,19 @@ mod tests {
 
   #[test]
   fn test_deserialize_missing_versions_field_fails() {
-    let result = serde_json::from_str::<DvmMeta>(
-      r#"{"alias": [{"name": "stable", "required": "1.0.0"}]}"#,
-    );
+    let result = serde_json::from_str::<DvmMeta>(r#"{"alias": [{"name": "stable", "required": "1.0.0"}]}"#);
     assert!(result.is_err());
   }
 
   #[test]
   fn test_deserialize_missing_alias_field_fails() {
-    let result = serde_json::from_str::<DvmMeta>(
-      r#"{"versions": [{"required": "~1.0.0", "current": "1.0.1"}]}"#,
-    );
+    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": [{"required": "~1.0.0", "current": "1.0.1"}]}"#);
     assert!(result.is_err());
   }
 
   #[test]
   fn test_deserialize_with_null_fields_fails() {
-    let result = serde_json::from_str::<DvmMeta>(
-      r#"{"versions": null, "alias": null}"#,
-    );
+    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": null, "alias": null}"#);
     assert!(result.is_err());
   }
 
@@ -757,15 +754,11 @@ mod tests {
   #[test]
   fn test_deserialize_wrong_types_fails_cleanly() {
     // versions is a string instead of an array
-    let result = serde_json::from_str::<DvmMeta>(
-      r#"{"versions": "not-an-array", "alias": []}"#,
-    );
+    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": "not-an-array", "alias": []}"#);
     assert!(result.is_err());
 
     // alias is a number instead of an array
-    let result = serde_json::from_str::<DvmMeta>(
-      r#"{"versions": [], "alias": 123}"#,
-    );
+    let result = serde_json::from_str::<DvmMeta>(r#"{"versions": [], "alias": 123}"#);
     assert!(result.is_err());
   }
 

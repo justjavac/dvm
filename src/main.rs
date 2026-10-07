@@ -52,8 +52,7 @@ pub fn main() {
       run_with_spinner(
         format!("Installing {}", version.clone().unwrap_or_else(|| "latest".to_string())),
         "Installed".to_string(),
-        || commands::install::exec(&meta, no_use, version)
-          .map_err(|err| anyhow::anyhow!("Failed to install: {}", err)),
+        || commands::install::exec(&meta, no_use, version).map_err(|err| anyhow::anyhow!("Failed to install: {}", err)),
       )
     }),
     Commands::List { remote } => {
@@ -75,35 +74,32 @@ pub fn main() {
       run_with_spinner(
         "Fixing...".to_string(),
         "All fixes applied, DVM is ready to use.".green().to_string(),
-        || commands::doctor::exec(&mut meta)
-          .map_err(|err| anyhow::anyhow!("Failed to fix: {}", err)),
+        || commands::doctor::exec(&mut meta).map_err(|err| anyhow::anyhow!("Failed to fix: {}", err)),
       )
     }),
     Commands::Upgrade { alias, dry_run } => with_dvm_lock(|| {
       run_with_spinner(
         "Upgrading...".to_string(),
         "All alias have been upgraded.".to_string(),
-        || commands::upgrade::exec(&mut meta, alias, dry_run)
-          .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err)),
+        || {
+          commands::upgrade::exec(&mut meta, alias, dry_run)
+            .map_err(|err| anyhow::anyhow!("Failed to upgrade: {}", err))
+        },
       )
     }),
     // exec handled above (before the match)
     Commands::Exec { .. } => unreachable!(),
 
     Commands::Clean { yes } => with_dvm_lock(|| {
-      run_with_spinner(
-        "Cleaning...".to_string(),
-        "clean finished".to_string(),
-        || commands::clean::exec(&mut meta, yes)
-          .map_err(|err| anyhow::anyhow!("Failed to clean: {}", err)),
-      )
+      run_with_spinner("Cleaning...".to_string(), "clean finished".to_string(), || {
+        commands::clean::exec(&mut meta, yes).map_err(|err| anyhow::anyhow!("Failed to clean: {}", err))
+      })
     }),
 
     Commands::Registry { command } => commands::registry::exec(command),
     Commands::Update => with_dvm_lock(|| {
       run_with_spinner("Updating cache...".to_string(), "Update success".to_string(), || {
-        commands::update::exec(&mut meta)
-          .map_err(|err| anyhow::anyhow!("Failed to update: {}", err))
+        commands::update::exec(&mut meta).map_err(|err| anyhow::anyhow!("Failed to update: {}", err))
       })
     }),
 
