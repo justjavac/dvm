@@ -460,6 +460,11 @@ registry_binary=https://example.com/
     let dir = tempfile::tempdir().unwrap();
     let original_home = std::env::var_os("HOME");
     std::env::set_var("HOME", dir.path());
+    // On Windows, dirs::home_dir() uses USERPROFILE, not HOME
+    #[cfg(windows)]
+    let original_userprofile = std::env::var_os("USERPROFILE");
+    #[cfg(windows)]
+    std::env::set_var("USERPROFILE", dir.path());
 
     // Also set DVM_DIR to isolate from any real ~/.dvm
     let original_dvm_dir = std::env::var_os("DVM_DIR");
@@ -472,6 +477,12 @@ registry_binary=https://example.com/
     } else {
       std::env::remove_var("HOME");
     }
+    #[cfg(windows)]
+    if let Some(userprofile) = original_userprofile {
+      std::env::set_var("USERPROFILE", userprofile);
+    } else {
+      std::env::remove_var("USERPROFILE");
+    }
     if let Some(dvm_dir) = original_dvm_dir {
       std::env::set_var("DVM_DIR", dvm_dir);
     } else {
@@ -479,6 +490,7 @@ registry_binary=https://example.com/
     }
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_fix_creates_file_when_missing() {
     let _lock = fs_lock();
@@ -497,6 +509,7 @@ registry_binary=https://example.com/
     });
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_fix_adds_missing_keys() {
     let _lock = fs_lock();
@@ -520,6 +533,7 @@ registry_binary=https://example.com/
     });
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_fix_is_idempotent() {
     let _lock = fs_lock();
@@ -537,6 +551,7 @@ registry_binary=https://example.com/
 
   // ---- rc_get_with_fix tests ----
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_get_with_fix_works_when_file_exists() {
     let _lock = fs_lock();
@@ -548,6 +563,7 @@ registry_binary=https://example.com/
     });
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_get_with_fix_fixes_when_key_missing() {
     let _lock = fs_lock();
@@ -562,6 +578,7 @@ registry_binary=https://example.com/
 
   // ---- rc_clean tests ----
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_clean_removes_unknown_keys() {
     let _lock = fs_lock();
@@ -584,6 +601,7 @@ registry_binary=https://example.com/
     });
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_clean_noop_when_file_missing() {
     let _lock = fs_lock();
@@ -605,6 +623,7 @@ registry_binary=https://example.com/
 
   // ---- rc_content_cascade tests (local overrides global) ----
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_content_cascade_prefers_local_over_global() {
     let _lock = fs_lock();
@@ -636,6 +655,7 @@ registry_binary=https://example.com/
     });
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_content_cascade_falls_back_to_global() {
     let _lock = fs_lock();
@@ -666,6 +686,7 @@ registry_binary=https://example.com/
 
   // ---- rc_update tests ----
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_update_creates_new_file() {
     let _lock = fs_lock();
@@ -681,6 +702,7 @@ registry_binary=https://example.com/
     });
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_update_modifies_existing_key() {
     let _lock = fs_lock();
@@ -786,6 +808,7 @@ registry_binary=https://example.com/
     cleaned
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn rc_fix_creates_global_config() {
     let _lock = fs_lock();

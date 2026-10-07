@@ -549,6 +549,7 @@ mod tests {
     assert!(!is_http_like_url("/local/path"));
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn deno_version_path_contains_version() {
     // Set a known DVM_DIR for this test
@@ -570,6 +571,7 @@ mod tests {
     assert!(path.to_string_lossy().contains("versions\\1.2.3\\deno.exe"));
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn deno_canary_path_contains_canary() {
     let _lock = dvm_dir_test_lock();
@@ -588,6 +590,7 @@ mod tests {
     assert!(path.to_string_lossy().contains("canary\\deno.exe"));
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn dvm_versions_path_contains_versions_prefix() {
     let _lock = dvm_dir_test_lock();
@@ -606,6 +609,7 @@ mod tests {
     assert!(path.to_string_lossy().ends_with("versions"));
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn dvm_bin_dir_ends_with_bin() {
     let _lock = dvm_dir_test_lock();
@@ -624,6 +628,7 @@ mod tests {
     assert!(path.to_string_lossy().ends_with("bin"));
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn dvm_bin_on_path_when_present() {
     let _lock = dvm_dir_test_lock();
@@ -645,6 +650,7 @@ mod tests {
     assert!(result);
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn dvm_bin_on_path_when_absent() {
     let _lock = dvm_dir_test_lock();
@@ -666,6 +672,7 @@ mod tests {
     assert!(!result);
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn dvm_bin_on_path_at_start() {
     let _lock = dvm_dir_test_lock();
@@ -687,6 +694,7 @@ mod tests {
     assert!(result);
   }
 
+  #[cfg(not(windows))]
   #[test]
   fn dvm_bin_on_path_empty_path() {
     let _lock = dvm_dir_test_lock();
