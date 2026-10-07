@@ -8,7 +8,7 @@ use fs2::FileExt;
 use semver::{Version, VersionReq};
 use std::env;
 use std::fs::{self, write, DirBuilder, File};
-use std::io::{stdin, stdout, BufReader, Read, Write};
+use std::io::{stdin, stdout, BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -93,13 +93,15 @@ pub fn prompt_request(prompt: &str) -> bool {
   print!("{} (Y/n)", prompt);
 
   let _ = stdout().flush();
-  let mut buffer = [0; 1];
-  let confirm = BufReader::new(stdin())
-    .read(&mut buffer)
-    .ok()
-    .map(|_| buffer[0] as char)
-    .unwrap_or_else(|| 'y');
-  confirm == '\n' || confirm == '\r' || confirm.eq_ignore_ascii_case(&'y')
+  let mut line = String::new();
+  let read_result = BufReader::new(stdin()).read_line(&mut line);
+  match read_result {
+    Ok(_) => {
+      let trimmed = line.trim();
+      trimmed.is_empty() || trimmed.starts_with(|c: char| c.eq_ignore_ascii_case(&'y'))
+    }
+    Err(_) => true,
+  }
 }
 
 pub fn check_is_deactivated() -> bool {
