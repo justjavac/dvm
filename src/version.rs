@@ -120,15 +120,21 @@ pub fn cache_remote_versions() -> Result<()> {
 /// use cached remote versions if exists, otherwise ask user to fetch remote versions
 pub fn remote_versions() -> Result<Vec<String>> {
   if !is_versions_cache_exists() {
-    println!("It seems that you have not updated the remote version cache, please run `dvm update` first.");
-    print!("Do you want to update the remote version cache now? [Y/n]");
-    let _ = std::io::stdout().lock().flush();
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    if input.trim().to_lowercase() == "y" || input.trim().is_empty() {
-      cache_remote_versions()?;
+    use std::io::IsTerminal;
+    if std::io::stdin().is_terminal() {
+      println!("It seems that you have not updated the remote version cache, please run `dvm update` first.");
+      print!("Do you want to update the remote version cache now? [Y/n]");
+      let _ = std::io::stdout().lock().flush();
+      let mut input = String::new();
+      std::io::stdin().read_line(&mut input)?;
+      if input.trim().to_lowercase() == "y" || input.trim().is_empty() {
+        cache_remote_versions()?;
+      } else {
+        anyhow::bail!("Please run `dvm update` to update the remote version cache.");
+      }
     } else {
-      anyhow::bail!("Please run `dvm update` to update the remote version cache.");
+      println!("Updating remote version cache (non-interactive mode)");
+      cache_remote_versions()?;
     }
   }
 
