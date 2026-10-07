@@ -8,6 +8,10 @@ use crate::meta::DvmMeta;
 use crate::utils::{deno_resolution, dvm_bin_dir, dvm_bin_on_path, dvm_root, is_exact_version, DenoResolution};
 
 pub fn exec(meta: &mut DvmMeta) -> Result<()> {
+  // Clean up stale version mappings before doing anything else — doctor is
+  // where integrity checks belong, not on every command startup.
+  let _ = meta.cleanup_stale_mappings()?;
+
   // Init enviroments if need
   // actually set DVM_DIR env var if not exist.
   let home_path = dvm_root();
