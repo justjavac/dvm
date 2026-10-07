@@ -12,6 +12,15 @@ pub fn exec(meta: &mut DvmMeta, yes: bool) -> Result<()> {
     return Ok(());
   }
 
+  if !yes {
+    let confirmed =
+      prompt_confirm("This will remove all cached Deno versions that are not currently mapped. Continue? [y/N]");
+    if !confirmed {
+      println!("Aborted.");
+      return Ok(());
+    }
+  }
+
   let requires = meta
     .versions
     .iter()

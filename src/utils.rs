@@ -8,7 +8,7 @@ use fs2::FileExt;
 use semver::{Version, VersionReq};
 use std::env;
 use std::fs::{self, write, DirBuilder, File};
-use std::io::{stdin, stdout, BufRead, BufReader, Read, Write};
+use std::io::{stdin, stdout, BufRead, BufReader, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
