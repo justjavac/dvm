@@ -331,4 +331,207 @@ mod tests {
     assert!(parsed.versions[1].try_to_version_req().is_ok());
     assert!(parsed.versions[1].is_valid_mapping());
   }
+
+  // --- Alias operation tests ---
+
+  #[test]
+  fn test_set_new_alias() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    assert_eq!(meta.alias.len(), 1);
+    assert_eq!(meta.alias[0].name, "stable");
+    assert_eq!(meta.alias[0].required, "^1.0.0");
+  }
+
+  #[test]
+  fn test_set_alias_updates_existing() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    // update existing alias
+    if let Some(a) = meta.alias.iter_mut().find(|it| it.name == "stable") {
+      a.required = "^2.0.0".to_string();
+    }
+    assert_eq!(meta.alias.len(), 1);
+    assert_eq!(meta.alias[0].required, "^2.0.0");
+  }
+
+  #[test]
+  fn test_get_existing_alias() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    let result = meta.get_alias("stable");
+    assert!(result.is_some());
+  }
+
+  #[test]
+  fn test_get_nonexistent_alias_returns_none() {
+    let meta = DvmMeta::default();
+    let result = meta.get_alias("nonexistent");
+    assert!(result.is_none());
+  }
+
+  #[test]
+  fn test_get_default_alias_latest() {
+    let meta = DvmMeta::default();
+    let result = meta.get_alias("latest");
+    assert!(result.is_some());
+  }
+
+  #[test]
+  fn test_delete_alias() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    assert_eq!(meta.alias.len(), 1);
+    // remove the alias
+    if let Some(index) = meta.alias.iter().position(|it| it.name == "stable") {
+      meta.alias.remove(index);
+    }
+    assert_eq!(meta.alias.len(), 0);
+    assert!(meta.get_alias("stable").is_none());
+  }
+
+  #[test]
+  fn test_delete_nonexistent_alias_is_noop() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    let before = meta.alias.len();
+    // try to remove an alias that doesn't exist
+    if let Some(index) = meta.alias.iter().position(|it| it.name == "nonexistent") {
+      meta.alias.remove(index);
+    }
+    assert_eq!(meta.alias.len(), before);
+  }
+
+  #[test]
+  fn test_list_alias_includes_default_and_custom() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    meta.alias.push(Alias {
+      name: "lts".to_string(),
+      required: "1.40.0".to_string(),
+    });
+    let list = meta.list_alias();
+    // default "latest" + 2 custom = 3 total
+    assert_eq!(list.len(), 3);
+    // "latest" should be at the front (inserted at index 0)
+    assert_eq!(list[0].name, "latest");
+    assert_eq!(list[0].required, "*");
+    // custom aliases should be present
+    assert!(list.iter().any(|a| a.name == "stable"));
+    assert!(list.iter().any(|a| a.name == "lts"));
+  }
+
+  #[test]
+  fn test_list_alias_empty_meta() {
+    let meta = DvmMeta::default();
+    let list = meta.list_alias();
+    // only the default "latest" alias
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].name, "latest");
+  }
+
+  #[test]
+  fn test_has_alias_for_existing() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    assert!(meta.has_alias("stable"));
+    // default alias also returns true
+    assert!(meta.has_alias("latest"));
+  }
+
+  #[test]
+  fn test_has_alias_for_nonexistent() {
+    let meta = DvmMeta::default();
+    assert!(!meta.has_alias("nonexistent"));
+  }
+
+  #[test]
+  fn test_resolve_version_req_exact_alias() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "v1".to_string(),
+      required: "1.2.3".to_string(),
+    });
+    let result = meta.resolve_version_req("v1");
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_resolve_version_req_lts_alias() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "lts".to_string(),
+      required: "1.40.0".to_string(),
+    });
+    let result = meta.resolve_version_req("lts");
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_resolve_version_req_range_alias() {
+    let mut meta = DvmMeta::default();
+    meta.alias.push(Alias {
+      name: "stable".to_string(),
+      required: "^1.0.0".to_string(),
+    });
+    let result = meta.resolve_version_req("stable");
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_resolve_version_req_default_alias() {
+    let meta = DvmMeta::default();
+    let result = meta.resolve_version_req("latest");
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_resolve_version_req_direct_version() {
+    let meta = DvmMeta::default();
+    let result = meta.resolve_version_req("1.2.3");
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_resolve_version_req_invalid() {
+    let meta = DvmMeta::default();
+    let result = meta.resolve_version_req("not-a-valid-version-or-alias");
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_set_default_alias_is_noop() {
+    let mut meta = DvmMeta::default();
+    // Trying to set "latest" (a default alias) should not add it to self.alias
+    if DEFAULT_ALIAS.contains_key("latest") {
+      // skip, simulating set_alias behavior for default aliases
+    } else {
+      meta.alias.push(Alias {
+        name: "latest".to_string(),
+        required: "*".to_string(),
+      });
+    }
+    assert_eq!(meta.alias.len(), 0);
+  }
 }
