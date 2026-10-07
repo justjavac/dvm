@@ -16,7 +16,27 @@ $DvmZip = "$BinDir\dvm.zip"
 $DvmExe = "$BinDir\dvm.exe"
 $DvmExeOldName = "dvm.exe.old"
 $DvmExeOld = "$BinDir\$DvmExeOldName"
-$DvmUri = "https://github.com/justjavac/dvm/releases/latest/download/dvm-x86_64-pc-windows-msvc.zip"
+
+# Detect processor architecture and select the correct binary
+$Arch = $env:PROCESSOR_ARCHITECTURE
+switch ($Arch) {
+  "ARM64" {
+    $DvmArch = "aarch64-pc-windows-msvc"
+  }
+  "AMD64" {
+    $DvmArch = "x86_64-pc-windows-msvc"
+  }
+  "x86" {
+    Write-Error "32-bit Windows is not supported by dvm."
+    exit 1
+  }
+  default {
+    Write-Warning "Unknown processor architecture '$Arch', falling back to x86_64."
+    $DvmArch = "x86_64-pc-windows-msvc"
+  }
+}
+
+$DvmUri = "https://github.com/justjavac/dvm/releases/latest/download/dvm-$DvmArch.zip"
 
 if (!(Test-Path $BinDir)) {
   New-Item $BinDir -ItemType Directory | Out-Null
