@@ -622,6 +622,24 @@ mod tests {
     assert!(result.is_err());
   }
 
+  // --- Corruption / degradation path tests ---
+
+  #[test]
+  fn test_default_creates_expected_structure() {
+    let meta = DvmMeta::default();
+    assert!(meta.versions.is_empty());
+    assert!(meta.alias.is_empty());
+    // Default alias still includes built-in "latest"
+    assert!(meta.has_alias("latest"));
+    assert_eq!(meta.list_alias().len(), 1); // only the default "latest"
+  }
+
+  #[test]
+  fn test_deserialize_empty_string_fails() {
+    let result = serde_json::from_str::<DvmMeta>("");
+    assert!(result.is_err());
+  }
+
   #[test]
   fn test_set_default_alias_is_noop() {
     let mut meta = DvmMeta::default();
@@ -635,5 +653,129 @@ mod tests {
       });
     }
     assert_eq!(meta.alias.len(), 0);
+  }
+
+  fn test_deserialize_garbage_text_fails() {
+    let result = serde_json::from_str::<DvmMeta>("this is not json at all!!!");
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_deserialize_empty_object_succeeds_with_defaults() {
+    // An empty JSON object `{}` — both fields are missing.
+    // Without #[serde(default)], this would fail. Let's verify current behavior.
+    let result = serde_json::from_str::<DvmMeta>("{}");
+    // Current behavior: fails because fields are required
+    assert!(result.is_err());
+    // DvmMeta::new() would fall back to default in this case
+  }
+
+  #[test]
+  fn test_deserialize_missing_versions_field_fails() {
+    let result = serde_json::from_str::<DvmMeta>(
+      r#"{"alias": [{"name": "stable", "required": "1.0.0"}]}"#,
+    );
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_deserialize_missing_alias_field_fails() {
+    let result = serde_json::from_str::<DvmMeta>(
+      r#"{"versions": [{"required": "~1.0.0", "current": "1.0.1"}]}"#,
+    );
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_deserialize_with_null_fields_fails() {
+    let result = serde_json::from_str::<DvmMeta>(
+      r#"{"versions": null, "alias": null}"#,
+    );
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_invalid_semver_in_current_field() {
+    let mapping = VersionMapping {
+      required: "~1.0.0".to_string(),
+      current: "not-a-version".to_string(),
+    };
+    assert!(!mapping.is_valid_mapping());
+    // try_to_version_req should still work (required is valid)
+    assert!(mapping.try_to_version_req().is_ok());
+  }
+
+  #[test]
+  fn test_invalid_version_req_in_required_field() {
+    let mapping = VersionMapping {
+      required: "not a valid req >= <=".to_string(),
+      current: "1.0.0".to_string(),
+    };
+    assert!(!mapping.is_valid_mapping());
+    assert!(mapping.try_to_version_req().is_err());
+  }
+
+  #[test]
+  fn test_version_mismatch_is_not_valid() {
+    // required = ^1.0.0, current = 2.0.0 — the current version doesn't match the req
+    let mapping = VersionMapping {
+      required: "^1.0.0".to_string(),
+      current: "2.0.0".to_string(),
+    };
+    // Both fields parse fine individually, but current doesn't satisfy required
+    assert!(Version::parse(&mapping.current).is_ok());
+    assert!(mapping.try_to_version_req().is_ok());
+    assert!(!mapping.is_valid_mapping());
+  }
+
+  #[test]
+  fn test_alias_invalid_version_req() {
+    let alias = Alias {
+      name: "bad".to_string(),
+      required: "!!!invalid!!!".to_string(),
+    };
+    assert!(alias.try_to_version_req().is_err());
+  }
+
+  #[test]
+  fn test_deserialize_extra_fields_ignored() {
+    // Extra unknown fields should be ignored (forward compatibility)
+    let result = serde_json::from_str::<DvmMeta>(
+      r#"{
+        "versions": [],
+        "alias": [],
+        "new_field": "some value",
+        "another_new_thing": 42
+      }"#,
+    );
+    assert!(result.is_ok());
+    let meta = result.unwrap();
+    assert!(meta.versions.is_empty());
+    assert!(meta.alias.is_empty());
+  }
+
+  #[test]
+  fn test_deserialize_wrong_types_fails_cleanly() {
+    // versions is a string instead of an array
+    let result = serde_json::from_str::<DvmMeta>(
+      r#"{"versions": "not-an-array", "alias": []}"#,
+    );
+    assert!(result.is_err());
+
+    // alias is a number instead of an array
+    let result = serde_json::from_str::<DvmMeta>(
+      r#"{"versions": [], "alias": 123}"#,
+    );
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_version_mapping_both_invalid() {
+    let mapping = VersionMapping {
+      required: "garbage req".to_string(),
+      current: "garbage version".to_string(),
+    };
+    assert!(!mapping.is_valid_mapping());
+    assert!(mapping.try_to_version_req().is_err());
   }
 }
