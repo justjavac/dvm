@@ -7,6 +7,7 @@ use dirs::home_dir;
 use fs2::FileExt;
 use semver::{Version, VersionReq};
 use std::env;
+#[allow(unused_imports)]
 use std::fs::{self, write, DirBuilder, File};
 use std::io::{stdin, stdout, BufRead, BufReader, Write};
 use std::path::Path;
@@ -411,6 +412,15 @@ pub fn is_http_like_url(url: &str) -> bool {
   url.starts_with("http://") || url.starts_with("https://")
 }
 
+/// Global mutex for tests that modify DVM_DIR or other process-global env vars.
+/// Env vars are process-global but Rust tests run in parallel threads by default.
+#[cfg(test)]
+pub(crate) fn dvm_test_lock() -> std::sync::MutexGuard<'static, ()> {
+  use std::sync::Mutex;
+  static LOCK: Mutex<()> = Mutex::new(());
+  LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -562,6 +572,7 @@ mod tests {
 
   #[test]
   fn deno_canary_path_contains_canary() {
+    let _lock = dvm_dir_test_lock();
     let original = std::env::var_os("DVM_DIR");
     std::env::set_var("DVM_DIR", "/tmp/test_dvm");
     let path = deno_canary_path();
@@ -579,6 +590,7 @@ mod tests {
 
   #[test]
   fn dvm_versions_path_contains_versions_prefix() {
+    let _lock = dvm_dir_test_lock();
     let original = std::env::var_os("DVM_DIR");
     std::env::set_var("DVM_DIR", "/tmp/test_dvm");
     let path = dvm_versions();
@@ -596,6 +608,7 @@ mod tests {
 
   #[test]
   fn dvm_bin_dir_ends_with_bin() {
+    let _lock = dvm_dir_test_lock();
     let original = std::env::var_os("DVM_DIR");
     std::env::set_var("DVM_DIR", "/tmp/test_dvm");
     let path = dvm_bin_dir();
@@ -613,6 +626,7 @@ mod tests {
 
   #[test]
   fn dvm_bin_on_path_when_present() {
+    let _lock = dvm_dir_test_lock();
     let original_dvm = std::env::var_os("DVM_DIR");
     let original_path = std::env::var_os("PATH");
     std::env::set_var("DVM_DIR", "/tmp/test_dvm");
@@ -633,6 +647,7 @@ mod tests {
 
   #[test]
   fn dvm_bin_on_path_when_absent() {
+    let _lock = dvm_dir_test_lock();
     let original_dvm = std::env::var_os("DVM_DIR");
     let original_path = std::env::var_os("PATH");
     std::env::set_var("DVM_DIR", "/tmp/test_dvm");
@@ -653,6 +668,7 @@ mod tests {
 
   #[test]
   fn dvm_bin_on_path_at_start() {
+    let _lock = dvm_dir_test_lock();
     let original_dvm = std::env::var_os("DVM_DIR");
     let original_path = std::env::var_os("PATH");
     std::env::set_var("DVM_DIR", "/tmp/test_dvm");
@@ -673,6 +689,7 @@ mod tests {
 
   #[test]
   fn dvm_bin_on_path_empty_path() {
+    let _lock = dvm_dir_test_lock();
     let original_dvm = std::env::var_os("DVM_DIR");
     let original_path = std::env::var_os("PATH");
     std::env::set_var("DVM_DIR", "/tmp/test_dvm");
@@ -694,9 +711,7 @@ mod tests {
   /// Mutex to serialize tests that modify the DVM_DIR environment variable,
   /// since Rust tests run in parallel by default and env vars are process-global.
   fn dvm_dir_test_lock() -> std::sync::MutexGuard<'static, ()> {
-    use std::sync::Mutex;
-    static LOCK: Mutex<()> = Mutex::new(());
-    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    super::dvm_test_lock()
   }
 
   /// Helper: set DVM_DIR to a temp directory and return the temp dir guard.

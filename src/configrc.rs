@@ -456,6 +456,7 @@ registry_binary=https://example.com/
   // ---- rc_fix tests (with temp HOME) ----
 
   fn with_home_dir<F: FnOnce(&std::path::Path)>(f: F) {
+    let _lock = crate::utils::dvm_test_lock();
     let dir = tempfile::tempdir().unwrap();
     let original_home = std::env::var_os("HOME");
     std::env::set_var("HOME", dir.path());
