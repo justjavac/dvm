@@ -287,6 +287,29 @@ fn download_and_unpack_canary(registry: &str, hash: &str) -> Result<()> {
   let url = compose_url_to_canary(registry, hash);
 
   let archive_data = download_archive(&url)?;
+
+  // Best-effort checksum verification.  If the checksum file is unavailable
+  // (e.g. on a custom mirror that doesn't publish .sha256 files), we log a
+  // warning and continue rather than hard-failing.
+  let checksum_url = format!("{}.sha256", url);
+  match download_sha256(&checksum_url) {
+    Ok(expected) => {
+      let actual = format!("{:x}", Sha256::digest(&archive_data));
+      if actual != expected {
+        anyhow::bail!(
+          "Checksum mismatch for {}:\n  expected: {}\n  actual:   {}",
+          ARCHIVE_NAME,
+          expected,
+          actual
+        );
+      }
+      println!("Checksum verified OK");
+    }
+    Err(err) => {
+      eprintln!("Warning: could not verify checksum: {}", err);
+    }
+  }
+
   if let Err(err) = unpack_canary(archive_data) {
     eprintln!("Failed to unpack Deno canary {}: {}", hash, err);
     eprintln!("Removing the corrupted archive and retrying download");
