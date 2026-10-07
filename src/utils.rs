@@ -695,4 +695,155 @@ mod tests {
     }
     assert!(!result);
   }
+
+  /// Mutex to serialize tests that modify the DVM_DIR environment variable,
+  /// since Rust tests run in parallel by default and env vars are process-global.
+  fn dvm_dir_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    use std::sync::Mutex;
+    static LOCK: Mutex<()> = Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+  }
+
+  /// Helper: set DVM_DIR to a temp directory and return the temp dir guard.
+  /// Caller must hold the dvm_dir_test_lock().
+  fn with_temp_dvm_dir() -> (tempfile::TempDir, PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("DVM_DIR", tmp.path());
+    let bin_dir = dvm_bin_dir();
+    std::fs::create_dir_all(&bin_dir).unwrap();
+    (tmp, bin_dir)
+  }
+
+  #[test]
+  fn test_deno_bin_path_returns_correct_path() {
+    let _lock = dvm_dir_test_lock();
+    let (tmp, _bin_dir) = with_temp_dvm_dir();
+
+    let path = deno_bin_path();
+    assert!(path.ends_with(format!("bin/{}", crate::consts::DENO_EXE)));
+    assert!(path.starts_with(tmp.path()));
+  }
+
+  #[test]
+  fn test_link_deno_bin_creates_link() {
+    let _lock = dvm_dir_test_lock();
+    let (_tmp, _bin_dir) = with_temp_dvm_dir();
+
+    // Create a fake source binary
+    let src = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(src.path(), b"fake deno binary").unwrap();
+
+    // Link it
+    link_deno_bin(src.path()).unwrap();
+
+    // Verify the link exists
+    let dst = deno_bin_path();
+    assert!(dst.exists());
+    assert_eq!(std::fs::read(&dst).unwrap(), b"fake deno binary");
+  }
+
+  #[test]
+  fn test_link_points_to_correct_source() {
+    let _lock = dvm_dir_test_lock();
+    let (_tmp, _bin_dir) = with_temp_dvm_dir();
+
+    let src = tempfile::NamedTempFile::new().unwrap();
+    let unique_content = b"unique content for link test";
+    std::fs::write(src.path(), unique_content).unwrap();
+
+    link_deno_bin(src.path()).unwrap();
+
+    let dst = deno_bin_path();
+    assert_eq!(std::fs::read(&dst).unwrap(), unique_content);
+
+    // On Unix, verify via inode that it's a hardlink or symlink
+    #[cfg(unix)]
+    {
+      use std::os::unix::fs::MetadataExt;
+      let src_meta = std::fs::metadata(src.path()).unwrap();
+      let dst_meta = std::fs::metadata(&dst).unwrap();
+      // Either same inode (hardlink) or it's a symlink (checked via symlink_metadata)
+      let is_symlink = std::fs::symlink_metadata(&dst)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false);
+      assert!(
+        src_meta.ino() == dst_meta.ino() || is_symlink,
+        "dst should be hardlink or symlink to src"
+      );
+    }
+  }
+
+  #[test]
+  fn test_link_deno_bin_overwrite() {
+    let _lock = dvm_dir_test_lock();
+    let (_tmp, _bin_dir) = with_temp_dvm_dir();
+
+    // First link
+    let src1 = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(src1.path(), b"version 1").unwrap();
+    link_deno_bin(src1.path()).unwrap();
+    assert_eq!(std::fs::read(deno_bin_path()).unwrap(), b"version 1");
+
+    // Second link (overwrite)
+    let src2 = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(src2.path(), b"version 2").unwrap();
+    // remove first, then link (simulating how use_this_bin_path works)
+    remove_deno_bin_link().unwrap();
+    link_deno_bin(src2.path()).unwrap();
+    assert_eq!(std::fs::read(deno_bin_path()).unwrap(), b"version 2");
+  }
+
+  #[test]
+  fn test_remove_deno_bin_link() {
+    let _lock = dvm_dir_test_lock();
+    let (_tmp, _bin_dir) = with_temp_dvm_dir();
+
+    // Create a link first
+    let src = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(src.path(), b"test").unwrap();
+    link_deno_bin(src.path()).unwrap();
+    assert!(deno_bin_path().exists());
+
+    // Remove it
+    remove_deno_bin_link().unwrap();
+    assert!(!deno_bin_path().exists());
+
+    // Removing again should be idempotent (no error)
+    remove_deno_bin_link().unwrap();
+  }
+
+  #[test]
+  fn test_remove_deno_bin_link_idempotent_when_missing() {
+    let _lock = dvm_dir_test_lock();
+    let (_tmp, _bin_dir) = with_temp_dvm_dir();
+
+    // No link exists — should not error
+    let result = remove_deno_bin_link();
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_link_deno_bin_end_to_end() {
+    let _lock = dvm_dir_test_lock();
+    let (tmp, _bin_dir) = with_temp_dvm_dir();
+
+    // Simulate a dvm versions directory with a fake deno binary
+    let version = Version::parse("1.40.0").unwrap();
+    let version_dir = tmp.path().join("versions").join("1.40.0");
+    std::fs::create_dir_all(&version_dir).unwrap();
+    let deno_path = version_dir.join(crate::consts::DENO_EXE);
+    std::fs::write(&deno_path, b"fake deno 1.40.0").unwrap();
+
+    // Test deno_version_path returns the right path
+    let computed_path = deno_version_path(&version);
+    assert_eq!(computed_path, deno_path);
+
+    // Link it and verify
+    link_deno_bin(&deno_path).unwrap();
+    assert_eq!(std::fs::read(deno_bin_path()).unwrap(), b"fake deno 1.40.0");
+
+    // Remove and verify
+    remove_deno_bin_link().unwrap();
+    assert!(!deno_bin_path().exists());
+  }
 }
