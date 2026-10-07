@@ -252,6 +252,75 @@ fn unpack_zip(archive_data: &[u8], dest_dir: &Path) -> Result<()> {
 
     if file.is_dir() {
       fs::create_dir_all(&out_path)?;
+    } else if file.unix_mode().is_some_and(|mode| mode & 0o170000 == 0o120000) {
+      // Symlink entry detected via Unix mode (S_IFLNK = 0o120000)
+      // Read the symlink target from the entry content
+      let mut target = String::new();
+      io::Read::read_to_string(&mut file, &mut target)?;
+      let target = target.trim();
+
+      // Validate the symlink target doesn't escape the destination directory.
+      // Absolute targets always escape. For relative targets, resolve them
+      // (without touching the filesystem) and verify they stay within dest_dir.
+      let target_path = Path::new(target);
+      if target_path.is_absolute() {
+        anyhow::bail!(
+          "Symlink target is absolute, refusing to extract: {} -> {}",
+          file.name(),
+          target
+        );
+      }
+      let symlink_dir = out_path.parent().unwrap_or(dest_dir);
+      let mut components = Vec::new();
+      for component in target_path.components() {
+        use std::path::Component;
+        match component {
+          Component::ParentDir => {
+            components.pop();
+          }
+          Component::Normal(part) => {
+            components.push(part.to_os_string());
+          }
+          Component::CurDir | Component::RootDir | Component::Prefix(_) => {}
+        }
+      }
+      let resolved = symlink_dir.join(PathBuf::from_iter(&components));
+      if !resolved.starts_with(dest_dir) {
+        anyhow::bail!(
+          "Symlink target escapes destination: {} -> {}",
+          file.name(),
+          target
+        );
+      }
+
+      if let Some(parent) = out_path.parent() {
+        fs::create_dir_all(parent)?;
+      }
+
+      cfg_if! {
+        if #[cfg(unix)] {
+          use std::os::unix::fs::symlink;
+          // Remove existing file/symlink if present
+          if out_path.symlink_metadata().is_ok() {
+            let _ = fs::remove_file(&out_path);
+          }
+          symlink(target, &out_path)?;
+        } else if #[cfg(windows)] {
+          // On Windows, creating symlinks requires admin privileges.
+          // Warn and skip rather than silently extracting as a text file.
+          eprintln!(
+            "Warning: skipping symlink entry {} -> {} (Windows symlinks require admin privileges)",
+            file.name(),
+            target
+          );
+        } else {
+          eprintln!(
+            "Warning: skipping symlink entry {} -> {} (unsupported platform)",
+            file.name(),
+            target
+          );
+        }
+      }
     } else {
       if let Some(parent) = out_path.parent() {
         fs::create_dir_all(parent)?;
