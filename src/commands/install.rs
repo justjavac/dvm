@@ -6,17 +6,16 @@ use crate::consts::{
   DVM_CACHE_PATH_PREFIX, DVM_CANARY_PATH_PREFIX, DVM_CONFIGRC_KEY_REGISTRY_BINARY, DVM_CONFIGRC_KEY_REGISTRY_VERSION,
   DVM_VERSION_CANARY, DVM_VERSION_LATEST, DVM_VERSION_LTS, REGISTRY_LIST_OFFICIAL, REGISTRY_OFFICIAL,
 };
+use crate::downloader;
 use crate::meta::DvmMeta;
-use crate::utils::{deno_canary_path, deno_version_path, dvm_root, print_error, print_warning};
+use crate::utils::{deno_canary_path, deno_version_path, dvm_root, print_error};
 use crate::version::{get_latest_canary, get_latest_lts_version, get_latest_remote_version};
 use anyhow::Result;
 use cfg_if::cfg_if;
 use semver::Version;
-use sha2::{Digest, Sha256};
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 cfg_if! {
   if #[cfg(windows)] {
@@ -108,50 +107,8 @@ pub fn exec(_: &DvmMeta, no_use: bool, version: Option<String>) -> Result<()> {
   Ok(())
 }
 
-/// Core download function: fetches `url` bytes with error handling.
-/// No user-facing output — use `download_archive` for archives.
-fn download_bytes(url: &str) -> Result<Vec<u8>> {
-  let response = match ureq::get(url).timeout(Duration::from_secs(30)).call() {
-    Ok(response) => response,
-    Err(ureq::Error::Status(404, _)) => anyhow::bail!("'{}' has not been found", url),
-    Err(ureq::Error::Status(code, _)) => anyhow::bail!("Download '{}' failed: {}", url, code),
-    Err(e) => anyhow::bail!("Network error {}", e),
-  };
-
-  let mut bytes = Vec::new();
-  response.into_reader().read_to_end(&mut bytes)?;
-  Ok(bytes)
-}
-
-/// Fetch an archive from `url`, rejecting error responses so a 404 page never
-/// reaches the unpacker as if it were an archive.  Prints progress to stdout.
-fn download_archive(url: &str) -> Result<Vec<u8>> {
-  println!("downloading {}", url);
-  download_bytes(url)
-}
-
-/// Download a .sha256 checksum file and return the hex-encoded hash.
-/// Handles the standard `sha256sum` format: `<hash>  <filename>`.
-fn download_sha256(url: &str) -> Result<String> {
-  let content = download_bytes(url)?;
-  let text = String::from_utf8(content)?;
-  // sha256sum format: "HASH  FILENAME" or just "HASH"
-  let hash = text
-    .lines()
-    .next()
-    .and_then(|line| line.split_whitespace().next())
-    .ok_or_else(|| anyhow::anyhow!("Empty checksum file"))?
-    .to_string();
-
-  if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
-    anyhow::bail!("Invalid SHA256 checksum format");
-  }
-
-  Ok(hash.to_lowercase())
-}
-
 fn download_package(url: &str, version: &Version) -> Result<Vec<u8>> {
-  let archive_data = download_archive(url)?;
+  let archive_data = downloader::download_with_checksum(url, ARCHIVE_NAME)?;
 
   println!("Version has been found");
   println!("Deno v{} has been downloaded", version);
@@ -163,35 +120,8 @@ fn compose_url_to_exec(registry: &str, version: &Version) -> String {
   format!("{}release/v{}/{}", registry, version, ARCHIVE_NAME)
 }
 
-/// Verify the SHA256 checksum of downloaded archive data.
-/// Best-effort: if the checksum file is unavailable (e.g. on a custom mirror
-/// that doesn't publish .sha256 files), we log a warning and continue rather
-/// than hard-failing.
-fn verify_checksum(url: &str, archive_data: &[u8]) -> Result<()> {
-  let checksum_url = format!("{}.sha256", url);
-  match download_sha256(&checksum_url) {
-    Ok(expected) => {
-      let actual = format!("{:x}", Sha256::digest(archive_data));
-      if actual != expected {
-        anyhow::bail!(
-          "Checksum verification failed for {}.\nThis usually means the download was corrupted or tampered with.\nExpected: {}\nActual:   {}\nTry running `dvm install` again, or switch to a different registry.",
-          ARCHIVE_NAME,
-          expected,
-          actual
-        );
-      }
-      println!("Checksum verified OK");
-    }
-    Err(err) => {
-      print_warning(&format!("could not verify checksum: {}", err));
-    }
-  }
-  Ok(())
-}
-
 fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
   let archive_data = download_package(url, version)?;
-  verify_checksum(url, &archive_data)?;
 
   if let Err(err) = unpack(archive_data, version) {
     print_error(&format!("Failed to unpack Deno v{}: {}", version, err));
@@ -199,7 +129,6 @@ fn download_and_unpack_package(url: &str, version: &Version) -> Result<()> {
     remove_version_dir(version)?;
 
     let archive_data = download_package(url, version)?;
-    verify_checksum(url, &archive_data)?;
     if let Err(retry_err) = unpack(archive_data, version) {
       remove_version_dir(version)?;
       return Err(anyhow::anyhow!(
@@ -308,36 +237,14 @@ fn compose_url_to_canary(registry: &str, hash: &str) -> String {
 fn download_and_unpack_canary(registry: &str, hash: &str) -> Result<()> {
   let url = compose_url_to_canary(registry, hash);
 
-  let archive_data = download_archive(&url)?;
-
-  // Best-effort checksum verification.  If the checksum file is unavailable
-  // (e.g. on a custom mirror that doesn't publish .sha256 files), we log a
-  // warning and continue rather than hard-failing.
-  let checksum_url = format!("{}.sha256", url);
-  match download_sha256(&checksum_url) {
-    Ok(expected) => {
-      let actual = format!("{:x}", Sha256::digest(&archive_data));
-      if actual != expected {
-        anyhow::bail!(
-          "Checksum verification failed for {}.\nThis usually means the download was corrupted or tampered with.\nExpected: {}\nActual:   {}\nTry running `dvm install` again, or switch to a different registry.",
-          ARCHIVE_NAME,
-          expected,
-          actual
-        );
-      }
-      println!("Checksum verified OK");
-    }
-    Err(err) => {
-      eprintln!("Warning: could not verify checksum: {}", err);
-    }
-  }
+  let archive_data = downloader::download_with_checksum(&url, ARCHIVE_NAME)?;
 
   if let Err(err) = unpack_canary(archive_data) {
     print_error(&format!("Failed to unpack Deno canary {}: {}", hash, err));
     eprintln!("Removing the corrupted archive and retrying download");
     remove_canary_dir()?;
 
-    let archive_data = download_archive(&url)?;
+    let archive_data = downloader::download_with_checksum(&url, ARCHIVE_NAME)?;
     if let Err(retry_err) = unpack_canary(archive_data) {
       remove_canary_dir()?;
       return Err(anyhow::anyhow!(
