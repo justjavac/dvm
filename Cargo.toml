@@ -4,7 +4,7 @@ version = "1.11.6"
 license = "MIT"
 authors = ["迷渡 <justjavac@gmail.com>", "CGQAQ <m.jason.liu@outlook.com>"]
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.88"
 description = "Deno Version Manager - Easy way to manage multiple active deno versions."
 repository = "https://github.com/justjavac/dvm"
 keywords = ["deno", "version-manager", "dvm", "cli"]
@@ -35,7 +35,7 @@ sha2 = "0.10.8"
 tempfile = "3.8.1"
 ureq = { version = "2.9", features = ["json"] }
 which = "5.0.0"
-zip = "0.6.6"
+zip = "9.1.0"
 
 [dev-dependencies]
 asserts-rs = "0.3.0"
