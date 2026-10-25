@@ -264,11 +264,15 @@ fn unpack_zip(archive_data: &[u8], dest_dir: &Path) -> Result<()> {
 
   for i in 0..zip.len() {
     let mut file = zip.by_index(i)?;
-    let out_path = dest_dir.join(file.name());
+    let name = file
+      .name()
+      .map_err(|err| anyhow::anyhow!("Invalid zip entry name: {}", err))?
+      .into_owned();
+    let out_path = dest_dir.join(&name);
 
     // Sanity check: prevent zip-slip path traversal
     if !out_path.starts_with(dest_dir) {
-      anyhow::bail!("Invalid zip entry path: {}", file.name());
+      anyhow::bail!("Invalid zip entry path: {}", name);
     }
 
     if file.is_dir() {
