@@ -417,7 +417,7 @@ dependencies = [
 
 [[package]]
 name = "dvm"
-version = "1.11.6"
+version = "1.11.7"
 dependencies = [
  "anyhow",
  "asserts-rs",
