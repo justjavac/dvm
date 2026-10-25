@@ -23,7 +23,7 @@ pub fn exec(meta: &mut DvmMeta, yes: bool) -> Result<()> {
 
   let requires = meta
     .versions
-    .iter()
+    .values()
     .filter_map(|v| {
       if v.is_valid_mapping() {
         None
